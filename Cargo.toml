@@ -1,0 +1,17 @@
+[package]
+authors = ["Gaute Hope <eg@gaute.vetsj.com>"]
+edition = "2018"
+license = "LGPL"
+name = "hidefix"
+version = "0.1.0"
+[dependencies]
+anyhow = "1.0.26"
+byte-slice-cast = "0.3.5"
+byteorder = "1.3.2"
+
+[dependencies.hdf5]
+path = "../../hdf5-rust"
+
+[dependencies.hdf5-sys]
+path = "../../hdf5-rust/hdf5-sys"
+features = [ 'static' ]
