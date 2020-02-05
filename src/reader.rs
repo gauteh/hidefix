@@ -32,7 +32,9 @@ impl<'a> DatasetReader<'a> {
         let dsz = self.ds.dtype.size() as u64;
         let vsz = counts.iter().product::<u64>() * dsz;
         let mut buf = Vec::with_capacity(vsz as usize);
-        unsafe { buf.set_len(vsz as usize); }
+        unsafe {
+            buf.set_len(vsz as usize);
+        }
         let mut buf_slice = &mut buf[..];
 
         let mut fd = self.fd.borrow_mut();
