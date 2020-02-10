@@ -7,7 +7,7 @@ use hidefix::{idx::Index, reader::DatasetReader};
 #[bench]
 fn read_2d_chunked_idx(b: &mut Bencher) {
     let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
-    let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+    let mut r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
@@ -23,7 +23,7 @@ fn read_2d_chunked_nat(b: &mut Bencher) {
 #[bench]
 fn read_t_float32_idx(b: &mut Bencher) {
     let i = Index::index("tests/data/t_float.h5").unwrap();
-    let r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
+    let mut r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
@@ -39,7 +39,7 @@ fn read_t_float32_nat(b: &mut Bencher) {
 #[bench]
 fn read_chunked_1d_idx(b: &mut Bencher) {
     let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
-    let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+    let mut r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }

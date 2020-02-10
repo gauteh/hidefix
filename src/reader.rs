@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
@@ -9,7 +8,7 @@ use super::idx::Dataset;
 
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
-    fd: RefCell<File>,
+    fd: File,
 }
 
 impl<'a> DatasetReader<'a> {
@@ -17,13 +16,13 @@ impl<'a> DatasetReader<'a> {
     where
         P: AsRef<Path>,
     {
-        let fd = RefCell::new(File::open(p)?);
+        let fd = File::open(p)?;
 
         Ok(DatasetReader { ds, fd })
     }
 
     pub fn read(
-        &self,
+        &mut self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
     ) -> Result<Vec<u8>, anyhow::Error> {
@@ -37,14 +36,12 @@ impl<'a> DatasetReader<'a> {
         }
         let mut buf_slice = &mut buf[..];
 
-        let mut fd = self.fd.borrow_mut();
-
         for (c, start, end) in self.ds.chunk_slices(indices, Some(&counts)) {
             let addr = c.addr + start * dsz;
             let slice_sz = ((end - start) * dsz) as usize;
 
-            fd.seek(SeekFrom::Start(addr))?;
-            fd.read_exact(&mut buf_slice[..slice_sz])?;
+            self.fd.seek(SeekFrom::Start(addr))?;
+            self.fd.read_exact(&mut buf_slice[..slice_sz])?;
             buf_slice = &mut buf_slice[slice_sz..];
         }
 
@@ -52,7 +49,7 @@ impl<'a> DatasetReader<'a> {
     }
 
     pub fn values<T>(
-        &self,
+        &mut self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
     ) -> Result<Vec<T>, anyhow::Error>
@@ -74,7 +71,7 @@ mod tests {
     #[test]
     fn read_t_float32() {
         let i = Index::index("tests/data/t_float.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
+        let mut r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
@@ -87,7 +84,8 @@ mod tests {
     #[test]
     fn read_chunked_1d() {
         let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+        let mut r =
+            DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
@@ -100,7 +98,8 @@ mod tests {
     #[test]
     fn read_chunked_2d() {
         let i = Index::index("tests/data/chunked_twoD.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+        let mut r =
+            DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
