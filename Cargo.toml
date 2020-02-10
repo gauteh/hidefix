@@ -10,7 +10,7 @@ version = "0.1.0"
 anyhow = "1.0.26"
 byte-slice-cast = "0.3.5"
 byteorder = "1.3.2"
-rio = "0.9"
+rio = { version = "0.9", optional = true }
 
 [dependencies.hdf5]
 branch = "hidefix"
@@ -20,3 +20,6 @@ git = "https://github.com/gauteh/hdf5-rust"
 branch = "hidefix"
 features = ["static"]
 git = "https://github.com/gauteh/hdf5-rust"
+
+[features]
+io_uring = [ "rio" ]
