@@ -180,6 +180,41 @@ impl Dataset {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn chunk_slices_range(b: &mut Bencher) {
+        let d = Dataset {
+            dtype: Datatype::from_type::<f32>().unwrap(),
+            order: H5T_order_t::H5T_ORDER_LE,
+            shape: vec![20, 20],
+            chunk_shape: vec![10, 10],
+            chunks: vec![
+                Chunk {
+                    offset: vec![0, 0],
+                    size: 400,
+                    addr: 0,
+                },
+                Chunk {
+                    offset: vec![0, 10],
+                    size: 400,
+                    addr: 400,
+                },
+                Chunk {
+                    offset: vec![10, 0],
+                    size: 400,
+                    addr: 800,
+                },
+                Chunk {
+                    offset: vec![10, 10],
+                    size: 400,
+                    addr: 1200,
+                },
+            ],
+        };
+
+        b.iter(|| d.chunk_slices(None, None).collect::<Vec<_>>());
+    }
 
     #[test]
     fn chunk_at_coord() {
