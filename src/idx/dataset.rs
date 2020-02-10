@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 use super::chunk::Chunk;
 
 use hdf5::Datatype;
@@ -77,21 +79,48 @@ impl Dataset {
         counts: Option<&[u64]>,
     ) -> impl Iterator<Item = (&Chunk, u64, u64)> {
         let indices: Vec<u64> = indices.unwrap_or(&vec![0; self.shape.len()]).to_vec();
-        let counts: &[u64] = counts.unwrap_or(&self.shape);
+        let counts: Vec<u64> = counts.unwrap_or(&self.shape).to_vec();
 
         assert!(
             indices
                 .iter()
-                .zip(counts)
+                .zip(&counts)
                 .map(|(i, c)| i + c)
                 .zip(&self.shape)
                 .all(|(l, &s)| l <= s),
             "out of bounds"
         );
 
+        ChunkSlicerCollapsed::new(
+            ChunkSlicer::new(self, indices, counts),
+            self.dtype.size() as u64,
+        )
+    }
+
+    /// Find chunk containing coordinate.
+    pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
+        // TODO: can probably be replaced by explicit experssion since
+        // sort order can be assumed.
+        self.chunks
+            .binary_search_by(|c| c.contains(indices, self.chunk_shape.as_slice()).reverse())
+            .map(|i| &self.chunks[i])
+            .map_err(|_| anyhow!("could not find chunk"))
+    }
+}
+
+pub struct ChunkSlicer<'a> {
+    indices: Vec<u64>,
+    counts: Vec<u64>,
+    offset: Vec<u64>,
+    dataset: &'a Dataset,
+    chunk_sz: Vec<u64>,
+}
+
+impl<'a> ChunkSlicer<'a> {
+    pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer<'a> {
         // size of chunk dimensions
         let chunk_sz = {
-            let mut d = self
+            let mut d = dataset
                 .chunk_shape
                 .iter()
                 .rev()
@@ -105,75 +134,117 @@ impl Dataset {
             d
         };
 
-        let mut slices: Vec<(&Chunk, u64, u64)> = Vec::new();
-        let mut offset: Vec<u64> = vec![0; indices.len()];
+        let offset = vec![0; indices.len()];
 
-        loop {
-            let idx: Vec<u64> = indices.iter().zip(&offset).map(|(i, o)| i + o).collect();
+        ChunkSlicer {
+            indices,
+            counts,
+            offset,
+            dataset,
+            chunk_sz,
+        }
+    }
+}
 
-            let chunk: &Chunk = self
-                .chunk_at_coord(&idx)
-                .expect("Moved index out of dataset!");
+impl<'a> Iterator for ChunkSlicer<'a> {
+    type Item = (&'a Chunk, u64, u64);
 
-            let chunk_last = chunk.offset.last().unwrap();
-            let shape_last = self.chunk_shape.last().unwrap();
-
-            use std::cmp::min;
-
-            // position in chunk of current offset
-            let chunk_start = idx
-                .iter()
-                .zip(&chunk.offset)
-                .map(|(o, c)| o - c)
-                .zip(&chunk_sz)
-                .map(|(d, sz)| d * sz)
-                .sum::<u64>();
-
-            let last = offset.last_mut().unwrap();
-
-            // determine how far we can advance the offset along in the current chunk.
-            *last = min(
-                *counts.last().unwrap(),
-                chunk_last + shape_last - indices.last().unwrap(),
-            );
-
-            // position in chunk of new offset
-            let chunk_end = indices
-                .iter()
-                .zip(&offset)
-                .map(|(i, o)| i + o)
-                .zip(&chunk.offset)
-                .map(|(o, c)| o - c)
-                .zip(&chunk_sz)
-                .map(|(d, sz)| d * sz)
-                .sum::<u64>();
-
-            slices.push((chunk, chunk_start, chunk_end));
-
-            // advance offset
-            let mut carry = 0;
-            for (o, c) in offset.iter_mut().zip(counts).rev() {
-                *o += carry;
-                carry = *o / c;
-                *o %= c;
-            }
-
-            if carry > 0 {
-                break;
-            }
+    fn next(&mut self) -> Option<Self::Item> {
+        // advance offset
+        let mut carry = 0;
+        for (o, c) in self.offset.iter_mut().zip(&self.counts).rev() {
+            *o += carry;
+            carry = *o / c;
+            *o %= c;
         }
 
-        slices.into_iter()
-    }
+        if carry > 0 {
+            return None;
+        }
 
-    /// Find chunk containing coordinate.
-    fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
-        // TODO: can probably be replaced by explicit experssion since
-        // sort order can be assumed.
-        self.chunks
-            .binary_search_by(|c| c.contains(indices, self.chunk_shape.as_slice()).reverse())
-            .map(|i| &self.chunks[i])
-            .map_err(|_| anyhow!("could not find chunk"))
+        let idx: Vec<u64> = self
+            .indices
+            .iter()
+            .zip(self.offset.iter())
+            .map(|(i, o)| i + *o)
+            .collect();
+
+        let chunk: &Chunk = self
+            .dataset
+            .chunk_at_coord(&idx)
+            .expect("Moved index out of dataset!");
+
+        let chunk_last = chunk.offset.last().unwrap();
+        let shape_last = self.dataset.chunk_shape.last().unwrap();
+
+        // position in chunk of current offset
+        let chunk_start = idx
+            .iter()
+            .zip(&chunk.offset)
+            .map(|(o, c)| o - c)
+            .zip(&self.chunk_sz)
+            .map(|(d, sz)| d * sz)
+            .sum::<u64>();
+
+        let last = self.offset.last_mut().unwrap();
+
+        // determine how far we can advance the offset along in the current chunk.
+        *last = min(
+            *self.counts.last().unwrap(),
+            chunk_last + shape_last - self.indices.last().unwrap(),
+        );
+
+        // position in chunk of new offset
+        let chunk_end = self
+            .indices
+            .iter()
+            .zip(&self.offset)
+            .map(|(i, o)| i + *o)
+            .zip(&chunk.offset)
+            .map(|(o, c)| o - c)
+            .zip(&self.chunk_sz)
+            .map(|(d, sz)| d * sz)
+            .sum::<u64>();
+
+        Some((chunk, chunk_start, chunk_end))
+    }
+}
+
+pub struct ChunkSlicerCollapsed<'a> {
+    slicer: std::iter::Fuse<ChunkSlicer<'a>>,
+    nxt: Option<(&'a Chunk, u64, u64)>,
+    sz: u64,
+}
+
+impl<'a> ChunkSlicerCollapsed<'a> {
+    pub fn new(slicer: ChunkSlicer<'a>, sz: u64) -> ChunkSlicerCollapsed<'a> {
+        ChunkSlicerCollapsed {
+            slicer: slicer.fuse(),
+            nxt: None,
+            sz,
+        }
+    }
+}
+
+impl<'a> Iterator for ChunkSlicerCollapsed<'a> {
+    type Item = (&'a Chunk, u64, u64);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (ac, ab, mut ae) = self.nxt.or_else(|| self.slicer.next())?;
+
+        self.nxt = None;
+
+        while let Some((bc, bb, be)) = self.slicer.next() {
+            if ac.addr + ae * self.sz == bc.addr + bb * self.sz {
+                // chunk slices are adjacent, extend chunk
+                ae = ae + (be - bb);
+            } else {
+                // we found a jump, set next and emit current slice
+                self.nxt = Some((bc, bb, be));
+                return Some((ac, ab, ae));
+            }
+        }
+        return Some((ac, ab, ae));
     }
 }
 
@@ -309,7 +380,7 @@ mod tests {
         assert_eq!(
             d.chunk_slices(Some(&[0, 0]), Some(&[2, 10]))
                 .collect::<Vec<(&Chunk, u64, u64)>>(),
-            [(&d.chunks[0], 0, 10), (&d.chunks[0], 10, 20)]
+            [(&d.chunks[0], 0, 20)]
         );
 
         assert_eq!(

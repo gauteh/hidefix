@@ -59,7 +59,8 @@ mod uring {
     #[bench]
     fn read_t_float32_idx_rio(b: &mut Bencher) {
         let i = Index::index("tests/data/t_float.h5").unwrap();
-        let mut r = uring::DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
+        let mut r =
+            uring::DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
 
         b.iter(|| r.values::<f32>(None, None).unwrap())
     }
