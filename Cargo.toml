@@ -4,20 +4,19 @@ edition = "2018"
 keywords = ["hdf"]
 license = "LGPL"
 name = "hidefix"
-version = "0.1.0"
 repository = "https://github.com/gauteh/dars"
-
+version = "0.1.0"
 [dependencies]
 anyhow = "1.0.26"
 byte-slice-cast = "0.3.5"
 byteorder = "1.3.2"
+rio = "0.9"
 
 [dependencies.hdf5]
-git = "https://github.com/gauteh/hdf5-rust"
 branch = "hidefix"
+git = "https://github.com/gauteh/hdf5-rust"
 
 [dependencies.hdf5-sys]
-git = "https://github.com/gauteh/hdf5-rust"
-features = [ 'static' ]
 branch = "hidefix"
-
+features = ["static"]
+git = "https://github.com/gauteh/hdf5-rust"
