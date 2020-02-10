@@ -103,40 +103,13 @@ impl Dataset {
 
     /// Find chunk containing coordinate.
     pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
-
-        let ch_sz = self.shape
-            .iter()
-            .zip(&self.chunk_shape)
-            .rev()
-            .map(|(s, ch)| s / ch)
-            .collect::<Vec<_>>();
-
-        let dim_chunk_sz = {
-            let mut d = ch_sz
-                .iter()
-                .scan(1, |p, &c| {
-                    let sz = *p;
-                    *p *= c;
-                    Some(sz)
-                })
-                .collect::<Vec<u64>>();
-            d.reverse();
-            d
-        };
-
-        let offsets = indices
-            .iter()
-            .zip(&self.chunk_shape)
-            .map(|(i, ch)| i / ch)
-            .collect::<Vec<_>>();
-
-        let offset = offsets
-            .iter()
-            .zip(dim_chunk_sz)
-            .map(|(i, sz)| i * sz)
-            .sum::<u64>();
-
-        Ok(&self.chunks[offset as usize])
+        // NOTE: This seems to be faster than the explicit expression
+        // (by factor 3x). Perhaps a less convuluted expression can be
+        // found. See `1e14162:hidefix/src/idx/dataset.rs`.
+        self.chunks
+            .binary_search_by(|c| c.contains(indices, self.chunk_shape.as_slice()).reverse())
+            .map(|i| &self.chunks[i])
+            .map_err(|_| anyhow!("could not find chunk"))
     }
 }
 
