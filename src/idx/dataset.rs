@@ -91,6 +91,10 @@ impl Dataset {
             "out of bounds"
         );
 
+        // NOTE: The collapser adds some overhead (about 1 us on
+        // simple tests. But usually saves it in causing fewer
+        // reads.
+
         ChunkSlicerCollapsed::new(
             ChunkSlicer::new(self, indices, counts),
             self.dtype.size() as u64,
@@ -99,12 +103,40 @@ impl Dataset {
 
     /// Find chunk containing coordinate.
     pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
-        // TODO: can probably be replaced by explicit experssion since
-        // sort order can be assumed.
-        self.chunks
-            .binary_search_by(|c| c.contains(indices, self.chunk_shape.as_slice()).reverse())
-            .map(|i| &self.chunks[i])
-            .map_err(|_| anyhow!("could not find chunk"))
+
+        let ch_sz = self.shape
+            .iter()
+            .zip(&self.chunk_shape)
+            .rev()
+            .map(|(s, ch)| s / ch)
+            .collect::<Vec<_>>();
+
+        let dim_chunk_sz = {
+            let mut d = ch_sz
+                .iter()
+                .scan(1, |p, &c| {
+                    let sz = *p;
+                    *p *= c;
+                    Some(sz)
+                })
+                .collect::<Vec<u64>>();
+            d.reverse();
+            d
+        };
+
+        let offsets = indices
+            .iter()
+            .zip(&self.chunk_shape)
+            .map(|(i, ch)| i / ch)
+            .collect::<Vec<_>>();
+
+        let offset = offsets
+            .iter()
+            .zip(dim_chunk_sz)
+            .map(|(i, sz)| i * sz)
+            .sum::<u64>();
+
+        Ok(&self.chunks[offset as usize])
     }
 }
 
@@ -289,10 +321,10 @@ mod tests {
 
     #[test]
     fn chunk_at_coord() {
-        let d = Dataset {
+        let mut d = Dataset {
             dtype: Datatype::from_type::<f32>().unwrap(),
             order: H5T_order_t::H5T_ORDER_LE,
-            shape: vec![100, 100],
+            shape: vec![20, 20],
             chunk_shape: vec![10, 10],
             chunks: vec![
                 Chunk {
@@ -317,6 +349,8 @@ mod tests {
                 },
             ],
         };
+
+        d.chunks.sort();
 
         assert_eq!(d.chunk_at_coord(&[0, 0]).unwrap().offset, [0, 0]);
         assert_eq!(d.chunk_at_coord(&[0, 5]).unwrap().offset, [0, 0]);
