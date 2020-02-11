@@ -6,6 +6,7 @@ extern crate anyhow;
 
 pub mod idx;
 pub mod reader;
+pub mod stream;
 
 #[cfg(feature = "io_uring")]
 pub mod uring;

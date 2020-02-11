@@ -2,7 +2,11 @@
 extern crate test;
 use test::Bencher;
 
-use hidefix::{idx::Index, reader::DatasetReader};
+use futures::stream::StreamExt;
+use futures_util::pin_mut;
+use tokio::runtime;
+
+use hidefix::{idx::Index, reader::DatasetReader, stream};
 
 #[bench]
 fn read_2d_chunked_idx(b: &mut Bencher) {
@@ -10,6 +14,30 @@ fn read_2d_chunked_idx(b: &mut Bencher) {
     let mut r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
+}
+
+#[bench]
+fn read_2d_chunked_idx_stream(b: &mut Bencher) {
+    let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
+    let r =
+        stream::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+
+    let mut rt = runtime::Runtime::new().unwrap();
+
+    b.iter(|| {
+        let vs: Vec<f32> = rt.block_on(async {
+            let v = r.stream_values::<f32>(None, None);
+            pin_mut!(v);
+            v.map(|v| v.unwrap())
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .flatten()
+                .collect()
+        });
+
+        vs
+    })
 }
 
 #[bench]

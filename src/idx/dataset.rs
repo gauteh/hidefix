@@ -71,6 +71,10 @@ impl Dataset {
         })
     }
 
+    pub fn size(&self) -> usize {
+        self.shape.iter().product::<u64>() as usize
+    }
+
     /// Returns an iterator over chunk, offset and size which if joined will make up the specified slice through the
     /// variable.
     pub fn chunk_slices(
