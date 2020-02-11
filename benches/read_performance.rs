@@ -96,7 +96,23 @@ mod coads {
         let i = Index::index("../data/coads_climatology.nc4").unwrap();
         let mut r = DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 
+        {
+            let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();
+            let d = h.dataset("SST").unwrap();
+
+            assert_eq!(d.read_raw::<f32>().unwrap(),
+                       r.values::<f32>(None, None).unwrap());
+        }
+
         b.iter(|| r.values::<f32>(None, None).unwrap())
+    }
+
+    #[bench]
+    fn idx_bytes(b: &mut Bencher) {
+        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let mut r = DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
+
+        b.iter(|| r.read(None, None).unwrap())
     }
 }
 
