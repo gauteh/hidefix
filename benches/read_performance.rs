@@ -80,6 +80,26 @@ fn read_chunked_1d_nat(b: &mut Bencher) {
     b.iter(|| d.read_raw::<f32>().unwrap())
 }
 
+mod coads {
+    use super::*;
+
+    #[bench]
+    fn native(b: &mut Bencher) {
+        let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();
+        let d = h.dataset("SST").unwrap();
+
+        b.iter(|| d.read_raw::<f32>().unwrap())
+    }
+
+    #[bench]
+    fn idx(b: &mut Bencher) {
+        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let mut r = DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
+
+        b.iter(|| r.values::<f32>(None, None).unwrap())
+    }
+}
+
 #[cfg(feature = "io_uring")]
 mod uring {
     use hidefix::uring;
