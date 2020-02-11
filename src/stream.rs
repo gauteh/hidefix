@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::Read;
 use std::io::Seek;
-use tokio::io::AsyncReadExt;
+// use tokio::io::AsyncReadExt;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 
