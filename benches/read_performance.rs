@@ -2,9 +2,8 @@
 extern crate test;
 use test::Bencher;
 
-use futures::stream::StreamExt;
-use futures_util::pin_mut;
-use tokio::runtime;
+use futures::executor::block_on_stream;
+use futures::pin_mut;
 
 use hidefix::{
     idx::Index,
@@ -26,21 +25,10 @@ fn read_2d_chunked_idx_stream(b: &mut Bencher) {
     let r =
         stream::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
-    let mut rt = runtime::Runtime::new().unwrap();
-
     b.iter(|| {
-        let vs: Vec<f32> = rt.block_on(async {
-            let v = r.stream_values::<f32>(None, None);
-            pin_mut!(v);
-            v.map(|v| v.unwrap())
-                .collect::<Vec<_>>()
-                .await
-                .into_iter()
-                .flatten()
-                .collect()
-        });
-
-        vs
+        let v = r.stream_values::<f32>(None, None);
+        pin_mut!(v);
+        block_on_stream(v).for_each(drop);
     })
 }
 
@@ -119,8 +107,6 @@ mod coads {
     fn stream(b: &mut Bencher) {
         let i = Index::index("../data/coads_climatology.nc4").unwrap();
         let r = stream::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
-
-        use futures::executor::block_on_stream;
 
         {
             let v = r.stream_values::<f32>(None, None);
