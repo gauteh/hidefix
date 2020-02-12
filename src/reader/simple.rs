@@ -4,7 +4,7 @@ use std::path::Path;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 
-use super::idx::Dataset;
+use crate::idx::Dataset;
 
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,

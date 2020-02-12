@@ -1,17 +1,15 @@
 use async_stream::stream;
 use futures::stream::{Stream, StreamExt};
 use futures_util::pin_mut;
-use std::io::SeekFrom;
-use std::path::{Path, PathBuf};
-// use tokio::fs::File;
 use std::fs::File;
 use std::io::Read;
 use std::io::Seek;
-// use tokio::io::AsyncReadExt;
+use std::io::SeekFrom;
+use std::path::{Path, PathBuf};
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 
-use super::idx::Dataset;
+use crate::idx::Dataset;
 
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
@@ -93,21 +91,16 @@ impl<'a> DatasetReader<'a> {
 mod tests {
     use super::*;
     use crate::idx::Index;
+    use futures::executor::block_on_stream;
 
-    #[tokio::test]
-    async fn read_t_float32() {
+    #[test]
+    fn read_t_float32() {
         let i = Index::index("tests/data/t_float.h5").unwrap();
         let r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
         pin_mut!(v);
-        let vs: Vec<f32> = v
-            .map(|v| v.unwrap())
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .flatten()
-            .collect();
+        let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path()).unwrap();
         let hvs = h.dataset("d32_1").unwrap().read_raw::<f32>().unwrap();
@@ -115,20 +108,14 @@ mod tests {
         assert_eq!(vs, hvs);
     }
 
-    #[tokio::test]
-    async fn read_chunked_1d() {
+    #[test]
+    fn read_chunked_1d() {
         let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
         let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
         pin_mut!(v);
-        let vs: Vec<f32> = v
-            .map(|v| v.unwrap())
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .flatten()
-            .collect();
+        let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
@@ -136,20 +123,14 @@ mod tests {
         assert_eq!(vs, hvs);
     }
 
-    #[tokio::test]
-    async fn read_chunked_2d() {
+    #[test]
+    fn read_chunked_2d() {
         let i = Index::index("tests/data/chunked_twoD.h5").unwrap();
         let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
         pin_mut!(v);
-        let vs: Vec<f32> = v
-            .map(|v| v.unwrap())
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .flatten()
-            .collect();
+        let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();

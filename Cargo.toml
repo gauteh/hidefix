@@ -16,10 +16,6 @@ futures-core = "0.3"
 futures-util = "0.3"
 async-stream = "0.2"
 
-[dependencies.tokio]
-features = ["full"]
-version = "0.2"
-
 [dependencies.hdf5]
 branch = "hidefix"
 git = "https://github.com/gauteh/hdf5-rust"
