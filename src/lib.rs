@@ -1,3 +1,4 @@
+#![feature(vec_into_raw_parts)]
 #![feature(test)]
 extern crate test;
 

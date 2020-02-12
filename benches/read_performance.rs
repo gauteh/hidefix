@@ -151,14 +151,21 @@ mod coads {
 
 #[cfg(feature = "io_uring")]
 mod uring {
+    use super::*;
     use hidefix::reader::uring;
 
     #[bench]
     fn read_t_float32_idx_rio(b: &mut Bencher) {
         let i = Index::index("tests/data/t_float.h5").unwrap();
-        let mut r =
-            uring::DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
 
-        b.iter(|| r.values::<f32>(None, None).unwrap())
+        b.iter(|| {
+            let r =
+                uring::DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
+            r.values::<f32>(None, None).unwrap();
+
+            // use std::{thread, time};
+            // let ten_millis = time::Duration::from_millis(1);
+            // thread::sleep(ten_millis);
+        })
     }
 }
