@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod simple;
 pub mod stream;
 

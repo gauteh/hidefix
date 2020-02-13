@@ -7,7 +7,7 @@ use futures::pin_mut;
 
 use hidefix::{
     idx::Index,
-    reader::{simple, stream},
+    reader::{cache, simple, stream},
 };
 
 #[bench]
@@ -15,6 +15,15 @@ fn read_2d_chunked_idx(b: &mut Bencher) {
     let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
     let mut r =
         simple::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+
+    b.iter(|| r.values::<f32>(None, None).unwrap())
+}
+
+#[bench]
+fn read_2d_chunked_cache(b: &mut Bencher) {
+    let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
+    let mut r =
+        cache::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
@@ -89,6 +98,25 @@ mod coads {
         let i = Index::index("../data/coads_climatology.nc4").unwrap();
         let mut r =
             simple::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
+
+        {
+            let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();
+            let d = h.dataset("SST").unwrap();
+
+            assert_eq!(
+                d.read_raw::<f32>().unwrap(),
+                r.values::<f32>(None, None).unwrap()
+            );
+        }
+
+        b.iter(|| r.values::<f32>(None, None).unwrap())
+    }
+
+    #[bench]
+    fn cache(b: &mut Bencher) {
+        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let mut r =
+            cache::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 
         {
             let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();

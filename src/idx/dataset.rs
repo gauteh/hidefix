@@ -254,7 +254,7 @@ impl<'a> Iterator for ChunkSlicerCollapsed<'a> {
         self.nxt = None;
 
         while let Some((bc, bb, be)) = self.slicer.next() {
-            if ac.addr + ae * self.sz == bc.addr + bb * self.sz {
+            if ac.addr == bc.addr && ac.addr + ae * self.sz == bc.addr + bb * self.sz {
                 // chunk slices are adjacent, extend chunk
                 ae = ae + (be - bb);
             } else {
