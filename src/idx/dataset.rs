@@ -12,12 +12,20 @@ pub struct Dataset {
     pub chunks: Vec<Chunk>,
     pub shape: Vec<u64>,
     pub chunk_shape: Vec<u64>,
+    pub shuffle: bool,
+    pub gzip: Option<u8>,
 }
 
 impl Dataset {
     pub fn index(ds: hdf5::Dataset) -> Result<Dataset, anyhow::Error> {
-        if ds.filters().has_filters() {
-            return Err(anyhow!("Filtered or compressed datasets not supported"));
+        let shuffle = ds.filters().get_shuffle();
+        let gzip = ds.filters().get_gzip();
+
+        if ds.filters().get_fletcher32()
+            || ds.filters().get_scale_offset().is_some()
+            || ds.filters().get_szip().is_some()
+        {
+            return Err(anyhow!("Unsupported filter"));
         }
 
         let mut chunks: Vec<Chunk> = match (ds.is_chunked(), ds.offset()) {
@@ -68,6 +76,8 @@ impl Dataset {
             chunks,
             shape,
             chunk_shape,
+            shuffle,
+            gzip,
         })
     }
 
@@ -262,9 +272,8 @@ mod tests {
     use super::*;
     use test::Bencher;
 
-    #[bench]
-    fn chunk_slices_range(b: &mut Bencher) {
-        let d = Dataset {
+    fn test_dataset() -> Dataset {
+        Dataset {
             dtype: Datatype::from_type::<f32>().unwrap(),
             order: H5T_order_t::H5T_ORDER_LE,
             shape: vec![20, 20],
@@ -291,41 +300,21 @@ mod tests {
                     addr: 1200,
                 },
             ],
-        };
+            shuffle: false,
+            gzip: None,
+        }
+    }
+
+    #[bench]
+    fn chunk_slices_range(b: &mut Bencher) {
+        let d = test_dataset();
 
         b.iter(|| d.chunk_slices(None, None).collect::<Vec<_>>());
     }
 
     #[test]
     fn chunk_at_coord() {
-        let mut d = Dataset {
-            dtype: Datatype::from_type::<f32>().unwrap(),
-            order: H5T_order_t::H5T_ORDER_LE,
-            shape: vec![20, 20],
-            chunk_shape: vec![10, 10],
-            chunks: vec![
-                Chunk {
-                    offset: vec![0, 0],
-                    size: 400,
-                    addr: 0,
-                },
-                Chunk {
-                    offset: vec![0, 10],
-                    size: 400,
-                    addr: 400,
-                },
-                Chunk {
-                    offset: vec![10, 0],
-                    size: 400,
-                    addr: 800,
-                },
-                Chunk {
-                    offset: vec![10, 10],
-                    size: 400,
-                    addr: 1200,
-                },
-            ],
-        };
+        let mut d = test_dataset();
 
         d.chunks.sort();
 
@@ -341,34 +330,7 @@ mod tests {
 
     #[test]
     fn chunk_slices() {
-        let d = Dataset {
-            dtype: Datatype::from_type::<f32>().unwrap(),
-            order: H5T_order_t::H5T_ORDER_LE,
-            shape: vec![20, 20],
-            chunk_shape: vec![10, 10],
-            chunks: vec![
-                Chunk {
-                    offset: vec![0, 0],
-                    size: 400,
-                    addr: 0,
-                },
-                Chunk {
-                    offset: vec![0, 10],
-                    size: 400,
-                    addr: 400,
-                },
-                Chunk {
-                    offset: vec![10, 0],
-                    size: 400,
-                    addr: 800,
-                },
-                Chunk {
-                    offset: vec![10, 10],
-                    size: 400,
-                    addr: 1200,
-                },
-            ],
-        };
+        let d = test_dataset();
 
         assert_eq!(
             d.chunk_slices(Some(&[0, 0]), Some(&[1, 10]))
