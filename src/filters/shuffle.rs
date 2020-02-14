@@ -1,4 +1,7 @@
-use byte_slice_cast::{AsByteSlice, AsMutByteSlice, ToByteSlice, ToMutByteSlice};
+use byte_slice_cast::{
+    AsByteSlice, AsMutByteSlice, FromByteVec, IntoByteVec, ToByteSlice, ToMutByteSlice,
+};
+use hdf5::Datatype;
 
 /// Shuffle bytes according to HDF5 spec:
 ///
@@ -61,6 +64,41 @@ where
         for j in 0..sz {
             dest[j * wsz + i] = src[i * sz + j];
         }
+    }
+}
+
+pub fn unshuffle_sized<T>(src: &[T], sz: usize) -> Vec<u8>
+where
+    T: ToByteSlice + FromByteVec + Copy,
+{
+    match sz {
+        1 => {
+            let mut v = Vec::<u8>::with_capacity(src.len());
+            v.copy_from_slice(&src.as_byte_slice());
+            v
+        }
+        2 => {
+            let sz = src.len() * std::mem::size_of::<T>() / 2;
+            let mut d = Vec::<u16>::with_capacity(sz);
+            unsafe { d.set_len(sz) };
+            unshuffle(src, &mut d);
+            d.into_byte_vec()
+        }
+        4 => {
+            let sz = src.len() * std::mem::size_of::<T>() / 4;
+            let mut d = Vec::<u32>::with_capacity(sz);
+            unsafe { d.set_len(sz) };
+            unshuffle(src, &mut d);
+            d.into_byte_vec()
+        }
+        8 => {
+            let sz = src.len() * std::mem::size_of::<T>() / 8;
+            let mut d = Vec::<u64>::with_capacity(sz);
+            unsafe { d.set_len(sz) };
+            unshuffle(src, &mut d);
+            d.into_byte_vec()
+        }
+        _ => unimplemented!(),
     }
 }
 
@@ -133,6 +171,19 @@ mod tests {
         let mut d = vec![0_i32; 1024 * 1024];
 
         b.iter(|| unshuffle(&v, &mut d))
+    }
+
+    #[bench]
+    fn unshuffle_sized_4mb(b: &mut Bencher) {
+        use rand::distributions::Standard;
+        use rand::{thread_rng, Rng};
+
+        let v: Vec<u8> = thread_rng()
+            .sample_iter(Standard)
+            .take(4 * 1024 * 1024)
+            .collect();
+
+        b.iter(|| unshuffle_sized(&v, 4))
     }
 
     #[test]
