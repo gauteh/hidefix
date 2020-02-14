@@ -113,6 +113,22 @@ mod coads {
     }
 
     #[bench]
+    fn chunk_at_coord(b: &mut Bencher) {
+        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let d = i.dataset("SST").unwrap();
+
+        b.iter(|| d.chunk_at_coord(&[5, 15, 40]).unwrap())
+    }
+
+    #[bench]
+    fn chunk_slices_range(b: &mut Bencher) {
+        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let d = i.dataset("SST").unwrap();
+
+        b.iter(|| d.chunk_slices(None, None).for_each(drop));
+    }
+
+    #[bench]
     fn cache(b: &mut Bencher) {
         let i = Index::index("../data/coads_climatology.nc4").unwrap();
         let mut r =

@@ -494,8 +494,8 @@ mod tests {
         b.iter(|| d.chunk_slices(None, None).collect::<Vec<_>>());
     }
 
-    #[test]
-    fn chunk_at_coord() {
+    #[bench]
+    fn chunk_at_coord(b: &mut Bencher) {
         let mut d = test_dataset();
 
         d.chunks.sort();
@@ -510,6 +510,8 @@ mod tests {
         assert_eq!(d.chunk_at_coord(&[10, 0]).unwrap().offset, [10, 0]);
         assert_eq!(d.chunk_at_coord(&[10, 1]).unwrap().offset, [10, 0]);
         assert_eq!(d.chunk_at_coord(&[15, 1]).unwrap().offset, [10, 0]);
+
+        b.iter(|| test::black_box(d.chunk_at_coord(&[15, 1]).unwrap()))
     }
 
     #[test]
