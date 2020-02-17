@@ -7,6 +7,7 @@ use byte_slice_cast::{FromByteVec, IntoVecOf};
 
 use crate::idx::{Chunk, Dataset};
 use crate::filters;
+use crate::filters::byteorder::{Order, ToNative};
 
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
@@ -49,10 +50,8 @@ impl<'a> DatasetReader<'a> {
             let slice_sz = end - start;
 
             if let Some(cache) = self.cache.get(c) {
-                // println!("cache: {} start: {} -> end: {}", c.addr, start, end);
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
-                // println!("read: {} start: {} -> end: {} (sz: {})", c.addr, start, end, c.size);
                 let mut cache: Vec<u8> = Vec::with_capacity(c.size as usize);
                 unsafe {
                     cache.set_len(c.size as usize);
@@ -84,11 +83,23 @@ impl<'a> DatasetReader<'a> {
     ) -> Result<Vec<T>, anyhow::Error>
     where
         T: FromByteVec,
+        [T]: ToNative
     {
-        // TODO: BE, LE conversion
         // TODO: use as_slice_of() to avoid copy, or possible values_to(&mut buf) so that
         //       caller keeps ownership of slice too.
-        Ok(self.read(indices, counts)?.into_vec_of::<T>()?)
+
+        let mut values = self.read(indices, counts)?.into_vec_of::<T>()?;
+
+        use hdf5_sys::h5t::H5T_order_t::*;
+        let order: Order = match self.ds.order {
+            H5T_ORDER_BE => Order::BE,
+            H5T_ORDER_LE => Order::LE,
+            _ => unimplemented!()
+        };
+
+        values.to_native(order);
+
+        Ok(values)
     }
 }
 
@@ -144,9 +155,7 @@ mod tests {
         let mut r =
             DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path()).unwrap();
 
-        let mut vs = r.values::<f32>(None, None).unwrap();
-        use byteorder::{BigEndian, LittleEndian, ByteOrder};
-        LittleEndian::from_slice_f32(&mut vs);
+        let vs = r.values::<f32>(None, None).unwrap();
 
         let h = hdf5::File::open(i.path()).unwrap();
         let hvs = h.dataset("d_4_shuffled_chunks").unwrap().read_raw::<f32>().unwrap();
