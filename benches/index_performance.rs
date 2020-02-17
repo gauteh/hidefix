@@ -17,6 +17,9 @@ mod coads {
         let i = Index::index("../data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
 
+        println!("slices: {}",
+            d.chunk_slices(None, None).collect::<Vec<_>>().len());
+
         b.iter(|| d.chunk_slices(None, None).for_each(drop))
     }
 }
