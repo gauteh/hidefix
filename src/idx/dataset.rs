@@ -1,5 +1,6 @@
 use std::cmp::min;
 use itertools::izip;
+use smallvec::{smallvec, SmallVec};
 
 use super::chunk::Chunk;
 
@@ -146,9 +147,9 @@ impl Dataset {
     //         .map_err(|_| anyhow!("could not find chunk"))
     // }
 
-    fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
+    pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
         // scale coordinates
-        let mut scaled = Vec::with_capacity(indices.len());
+        let mut scaled = SmallVec::<[u64; 4]>::with_capacity(indices.len());
         unsafe { scaled.set_len(indices.len()); }
 
         for (s, i, csz) in izip!(&mut scaled, indices, &self.chunk_shape) {
@@ -262,18 +263,20 @@ impl<'a> Iterator for ChunkSlicer<'a> {
     }
 }
 
+const COORD_SZ: usize = 4;
+
 pub struct ChunkSlicer2<'a> {
     dataset: &'a Dataset,
     offset: u64,
-    offset_coords: Vec<u64>,
+    offset_coords: SmallVec<[u64; COORD_SZ]>,
     start: u64,
-    start_coords: Vec<u64>,
-    indices: Vec<u64>,
-    counts: Vec<u64>,
+    start_coords: SmallVec<[u64; COORD_SZ]>,
+    indices: SmallVec<[u64; COORD_SZ]>,
+    counts: SmallVec<[u64; COORD_SZ]>,
     end: u64,
-    chunk_sz: Vec<u64>,
-    dim_sz: Vec<u64>,
-    slice_sz: Vec<u64>
+    chunk_sz: SmallVec<[u64; COORD_SZ]>,
+    // dim_sz: Vec<u64>,
+    slice_sz: SmallVec<[u64; COORD_SZ]>
 }
 
 impl<'a> ChunkSlicer2<'a> {
@@ -289,7 +292,7 @@ impl<'a> ChunkSlicer2<'a> {
                     *p *= c;
                     Some(sz)
                 })
-                .collect::<Vec<u64>>();
+                .collect::<SmallVec<[u64; COORD_SZ]>>();
             d.reverse();
             d
         };
@@ -304,7 +307,7 @@ impl<'a> ChunkSlicer2<'a> {
                     *p *= c;
                     Some(sz)
                 })
-                .collect::<Vec<u64>>();
+                .collect::<SmallVec<[u64; COORD_SZ]>>();
             d.reverse();
             d
         };
@@ -320,7 +323,7 @@ impl<'a> ChunkSlicer2<'a> {
                     *p *= c;
                     Some(sz)
                 })
-                .collect::<Vec<u64>>();
+                .collect::<SmallVec<[u64; COORD_SZ]>>();
             d.reverse();
             d
         };
@@ -330,14 +333,14 @@ impl<'a> ChunkSlicer2<'a> {
         ChunkSlicer2 {
             dataset,
             offset: 0,
-            offset_coords: vec![0; indices.len()],
+            offset_coords: smallvec![0; indices.len()],
             start: Self::offset_at_coords(&dim_sz, &indices),
-            start_coords: indices.clone(),
-            indices: indices,
-            counts,
+            start_coords: SmallVec::from_slice(&indices),
+            indices: SmallVec::from_vec(indices),
+            counts: SmallVec::from_vec(counts),
             end,
             chunk_sz,
-            dim_sz,
+            // dim_sz,
             slice_sz
         }
     }
