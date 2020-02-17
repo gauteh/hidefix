@@ -7,6 +7,10 @@ use super::chunk::Chunk;
 use hdf5::Datatype;
 use hdf5_sys::h5t::H5T_order_t;
 
+/// Size of coordinate vectors used which do not require allocations. Slicing variables with
+/// greater dimensions than this will be slower.
+const COORD_SZ: usize = 4;
+
 #[derive(Debug)]
 pub struct Dataset {
     pub dtype: Datatype,
@@ -149,7 +153,7 @@ impl Dataset {
 
     pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
         // scale coordinates
-        let mut scaled = SmallVec::<[u64; 4]>::with_capacity(indices.len());
+        let mut scaled = SmallVec::<[u64; COORD_SZ]>::with_capacity(indices.len());
         unsafe { scaled.set_len(indices.len()); }
 
         for (s, i, csz) in izip!(&mut scaled, indices, &self.chunk_shape) {
@@ -160,110 +164,6 @@ impl Dataset {
         Ok(&self.chunks[scaled_offset as usize])
     }
 }
-
-pub struct ChunkSlicer<'a> {
-    indices: Vec<u64>,
-    counts: Vec<u64>,
-    offset: Vec<u64>,
-    dataset: &'a Dataset,
-    chunk_sz: Vec<u64>,
-}
-
-impl<'a> ChunkSlicer<'a> {
-    pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer<'a> {
-        // size of chunk dimensions
-        let chunk_sz = {
-            let mut d = dataset
-                .chunk_shape
-                .iter()
-                .rev()
-                .scan(1, |p, &c| {
-                    let sz = *p;
-                    *p *= c;
-                    Some(sz)
-                })
-                .collect::<Vec<u64>>();
-            d.reverse();
-            d
-        };
-
-        let offset = vec![0; indices.len()];
-
-        ChunkSlicer {
-            indices,
-            counts,
-            offset,
-            dataset,
-            chunk_sz,
-        }
-    }
-}
-
-impl<'a> Iterator for ChunkSlicer<'a> {
-    type Item = (&'a Chunk, u64, u64);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // advance offset
-        let mut carry = 0;
-        for (o, c) in self.offset.iter_mut().zip(&self.counts).rev() {
-            *o += carry;
-            carry = *o / c;
-            *o %= c;
-        }
-
-        if carry > 0 {
-            return None;
-        }
-
-        let idx: Vec<u64> = self
-            .indices
-            .iter()
-            .zip(self.offset.iter())
-            .map(|(i, o)| i + *o)
-            .collect();
-
-        let chunk: &Chunk = self
-            .dataset
-            .chunk_at_coord(&idx)
-            .expect("Moved index out of dataset!");
-
-        let chunk_last = chunk.offset.last().unwrap();
-        let shape_last = self.dataset.chunk_shape.last().unwrap();
-
-        // position in chunk of current offset
-        let chunk_start = idx
-            .iter()
-            .zip(&chunk.offset)
-            .map(|(o, c)| o - c)
-            .zip(&self.chunk_sz)
-            .map(|(d, sz)| d * sz)
-            .sum::<u64>();
-
-        let last = self.offset.last_mut().unwrap();
-
-        // determine how far we can advance the offset along in the current chunk.
-        *last = min(
-            *self.counts.last().unwrap(),
-            chunk_last + shape_last - self.indices.last().unwrap(),
-        );
-
-        // position in chunk of new offset
-        let chunk_end = self
-            .indices
-            .iter()
-            .zip(&self.offset)
-            .map(|(i, o)| i + *o)
-            .zip(&chunk.offset)
-            .map(|(o, c)| o - c)
-            .zip(&self.chunk_sz)
-            .map(|(d, sz)| d * sz)
-            .sum::<u64>();
-
-        Some((chunk, chunk_start, chunk_end))
-    }
-}
-
-const COORD_SZ: usize = 4;
 
 pub struct ChunkSlicer2<'a> {
     dataset: &'a Dataset,
