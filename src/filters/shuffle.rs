@@ -72,6 +72,7 @@ where
 {
     match sz {
         1 => {
+            // noop
             let mut v = Vec::<u8>::with_capacity(src.len());
             v.copy_from_slice(&src.as_byte_slice());
             v

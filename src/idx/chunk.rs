@@ -11,6 +11,8 @@ use std::hash::{Hash, Hasher};
 pub struct Chunk {
     pub addr: u64,
     pub offset: Vec<u64>,
+
+    /// Chunk size in bytes (storage size)
     pub size: u64,
 }
 

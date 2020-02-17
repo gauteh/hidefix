@@ -6,6 +6,7 @@ use std::path::Path;
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 
 use crate::idx::{Chunk, Dataset};
+use crate::filters;
 
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
@@ -52,19 +53,19 @@ impl<'a> DatasetReader<'a> {
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
                 // println!("read: {} start: {} -> end: {} (sz: {})", c.addr, start, end, c.size);
-                let mut cache: Vec<u8> = Vec::with_capacity((c.size * dsz) as usize);
+                let mut cache: Vec<u8> = Vec::with_capacity(c.size as usize);
                 unsafe {
-                    cache.set_len((c.size * dsz) as usize);
+                    cache.set_len(c.size as usize);
                 }
 
-                let mut cache = if self.ds.shuffle {
+                self.fd.seek(SeekFrom::Start(c.addr))?;
+                self.fd.read_exact(&mut cache)?;
+
+                let cache = if self.ds.shuffle {
                     filters::shuffle::unshuffle_sized(&cache, dsz as usize)
                 } else {
                     cache
                 };
-
-                self.fd.seek(SeekFrom::Start(c.addr))?;
-                self.fd.read_exact(&mut cache); // TODO: handle error
 
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
                 self.cache.insert(c.clone(), cache);
@@ -145,10 +146,10 @@ mod tests {
 
         let mut vs = r.values::<f32>(None, None).unwrap();
         use byteorder::{BigEndian, LittleEndian, ByteOrder};
-        BigEndian::from_slice_f32(&mut vs);
+        LittleEndian::from_slice_f32(&mut vs);
 
         let h = hdf5::File::open(i.path()).unwrap();
-        let mut hvs = h.dataset("d_4_shuffled_chunks").unwrap().read_raw::<f32>().unwrap();
+        let hvs = h.dataset("d_4_shuffled_chunks").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
     }
