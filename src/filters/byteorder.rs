@@ -1,8 +1,7 @@
 pub enum Order {
     BE,
-    LE
+    LE,
 }
-
 
 pub trait ToNative {
     /// `order` is the original order of the bytes.
@@ -58,28 +57,45 @@ impl ToBigEndian for [u8] {
     fn to_big_e(&mut self, _order: Order) {}
 }
 
-impl<T> ToNative for [T] where T: Swap {
+impl<T> ToNative for [T]
+where
+    T: Swap,
+{
     fn to_native(&mut self, order: Order) {
         if cfg!(target_endian = "big") {
             match order {
                 Order::BE => (),
-                Order::LE => for n in self { *n = n.swap() }
+                Order::LE => {
+                    for n in self {
+                        *n = n.swap()
+                    }
+                }
             }
         } else {
             match order {
-                Order::BE => for n in self { *n = n.swap() },
+                Order::BE => {
+                    for n in self {
+                        *n = n.swap()
+                    }
+                }
                 Order::LE => (),
             }
         }
     }
 }
 
-impl<T> ToBigEndian for [T] where T: Swap {
+impl<T> ToBigEndian for [T]
+where
+    T: Swap,
+{
     fn to_big_e(&mut self, order: Order) {
         match order {
             Order::BE => (),
-            Order::LE => for n in self { *n = n.swap() }
+            Order::LE => {
+                for n in self {
+                    *n = n.swap()
+                }
+            }
         }
     }
 }
-

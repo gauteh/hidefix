@@ -5,9 +5,9 @@ use std::path::Path;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 
-use crate::idx::{Chunk, Dataset};
 use crate::filters;
 use crate::filters::byteorder::{Order, ToNative};
+use crate::idx::{Chunk, Dataset};
 
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
@@ -83,7 +83,7 @@ impl<'a> DatasetReader<'a> {
     ) -> Result<Vec<T>, anyhow::Error>
     where
         T: FromByteVec,
-        [T]: ToNative
+        [T]: ToNative,
     {
         // TODO: use as_slice_of() to avoid copy, or possible values_to(&mut buf) so that
         //       caller keeps ownership of slice too.
@@ -94,7 +94,7 @@ impl<'a> DatasetReader<'a> {
         let order: Order = match self.ds.order {
             H5T_ORDER_BE => Order::BE,
             H5T_ORDER_LE => Order::LE,
-            _ => unimplemented!()
+            _ => unimplemented!(),
         };
 
         values.to_native(order);
@@ -153,12 +153,17 @@ mod tests {
     fn read_chunked_shuffled_2d() {
         let i = Index::index("tests/data/dmrpp/chunked/chunked_shuffled_twoD.h5").unwrap();
         let mut r =
-            DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path()).unwrap();
+            DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path())
+                .unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
         let h = hdf5::File::open(i.path()).unwrap();
-        let hvs = h.dataset("d_4_shuffled_chunks").unwrap().read_raw::<f32>().unwrap();
+        let hvs = h
+            .dataset("d_4_shuffled_chunks")
+            .unwrap()
+            .read_raw::<f32>()
+            .unwrap();
 
         assert_eq!(vs, hvs);
     }

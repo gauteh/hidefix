@@ -1,2 +1,2 @@
-pub mod shuffle;
 pub mod byteorder;
+pub mod shuffle;

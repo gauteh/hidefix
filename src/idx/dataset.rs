@@ -1,6 +1,6 @@
-use std::cmp::min;
 use itertools::izip;
 use smallvec::{smallvec, SmallVec};
+use std::cmp::min;
 
 use super::chunk::Chunk;
 
@@ -111,7 +111,6 @@ impl Dataset {
             d
         };
 
-
         // size of chunk dimensions
         let chunk_dim_sz = {
             let mut d = chunk_shape
@@ -165,58 +164,55 @@ impl Dataset {
             "out of bounds"
         );
 
-        // NOTE: The collapser adds some overhead (about 1 us on
-        // simple tests. But usually saves it in causing fewer
-        // reads.
-
-        ChunkSlicerCollapsed::new(
-            ChunkSlicer2::new(self, indices, counts),
-            self.dtype.size() as u64,
-        )
+        ChunkSlicer::new(self, indices, counts)
     }
 
     pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
         // scale coordinates
         let mut scaled = SmallVec::<[u64; COORD_SZ]>::with_capacity(indices.len());
-        unsafe { scaled.set_len(indices.len()); }
+        unsafe {
+            scaled.set_len(indices.len());
+        }
 
         for (s, i, csz) in izip!(&mut scaled, indices, &self.chunk_shape) {
             *s = i / csz;
         }
 
-        let scaled_offset = scaled.iter().zip(&self.scaled_dim_sz).map(|(c, sz)| c * sz).sum::<u64>();
+        let scaled_offset = scaled
+            .iter()
+            .zip(&self.scaled_dim_sz)
+            .map(|(c, sz)| c * sz)
+            .sum::<u64>();
         Ok(&self.chunks[scaled_offset as usize])
     }
 }
 
-pub struct ChunkSlicer2<'a> {
+pub struct ChunkSlicer<'a> {
     dataset: &'a Dataset,
     offset: u64,
     offset_coords: SmallVec<[u64; COORD_SZ]>,
-    start: u64,
     start_coords: SmallVec<[u64; COORD_SZ]>,
     indices: SmallVec<[u64; COORD_SZ]>,
     counts: SmallVec<[u64; COORD_SZ]>,
     end: u64,
-    slice_sz: SmallVec<[u64; COORD_SZ]>
+    slice_sz: SmallVec<[u64; COORD_SZ]>,
 }
 
-impl<'a> ChunkSlicer2<'a> {
-    pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer2<'a> {
+impl<'a> ChunkSlicer<'a> {
+    pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer<'a> {
         // size of slice dimensions
         let slice_sz = Self::dim_sz(&counts);
         let end = counts.iter().product::<u64>();
 
-        ChunkSlicer2 {
+        ChunkSlicer {
             dataset,
             offset: 0,
             offset_coords: smallvec![0; indices.len()],
-            start: Self::offset_at_coords(&dataset.dim_sz, &indices),
             start_coords: SmallVec::from_slice(&indices),
             indices: SmallVec::from_vec(indices),
             counts: SmallVec::from_vec(counts),
             end,
-            slice_sz
+            slice_sz,
         }
     }
 
@@ -256,18 +252,12 @@ impl<'a> ChunkSlicer2<'a> {
     }
 }
 
-impl<'a> Iterator for ChunkSlicer2<'a> {
+impl<'a> Iterator for ChunkSlicer<'a> {
     type Item = (&'a Chunk, u64, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset >= self.end {
             return None;
-        }
-
-        Self::coords_at_offset(self.offset, &self.slice_sz, &mut self.offset_coords);
-
-        for (i, o, s) in izip!(&self.indices, &self.offset_coords, &mut self.start_coords) {
-            *s = *i + *o;
         }
 
         let chunk: &Chunk = self
@@ -282,20 +272,50 @@ impl<'a> Iterator for ChunkSlicer2<'a> {
         let chunk_start = Self::chunk_start(
             &self.start_coords,
             &chunk.offset,
-            &self.dataset.chunk_dim_sz);
-
-        // position in last dimension of offset
-        let old_last = *self.offset_coords.last().unwrap();
-
-        // determine how far we can advance the offset along in the current chunk.
-        *self.offset_coords.last_mut().unwrap() = min(
-            *self.counts.last().unwrap(),
-            chunk_last + shape_last - self.indices.last().unwrap(),
+            &self.dataset.chunk_dim_sz,
         );
 
-        let advanced = self.offset_coords.last().unwrap() - old_last;
-        self.offset += advanced;
-        self.start += advanced;
+        debug_assert!(
+            chunk.contains(&self.start_coords, &self.dataset.chunk_shape)
+                == std::cmp::Ordering::Equal
+        );
+
+        let mut advanced = 0;
+
+        // we can advance in the last dimension, and any dimensions within the chunk
+        // that overlap completely with the slice.
+
+        // determine how far we can advance the offset along in the current chunk.
+        while self.offset < self.end
+            && chunk.contains(&self.start_coords, &self.dataset.chunk_shape)
+            == std::cmp::Ordering::Equal
+            && (Self::chunk_start(
+                &self.start_coords,
+                &chunk.offset,
+                &self.dataset.chunk_dim_sz,
+            ) - chunk_start)
+                == advanced
+        {
+            // position in last dimension of offset
+            let old_last = *self.offset_coords.last().unwrap();
+
+            *self.offset_coords.last_mut().unwrap() = min(
+                *self.counts.last().unwrap(),
+                chunk_last + shape_last - self.indices.last().unwrap(),
+            );
+
+            let diff = self.offset_coords.last().unwrap() - old_last;
+            self.offset += diff;
+            advanced += diff;
+
+            debug_assert!(diff > 0);
+
+            Self::coords_at_offset(self.offset, &self.slice_sz, &mut self.offset_coords);
+
+            for (i, o, s) in izip!(&self.indices, &self.offset_coords, &mut self.start_coords) {
+                *s = *i + *o;
+            }
+        }
 
         debug_assert!(advanced > 0);
 
@@ -305,44 +325,6 @@ impl<'a> Iterator for ChunkSlicer2<'a> {
         debug_assert!(chunk_end > chunk_start);
 
         Some((chunk, chunk_start, chunk_end))
-    }
-}
-
-pub struct ChunkSlicerCollapsed<'a> {
-    slicer: std::iter::Fuse<ChunkSlicer2<'a>>,
-    nxt: Option<(&'a Chunk, u64, u64)>,
-    sz: u64,
-}
-
-impl<'a> ChunkSlicerCollapsed<'a> {
-    pub fn new(slicer: ChunkSlicer2<'a>, sz: u64) -> ChunkSlicerCollapsed<'a> {
-        ChunkSlicerCollapsed {
-            slicer: slicer.fuse(),
-            nxt: None,
-            sz,
-        }
-    }
-}
-
-impl<'a> Iterator for ChunkSlicerCollapsed<'a> {
-    type Item = (&'a Chunk, u64, u64);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let (ac, ab, mut ae) = self.nxt.or_else(|| self.slicer.next())?;
-
-        self.nxt = None;
-
-        while let Some((bc, bb, be)) = self.slicer.next() {
-            if ac.addr == bc.addr && ac.addr + ae * self.sz == bc.addr + bb * self.sz {
-                // chunk slices are adjacent, extend chunk
-                ae = ae + (be - bb);
-            } else {
-                // we found a jump, set next and emit current slice
-                self.nxt = Some((bc, bb, be));
-                return Some((ac, ab, ae));
-            }
-        }
-        return Some((ac, ab, ae));
     }
 }
 
@@ -423,21 +405,21 @@ mod tests {
 
     #[bench]
     fn offset_at_coords(b: &mut Bencher) {
-        let dim_sz = vec![30*40, 30, 1];
+        let dim_sz = vec![30 * 40, 30, 1];
 
         let coords = vec![10, 10, 10];
 
-        b.iter(|| test::black_box(ChunkSlicer2::offset_at_coords(&dim_sz, &coords)))
+        b.iter(|| test::black_box(ChunkSlicer::offset_at_coords(&dim_sz, &coords)))
     }
 
     #[bench]
     fn coords_at_offset(b: &mut Bencher) {
-        let dim_sz = vec![30*40, 30, 1];
+        let dim_sz = vec![30 * 40, 30, 1];
 
         let mut coords = vec![10, 10, 10];
-        let offset = 30*10 + 40*10 + 10;
+        let offset = 30 * 10 + 40 * 10 + 10;
 
-        b.iter(|| test::black_box(ChunkSlicer2::coords_at_offset(offset, &dim_sz, &mut coords)))
+        b.iter(|| test::black_box(ChunkSlicer::coords_at_offset(offset, &dim_sz, &mut coords)))
     }
 
     #[bench]
@@ -446,18 +428,18 @@ mod tests {
         let coords = vec![20, 10];
         let ch_offset = vec![20, 10];
 
-        b.iter(|| test::black_box(ChunkSlicer2::chunk_start(&coords, &ch_offset, &dim_sz)))
+        b.iter(|| test::black_box(ChunkSlicer::chunk_start(&coords, &ch_offset, &dim_sz)))
     }
 
     #[bench]
     fn dim_sz(b: &mut Bencher) {
         let counts = vec![12, 180, 90];
 
-        b.iter(|| test::black_box(ChunkSlicer2::dim_sz(&counts)))
+        b.iter(|| test::black_box(ChunkSlicer::dim_sz(&counts)))
     }
 
     #[test]
-    fn chunk_slices() {
+    fn chunk_slices_scenarios() {
         let d = test_dataset();
 
         assert_eq!(
@@ -528,6 +510,29 @@ mod tests {
                 (&d.chunks[0], 45, 46),
                 (&d.chunks[0], 55, 56),
             ]
+        );
+
+        assert_eq!(
+            d.chunk_slices(Some(&[2, 15]), Some(&[4, 1]))
+                .collect::<Vec<(&Chunk, u64, u64)>>(),
+            [
+                (&d.chunks[1], 25, 26),
+                (&d.chunks[1], 35, 36),
+                (&d.chunks[1], 45, 46),
+                (&d.chunks[1], 55, 56),
+            ]
+        );
+    }
+
+    #[test]
+    fn coads_slice_all() {
+        use crate::idx::Index;
+        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let d = i.dataset("SST").unwrap();
+
+        println!(
+            "slices: {}",
+            d.chunk_slices(None, None).collect::<Vec<_>>().len()
         );
     }
 }
