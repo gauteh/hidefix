@@ -204,20 +204,7 @@ pub struct ChunkSlicer2<'a> {
 impl<'a> ChunkSlicer2<'a> {
     pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer2<'a> {
         // size of slice dimensions
-        let slice_sz = {
-            let mut d = counts
-                .iter()
-                .rev()
-                .scan(1, |p, &c| {
-                    let sz = *p;
-                    *p *= c;
-                    Some(sz)
-                })
-                .collect::<SmallVec<[u64; COORD_SZ]>>();
-            d.reverse();
-            d
-        };
-
+        let slice_sz = Self::dim_sz(&counts);
         let end = counts.iter().product::<u64>();
 
         ChunkSlicer2 {
@@ -233,6 +220,20 @@ impl<'a> ChunkSlicer2<'a> {
         }
     }
 
+    fn dim_sz(dims: &[u64]) -> SmallVec<[u64; COORD_SZ]> {
+        let mut d = dims
+            .iter()
+            .rev()
+            .scan(1, |p, &c| {
+                let sz = *p;
+                *p *= c;
+                Some(sz)
+            })
+            .collect::<SmallVec<[u64; COORD_SZ]>>();
+        d.reverse();
+        d
+    }
+
     fn offset_at_coords(dim_sz: &[u64], coords: &[u64]) -> u64 {
         coords.iter().zip(dim_sz).map(|(i, z)| i * z).sum::<u64>()
     }
@@ -244,6 +245,15 @@ impl<'a> ChunkSlicer2<'a> {
         }
     }
 
+    fn chunk_start(coords: &[u64], chunk_offset: &[u64], dim_sz: &[u64]) -> u64 {
+        coords
+            .iter()
+            .zip(chunk_offset)
+            .map(|(o, c)| o - c)
+            .zip(dim_sz)
+            .map(|(d, sz)| d * sz)
+            .sum::<u64>()
+    }
 }
 
 impl<'a> Iterator for ChunkSlicer2<'a> {
@@ -269,13 +279,10 @@ impl<'a> Iterator for ChunkSlicer2<'a> {
         let shape_last = self.dataset.chunk_shape.last().unwrap();
 
         // position in chunk of current offset
-        let chunk_start = self.start_coords
-            .iter()
-            .zip(&chunk.offset)
-            .map(|(o, c)| o - c)
-            .zip(&self.dataset.chunk_dim_sz)
-            .map(|(d, sz)| d * sz)
-            .sum::<u64>();
+        let chunk_start = Self::chunk_start(
+            &self.start_coords,
+            &chunk.offset,
+            &self.dataset.chunk_dim_sz);
 
         // position in last dimension of offset
         let old_last = *self.offset_coords.last().unwrap();
@@ -384,7 +391,14 @@ mod tests {
     fn chunk_slices_range(b: &mut Bencher) {
         let d = test_dataset();
 
-        b.iter(|| d.chunk_slices(None, None).collect::<Vec<_>>());
+        b.iter(|| d.chunk_slices(None, None).for_each(drop));
+    }
+
+    #[bench]
+    fn make_chunk_slices_iterator(b: &mut Bencher) {
+        let d = test_dataset();
+
+        b.iter(|| test::black_box(d.chunk_slices(None, None)))
     }
 
     #[bench]
@@ -424,6 +438,22 @@ mod tests {
         let offset = 30*10 + 40*10 + 10;
 
         b.iter(|| test::black_box(ChunkSlicer2::coords_at_offset(offset, &dim_sz, &mut coords)))
+    }
+
+    #[bench]
+    fn chunk_start(b: &mut Bencher) {
+        let dim_sz = vec![10, 1];
+        let coords = vec![20, 10];
+        let ch_offset = vec![20, 10];
+
+        b.iter(|| test::black_box(ChunkSlicer2::chunk_start(&coords, &ch_offset, &dim_sz)))
+    }
+
+    #[bench]
+    fn dim_sz(b: &mut Bencher) {
+        let counts = vec![12, 180, 90];
+
+        b.iter(|| test::black_box(ChunkSlicer2::dim_sz(&counts)))
     }
 
     #[test]
