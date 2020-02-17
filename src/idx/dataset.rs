@@ -19,6 +19,8 @@ pub struct Dataset {
     pub shape: Vec<u64>,
     pub chunk_shape: Vec<u64>,
     scaled_dim_sz: Vec<u64>,
+    dim_sz: Vec<u64>,
+    chunk_dim_sz: Vec<u64>,
     pub shuffle: bool,
     pub gzip: Option<u8>,
 }
@@ -94,6 +96,37 @@ impl Dataset {
             d
         };
 
+        // size of dataset dimensions
+        let dim_sz = {
+            let mut d = shape
+                .iter()
+                .rev()
+                .scan(1, |p, &c| {
+                    let sz = *p;
+                    *p *= c;
+                    Some(sz)
+                })
+                .collect::<Vec<u64>>();
+            d.reverse();
+            d
+        };
+
+
+        // size of chunk dimensions
+        let chunk_dim_sz = {
+            let mut d = chunk_shape
+                .iter()
+                .rev()
+                .scan(1, |p, &c| {
+                    let sz = *p;
+                    *p *= c;
+                    Some(sz)
+                })
+                .collect::<Vec<u64>>();
+            d.reverse();
+            d
+        };
+
         Ok(Dataset {
             dtype,
             order,
@@ -101,6 +134,8 @@ impl Dataset {
             shape,
             chunk_shape,
             scaled_dim_sz,
+            dim_sz,
+            chunk_dim_sz,
             shuffle,
             gzip,
         })
@@ -140,17 +175,6 @@ impl Dataset {
         )
     }
 
-    /// Find chunk containing coordinate.
-    // pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
-    //     // NOTE: This seems to be faster than the explicit expression
-    //     // (by factor 3x). Perhaps a less convuluted expression can be
-    //     // found. See `1e14162:hidefix/src/idx/dataset.rs`.
-    //     self.chunks
-    //         .binary_search_by(|c| c.contains(indices, self.chunk_shape.as_slice()).reverse())
-    //         .map(|i| &self.chunks[i])
-    //         .map_err(|_| anyhow!("could not find chunk"))
-    // }
-
     pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
         // scale coordinates
         let mut scaled = SmallVec::<[u64; COORD_SZ]>::with_capacity(indices.len());
@@ -174,48 +198,14 @@ pub struct ChunkSlicer2<'a> {
     indices: SmallVec<[u64; COORD_SZ]>,
     counts: SmallVec<[u64; COORD_SZ]>,
     end: u64,
-    chunk_sz: SmallVec<[u64; COORD_SZ]>,
-    // dim_sz: Vec<u64>,
     slice_sz: SmallVec<[u64; COORD_SZ]>
 }
 
 impl<'a> ChunkSlicer2<'a> {
     pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer2<'a> {
-        // size of dataset dimensions
-        let dim_sz = {
-            let mut d = dataset
-                .shape
-                .iter()
-                .rev()
-                .scan(1, |p, &c| {
-                    let sz = *p;
-                    *p *= c;
-                    Some(sz)
-                })
-                .collect::<SmallVec<[u64; COORD_SZ]>>();
-            d.reverse();
-            d
-        };
-
         // size of slice dimensions
         let slice_sz = {
             let mut d = counts
-                .iter()
-                .rev()
-                .scan(1, |p, &c| {
-                    let sz = *p;
-                    *p *= c;
-                    Some(sz)
-                })
-                .collect::<SmallVec<[u64; COORD_SZ]>>();
-            d.reverse();
-            d
-        };
-
-        // size of chunk dimensions
-        let chunk_sz = {
-            let mut d = dataset
-                .chunk_shape
                 .iter()
                 .rev()
                 .scan(1, |p, &c| {
@@ -234,13 +224,11 @@ impl<'a> ChunkSlicer2<'a> {
             dataset,
             offset: 0,
             offset_coords: smallvec![0; indices.len()],
-            start: Self::offset_at_coords(&dim_sz, &indices),
+            start: Self::offset_at_coords(&dataset.dim_sz, &indices),
             start_coords: SmallVec::from_slice(&indices),
             indices: SmallVec::from_vec(indices),
             counts: SmallVec::from_vec(counts),
             end,
-            chunk_sz,
-            // dim_sz,
             slice_sz
         }
     }
@@ -285,7 +273,7 @@ impl<'a> Iterator for ChunkSlicer2<'a> {
             .iter()
             .zip(&chunk.offset)
             .map(|(o, c)| o - c)
-            .zip(&self.chunk_sz)
+            .zip(&self.dataset.chunk_dim_sz)
             .map(|(d, sz)| d * sz)
             .sum::<u64>();
 
@@ -363,6 +351,8 @@ mod tests {
             shape: vec![20, 20],
             chunk_shape: vec![10, 10],
             scaled_dim_sz: vec![2, 1],
+            dim_sz: vec![20, 1],
+            chunk_dim_sz: vec![10, 1],
             chunks: vec![
                 Chunk {
                     offset: vec![0, 0],
@@ -415,6 +405,25 @@ mod tests {
         assert_eq!(d.chunk_at_coord(&[15, 1]).unwrap().offset, [10, 0]);
 
         b.iter(|| test::black_box(d.chunk_at_coord(&[15, 1]).unwrap()))
+    }
+
+    #[bench]
+    fn offset_at_coords(b: &mut Bencher) {
+        let dim_sz = vec![30*40, 30, 1];
+
+        let coords = vec![10, 10, 10];
+
+        b.iter(|| test::black_box(ChunkSlicer2::offset_at_coords(&dim_sz, &coords)))
+    }
+
+    #[bench]
+    fn coords_at_offset(b: &mut Bencher) {
+        let dim_sz = vec![30*40, 30, 1];
+
+        let mut coords = vec![10, 10, 10];
+        let offset = 30*10 + 40*10 + 10;
+
+        b.iter(|| test::black_box(ChunkSlicer2::coords_at_offset(offset, &dim_sz, &mut coords)))
     }
 
     #[test]
