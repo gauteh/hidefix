@@ -57,8 +57,14 @@ impl<'a> DatasetReader<'a> {
                     cache.set_len((c.size * dsz) as usize);
                 }
 
+                let mut cache = if self.ds.shuffle {
+                    filters::shuffle::unshuffle_sized(&cache, dsz as usize)
+                } else {
+                    cache
+                };
+
                 self.fd.seek(SeekFrom::Start(c.addr))?;
-                self.fd.read_exact(&mut cache);
+                self.fd.read_exact(&mut cache); // TODO: handle error
 
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
                 self.cache.insert(c.clone(), cache);
@@ -127,6 +133,22 @@ mod tests {
 
         let h = hdf5::File::open(i.path()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
+
+        assert_eq!(vs, hvs);
+    }
+
+    #[test]
+    fn read_chunked_shuffled_2d() {
+        let i = Index::index("tests/data/dmrpp/chunked/chunked_shuffled_twoD.h5").unwrap();
+        let mut r =
+            DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path()).unwrap();
+
+        let mut vs = r.values::<f32>(None, None).unwrap();
+        use byteorder::{BigEndian, LittleEndian, ByteOrder};
+        BigEndian::from_slice_f32(&mut vs);
+
+        let h = hdf5::File::open(i.path()).unwrap();
+        let mut hvs = h.dataset("d_4_shuffled_chunks").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
     }

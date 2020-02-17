@@ -1,7 +1,6 @@
 use byte_slice_cast::{
     AsByteSlice, AsMutByteSlice, FromByteVec, IntoByteVec, ToByteSlice, ToMutByteSlice,
 };
-use hdf5::Datatype;
 
 /// Shuffle bytes according to HDF5 spec:
 ///
