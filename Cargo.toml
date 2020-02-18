@@ -10,7 +10,6 @@ version = "0.1.0"
 anyhow = "1.0.26"
 async-stream = "0.2"
 byte-slice-cast = "0.3.5"
-byteorder = "1.3.2"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
@@ -33,6 +32,7 @@ version = "0.9"
 
 [dev-dependencies]
 rand = "0.7.3"
+byteorder = "1.3.2"
 
 [features]
 io_uring = ["rio"]
