@@ -4,6 +4,7 @@ use std::path::Path;
 
 use lru::LruCache;
 use byte_slice_cast::{FromByteVec, IntoVecOf};
+use hdf5::ByteOrder;
 
 use crate::filters;
 use crate::filters::byteorder::{Order, ToNative};
@@ -109,10 +110,9 @@ impl<'a> DatasetReader<'a> {
 
         let mut values = self.read(indices, counts)?.into_vec_of::<T>()?;
 
-        use hdf5_sys::h5t::H5T_order_t::*;
         let order: Order = match self.ds.order {
-            H5T_ORDER_BE => Order::BE,
-            H5T_ORDER_LE => Order::LE,
+            ByteOrder::BigEndian => Order::BE,
+            ByteOrder::LittleEndian => Order::LE,
             _ => unimplemented!(),
         };
 
@@ -196,16 +196,16 @@ mod tests {
 
         let vs = r.values::<f32>(None, None).unwrap();
 
-        println!("{:?}", vs);
+        // println!("{:?}", vs);
 
         // hdf5 having issues loading zlib
-        // let h = hdf5::File::open(i.path()).unwrap();
-        // let hvs = h
-        //     .dataset("d_4_gzipped_chunks")
-        //     .unwrap()
-        //     .read_raw::<f32>()
-        //     .unwrap();
+        let h = hdf5::File::open(i.path()).unwrap();
+        let hvs = h
+            .dataset("d_4_gzipped_chunks")
+            .unwrap()
+            .read_raw::<f32>()
+            .unwrap();
 
-        // assert_eq!(vs, hvs);
+        assert_eq!(vs, hvs);
     }
 }

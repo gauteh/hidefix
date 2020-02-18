@@ -4,8 +4,7 @@ use std::cmp::min;
 
 use super::chunk::Chunk;
 
-use hdf5::Datatype;
-use hdf5_sys::h5t::H5T_order_t;
+use hdf5::{ByteOrder, Datatype};
 
 /// Size of coordinate vectors used which do not require allocations. Slicing variables with
 /// greater dimensions than this will be slower.
@@ -14,7 +13,7 @@ const COORD_SZ: usize = 4;
 #[derive(Debug)]
 pub struct Dataset {
     pub dtype: Datatype,
-    pub order: H5T_order_t,
+    pub order: ByteOrder,
     pub chunks: Vec<Chunk>,
     pub shape: Vec<u64>,
     pub chunk_shape: Vec<u64>,
@@ -346,7 +345,7 @@ mod tests {
     fn test_dataset() -> Dataset {
         Dataset {
             dtype: Datatype::from_type::<f32>().unwrap(),
-            order: H5T_order_t::H5T_ORDER_LE,
+            order: hdf5::ByteOrder::BigEndian,
             shape: vec![20, 20],
             chunk_shape: vec![10, 10],
             scaled_dim_sz: vec![2, 1],
