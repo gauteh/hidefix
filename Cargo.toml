@@ -24,7 +24,7 @@ git = "https://github.com/gauteh/hdf5-rust"
 
 [dependencies.hdf5-sys]
 branch = "hidefix"
-features = ["static", "zlib"]
+features = ["static"]
 git = "https://github.com/gauteh/hdf5-rust"
 
 [dependencies.rio]
