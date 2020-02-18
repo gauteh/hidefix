@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn read_t_float32() {
-        let i = Index::index("tests/data/t_float.h5").unwrap();
+        let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
         let r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn read_chunked_1d() {
-        let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
+        let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
         let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn read_chunked_2d() {
-        let i = Index::index("tests/data/chunked_twoD.h5").unwrap();
+        let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
         let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);

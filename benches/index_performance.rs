@@ -6,7 +6,7 @@ use hidefix::idx::Index;
 
 #[bench]
 fn read_2d_chunked_idx(b: &mut Bencher) {
-    b.iter(|| Index::index("tests/data/chunked_oneD.h5").unwrap())
+    b.iter(|| Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap())
 }
 
 mod coads {

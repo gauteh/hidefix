@@ -12,7 +12,7 @@ use hidefix::{
 
 #[bench]
 fn read_2d_chunked_idx(b: &mut Bencher) {
-    let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
+    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let mut r =
         simple::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
@@ -21,7 +21,7 @@ fn read_2d_chunked_idx(b: &mut Bencher) {
 
 #[bench]
 fn read_2d_chunked_cache(b: &mut Bencher) {
-    let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
+    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let mut r =
         cache::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
@@ -30,7 +30,7 @@ fn read_2d_chunked_cache(b: &mut Bencher) {
 
 #[bench]
 fn read_2d_chunked_idx_stream(b: &mut Bencher) {
-    let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
+    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let r =
         stream::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
@@ -43,7 +43,7 @@ fn read_2d_chunked_idx_stream(b: &mut Bencher) {
 
 #[bench]
 fn read_2d_chunked_nat(b: &mut Bencher) {
-    let h = hdf5::File::open("tests/data/chunked_oneD.h5").unwrap();
+    let h = hdf5::File::open("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let d = h.dataset("d_4_chunks").unwrap();
 
     b.iter(|| d.read_raw::<f32>().unwrap())
@@ -51,7 +51,7 @@ fn read_2d_chunked_nat(b: &mut Bencher) {
 
 #[bench]
 fn read_t_float32_idx(b: &mut Bencher) {
-    let i = Index::index("tests/data/t_float.h5").unwrap();
+    let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
     let mut r = simple::DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
@@ -59,7 +59,7 @@ fn read_t_float32_idx(b: &mut Bencher) {
 
 #[bench]
 fn read_t_float32_nat(b: &mut Bencher) {
-    let h = hdf5::File::open("tests/data/t_float.h5").unwrap();
+    let h = hdf5::File::open("tests/data/dmrpp/t_float.h5").unwrap();
     let d = h.dataset("d32_1").unwrap();
 
     b.iter(|| d.read_raw::<f32>().unwrap())
@@ -67,7 +67,7 @@ fn read_t_float32_nat(b: &mut Bencher) {
 
 #[bench]
 fn read_chunked_1d_idx(b: &mut Bencher) {
-    let i = Index::index("tests/data/chunked_oneD.h5").unwrap();
+    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let mut r =
         simple::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
 
@@ -76,7 +76,7 @@ fn read_chunked_1d_idx(b: &mut Bencher) {
 
 #[bench]
 fn read_chunked_1d_nat(b: &mut Bencher) {
-    let h = hdf5::File::open("tests/data/chunked_oneD.h5").unwrap();
+    let h = hdf5::File::open("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let d = h.dataset("d_4_chunks").unwrap();
 
     b.iter(|| d.read_raw::<f32>().unwrap())
@@ -200,7 +200,7 @@ mod uring {
 
     #[bench]
     fn read_t_float32_idx_rio(b: &mut Bencher) {
-        let i = Index::index("tests/data/t_float.h5").unwrap();
+        let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
 
         b.iter(|| {
             let r =
