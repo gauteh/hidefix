@@ -31,7 +31,7 @@ impl Index {
             .iter()
             .map(|m| hf.dataset(m).map(|d| (m, d)))
             .filter_map(Result::ok)
-            .map(|(m, d)| Dataset::index(d).map(|d| (m.clone(), d)))
+            .map(|(m, d)| Dataset::index(&d).map(|d| (m.clone(), d)))
             .collect::<Result<HashMap<String, Dataset>, _>>()?;
 
         Ok(Index {
@@ -40,10 +40,12 @@ impl Index {
         })
     }
 
+    #[must_use]
     pub fn dataset(&self, s: &str) -> Option<&Dataset> {
         self.datasets.get(s)
     }
 
+    #[must_use]
     pub fn path(&self) -> &Path {
         self.path.as_ref()
     }

@@ -34,7 +34,7 @@ impl<'a> DatasetReader<'a> {
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
     ) -> Result<Vec<u8>, anyhow::Error> {
-        let counts: &[u64] = counts.unwrap_or(self.ds.shape.as_slice());
+        let counts: &[u64] = counts.unwrap_or_else(|| self.ds.shape.as_slice());
 
         let dsz = self.ds.dtype.size() as u64;
         let vsz = counts.iter().product::<u64>() * dsz;

@@ -117,7 +117,7 @@ mod coads {
         let i = Index::index("../data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
 
-        b.iter(|| d.chunk_at_coord(&[5, 15, 40]).unwrap())
+        b.iter(|| d.chunk_at_coord(&[5, 15, 40]))
     }
 
     #[bench]

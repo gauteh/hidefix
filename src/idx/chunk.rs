@@ -19,6 +19,7 @@ pub struct Chunk {
 impl Chunk {
     /// Is the point described by the indices inside the chunk (`Equal`), before (`Less`) or after
     /// (`Greater`).
+    #[must_use]
     pub fn contains(&self, i: &[u64], shape: &[u64]) -> Ordering {
         assert!(i.len() == shape.len());
         assert!(i.len() == self.offset.len());

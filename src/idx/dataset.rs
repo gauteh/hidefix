@@ -26,7 +26,7 @@ pub struct Dataset {
 }
 
 impl Dataset {
-    pub fn index(ds: hdf5::Dataset) -> Result<Dataset, anyhow::Error> {
+    pub fn index(ds: &hdf5::Dataset) -> Result<Dataset, anyhow::Error> {
         let shuffle = ds.filters().get_shuffle();
         let gzip = ds.filters().get_gzip();
 
@@ -74,10 +74,10 @@ impl Dataset {
             .into_iter()
             .map(|u| u as u64)
             .collect::<Vec<u64>>();
-        let chunk_shape = ds
-            .chunks()
-            .map(|cs| cs.into_iter().map(|u| u as u64).collect())
-            .unwrap_or(shape.clone());
+        let chunk_shape = ds.chunks().map_or_else(
+            || shape.clone(),
+            |cs| cs.into_iter().map(|u| u as u64).collect(),
+        );
 
         // scaled dimensions
         let scaled_dim_sz = {
@@ -140,6 +140,7 @@ impl Dataset {
         })
     }
 
+    #[must_use]
     pub fn size(&self) -> usize {
         self.shape.iter().product::<u64>() as usize
     }
@@ -167,7 +168,7 @@ impl Dataset {
         ChunkSlicer::new(self, indices, counts)
     }
 
-    pub fn chunk_at_coord(&self, indices: &[u64]) -> Result<&Chunk, anyhow::Error> {
+    pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk {
         // scale coordinates
         let mut scaled = SmallVec::<[u64; COORD_SZ]>::with_capacity(indices.len());
         unsafe {
@@ -183,7 +184,8 @@ impl Dataset {
             .zip(&self.scaled_dim_sz)
             .map(|(c, sz)| c * sz)
             .sum::<u64>();
-        Ok(&self.chunks[scaled_offset as usize])
+
+        &self.chunks[scaled_offset as usize]
     }
 }
 
@@ -230,17 +232,15 @@ impl<'a> ChunkSlicer<'a> {
         d
     }
 
-    fn offset_at_coords(dim_sz: &[u64], coords: &[u64]) -> u64 {
-        coords.iter().zip(dim_sz).map(|(i, z)| i * z).sum::<u64>()
-    }
-
     fn coords_at_offset(mut offset: u64, dim_sz: &[u64], coords: &mut [u64]) {
         for (c, sz) in coords.iter_mut().zip(dim_sz) {
             *c = offset / sz;
-            offset = offset % sz;
+            offset %= sz;
         }
     }
 
+    /// Offset from chunk offset coordinates. `dim_sz` is dimension size of chunk
+    /// dimensions.
     fn chunk_start(coords: &[u64], chunk_offset: &[u64], dim_sz: &[u64]) -> u64 {
         coords
             .iter()
@@ -262,11 +262,7 @@ impl<'a> Iterator for ChunkSlicer<'a> {
 
         let chunk: &Chunk = self
             .dataset
-            .chunk_at_coord(&self.start_coords)
-            .expect("Moved index out of dataset!");
-
-        let chunk_last = chunk.offset.last().unwrap();
-        let shape_last = self.dataset.chunk_shape.last().unwrap();
+            .chunk_at_coord(&self.start_coords);
 
         // position in chunk of current offset
         let chunk_start = Self::chunk_start(
@@ -280,49 +276,63 @@ impl<'a> Iterator for ChunkSlicer<'a> {
                 == std::cmp::Ordering::Equal
         );
 
+        // Starting from the last dimension we can advance the offset to the end of the dimension
+        // of chunk or to the end of the dimension in the slice. As long as these are the
+        // exactly the same, and the start of the slice dimension is the same as the start of the
+        // chunk dimension, we can move on to the next dimension and see if it should be advanced
+        // as well.
         let mut advanced = 0;
+        let mut carry = 0;
 
-        // we can advance in the last dimension, and any dimensions within the chunk
-        // that overlap completely with the slice.
-
-        // determine how far we can advance the offset along in the current chunk.
-        while self.offset < self.end
-            && chunk.contains(&self.start_coords, &self.dataset.chunk_shape)
-            == std::cmp::Ordering::Equal
-            && (Self::chunk_start(
-                &self.start_coords,
-                &chunk.offset,
-                &self.dataset.chunk_dim_sz,
-            ) - chunk_start)
-                == advanced
+        for (idx, start, offset, count, chunk_offset, chunk_len, chunk_dim_sz) in izip!(
+            &self.indices,
+            &mut self.start_coords,
+            &mut self.offset_coords,
+            &self.counts,
+            &chunk.offset,
+            &self.dataset.chunk_shape,
+            &self.dataset.chunk_dim_sz
+        )
+        .rev()
         {
-            // position in last dimension of offset
-            let old_last = *self.offset_coords.last().unwrap();
+            *offset += carry;
+            *start = idx + *offset;
+            carry = *offset / count;
 
-            *self.offset_coords.last_mut().unwrap() = min(
-                *self.counts.last().unwrap(),
-                chunk_last + shape_last - self.indices.last().unwrap(),
-            );
+            let last = *offset;
 
-            let diff = self.offset_coords.last().unwrap() - old_last;
-            self.offset += diff;
+            *offset = min(*count, chunk_offset + chunk_len - idx);
+
+            let diff = (*offset - last) * chunk_dim_sz;
+
             advanced += diff;
+            self.offset += diff;
 
-            debug_assert!(diff > 0);
+            carry += *offset / count;
+            *offset %= count;
+            *start = idx + *offset;
 
-            Self::coords_at_offset(self.offset, &self.slice_sz, &mut self.offset_coords);
-
-            for (i, o, s) in izip!(&self.indices, &self.offset_coords, &mut self.start_coords) {
-                *s = *i + *o;
+            if self.offset >= self.end
+                || start != chunk_offset
+                || (*start + count) != (chunk_offset + chunk_len)
+                || diff == 0
+            {
+                break;
             }
+        }
+
+        // update offset coords
+        Self::coords_at_offset(self.offset, &self.slice_sz, &mut self.offset_coords);
+
+        // update start coords
+        for (i, o, s) in izip!(&self.indices, &self.offset_coords, &mut self.start_coords) {
+            *s = *i + *o;
         }
 
         debug_assert!(advanced > 0);
 
         // position in chunk of new offset
         let chunk_end = chunk_start + advanced;
-
-        debug_assert!(chunk_end > chunk_start);
 
         Some((chunk, chunk_start, chunk_end))
     }
@@ -391,25 +401,16 @@ mod tests {
 
         println!("chunks: {:#?}", d.chunks);
 
-        assert_eq!(d.chunk_at_coord(&[0, 0]).unwrap().offset, [0, 0]);
-        assert_eq!(d.chunk_at_coord(&[0, 5]).unwrap().offset, [0, 0]);
-        assert_eq!(d.chunk_at_coord(&[5, 5]).unwrap().offset, [0, 0]);
-        assert_eq!(d.chunk_at_coord(&[0, 10]).unwrap().offset, [0, 10]);
-        assert_eq!(d.chunk_at_coord(&[0, 15]).unwrap().offset, [0, 10]);
-        assert_eq!(d.chunk_at_coord(&[10, 0]).unwrap().offset, [10, 0]);
-        assert_eq!(d.chunk_at_coord(&[10, 1]).unwrap().offset, [10, 0]);
-        assert_eq!(d.chunk_at_coord(&[15, 1]).unwrap().offset, [10, 0]);
+        assert_eq!(d.chunk_at_coord(&[0, 0]).offset, [0, 0]);
+        assert_eq!(d.chunk_at_coord(&[0, 5]).offset, [0, 0]);
+        assert_eq!(d.chunk_at_coord(&[5, 5]).offset, [0, 0]);
+        assert_eq!(d.chunk_at_coord(&[0, 10]).offset, [0, 10]);
+        assert_eq!(d.chunk_at_coord(&[0, 15]).offset, [0, 10]);
+        assert_eq!(d.chunk_at_coord(&[10, 0]).offset, [10, 0]);
+        assert_eq!(d.chunk_at_coord(&[10, 1]).offset, [10, 0]);
+        assert_eq!(d.chunk_at_coord(&[15, 1]).offset, [10, 0]);
 
-        b.iter(|| test::black_box(d.chunk_at_coord(&[15, 1]).unwrap()))
-    }
-
-    #[bench]
-    fn offset_at_coords(b: &mut Bencher) {
-        let dim_sz = vec![30 * 40, 30, 1];
-
-        let coords = vec![10, 10, 10];
-
-        b.iter(|| test::black_box(ChunkSlicer::offset_at_coords(&dim_sz, &coords)))
+        b.iter(|| test::black_box(d.chunk_at_coord(&[15, 1])))
     }
 
     #[bench]
