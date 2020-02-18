@@ -70,6 +70,28 @@ impl<'a> DatasetReader<'a> {
                     cache
                 };
 
+                let cache = if let Some(ratio) = self.ds.gzip {
+                    use flate2;
+                    // let mut dz = flate2::read::DeflateDecoder::new(&cache[..]);
+                    // dz.read_to_end(&mut decache)?;
+
+                    // let mut dz = flate2::Decompress::new(false);
+                    // dz.decompress_vec(&cache, &mut decache, flate2::FlushDecompress::None)?;
+                    // let mut rz = flate2::CrcReader<flate2::
+                    // let mut gz = flate2::GzBuilder::new().read(&cache[..], flate2::Compression::new(ratio as u32));
+
+                    let chunk_sz = self.ds.chunk_shape.iter().product::<u64>() * dsz;
+                    let mut decache: Vec<u8> = Vec::with_capacity(chunk_sz as usize);
+                    unsafe { decache.set_len(chunk_sz as usize); }
+
+                    let mut dz = flate2::read::ZlibDecoder::new(&cache[..]);
+                    dz.read_exact(&mut decache)?;
+
+                    decache
+                } else {
+                    cache
+                };
+
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
                 self.cache.put(c.addr, cache);
             }
@@ -165,6 +187,26 @@ mod tests {
         let h = hdf5::File::open(i.path()).unwrap();
         let hvs = h
             .dataset("d_4_shuffled_chunks")
+            .unwrap()
+            .read_raw::<f32>()
+            .unwrap();
+
+        assert_eq!(vs, hvs);
+    }
+
+    #[test]
+    fn read_chunked_gzipped_2d() {
+        let i = Index::index("tests/data/dmrpp/chunked_gzipped_twoD.h5").unwrap();
+        let mut r =
+            DatasetReader::with_dataset(i.dataset("d_4_gzipped_chunks").unwrap(), i.path())
+                .unwrap();
+
+        let vs = r.values::<f32>(None, None).unwrap();
+        println!("{:?}", vs);
+
+        let h = hdf5::File::open(i.path()).unwrap();
+        let hvs = h
+            .dataset("d_4_gzipped_chunks")
             .unwrap()
             .read_raw::<f32>()
             .unwrap();
