@@ -1,18 +1,18 @@
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
+use lru::LruCache;
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 
 use crate::filters;
 use crate::filters::byteorder::{Order, ToNative};
-use crate::idx::{Chunk, Dataset};
+use crate::idx::Dataset;
 
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
     fd: File,
-    cache: HashMap<Chunk, Vec<u8>>,
+    cache: LruCache<u64, Vec<u8>>,
 }
 
 impl<'a> DatasetReader<'a> {
@@ -22,10 +22,14 @@ impl<'a> DatasetReader<'a> {
     {
         let fd = File::open(p)?;
 
+        const CACHE_SZ: u64 = 32 * 1024 * 1024;
+        let cache_sz = CACHE_SZ / (ds.chunk_shape.iter().product::<u64>() * ds.dtype.size() as u64);
+        println!("cache_sz: {}", cache_sz);
+
         Ok(DatasetReader {
             ds,
             fd,
-            cache: HashMap::with_capacity(ds.chunks.len()),
+            cache: LruCache::new(cache_sz as usize),
         })
     }
 
@@ -49,7 +53,7 @@ impl<'a> DatasetReader<'a> {
             let end = (end * dsz) as usize;
             let slice_sz = end - start;
 
-            if let Some(cache) = self.cache.get(c) {
+            if let Some(cache) = self.cache.get(&c.addr) {
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
                 let mut cache: Vec<u8> = Vec::with_capacity(c.size as usize);
@@ -67,7 +71,7 @@ impl<'a> DatasetReader<'a> {
                 };
 
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
-                self.cache.insert(c.clone(), cache);
+                self.cache.put(c.addr, cache);
             }
 
             buf_slice = &mut buf_slice[slice_sz..];

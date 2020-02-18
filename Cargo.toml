@@ -6,7 +6,6 @@ license = "LGPL"
 name = "hidefix"
 repository = "https://github.com/gauteh/dars"
 version = "0.1.0"
-
 [dependencies]
 anyhow = "1.0.26"
 async-stream = "0.2"
@@ -15,7 +14,8 @@ byteorder = "1.3.2"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
-itertools = "*"
+itertools = "0.8"
+lru = "0.4"
 smallvec = "1.2.0"
 
 [dependencies.hdf5]
