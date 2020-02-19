@@ -31,7 +31,7 @@ impl Dataset {
             || ds.filters().get_scale_offset().is_some()
             || ds.filters().get_szip().is_some()
         {
-            return Err(anyhow!("Unsupported filter"));
+            return Err(anyhow!("{}: Unsupported filter", ds.name()));
         }
 
         let mut chunks: Vec<Chunk> = match (ds.is_chunked(), ds.offset()) {
@@ -54,12 +54,12 @@ impl Dataset {
                                 size: ci.size,
                                 addr: ci.addr,
                             })
-                            .ok_or_else(|| anyhow!("Could not get chunk info"))
+                            .ok_or_else(|| anyhow!("{}: Could not get chunk info", ds.name()))
                     })
                     .collect()
             }
 
-            _ => Err(anyhow!("Unsupported data layout")),
+            _ => Err(anyhow!("{}: Unsupported data layout (chunked: {}, offset: {:?})", ds.name(), ds.is_chunked(), ds.offset())),
         }?;
 
         chunks.sort();
@@ -236,6 +236,11 @@ impl<'a> Iterator for ChunkSlicer<'a> {
 
         let chunk: &Chunk = self.dataset.chunk_at_coord(&self.start_coords);
 
+        debug_assert!(
+            chunk.contains(&self.start_coords, &self.dataset.chunk_shape)
+            == std::cmp::Ordering::Equal
+        );
+
         // position in chunk of current offset
         let chunk_start = Self::chunk_start(
             &self.start_coords,
@@ -243,10 +248,6 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             &self.dataset.chunk_dim_sz,
         );
 
-        debug_assert!(
-            chunk.contains(&self.start_coords, &self.dataset.chunk_shape)
-                == std::cmp::Ordering::Equal
-        );
 
         // Starting from the last dimension we can advance the offset to the end of the dimension
         // of chunk or to the end of the dimension in the slice. As long as these are the
