@@ -18,6 +18,7 @@ pub struct Dataset {
     pub chunks: Vec<Chunk>,
     pub shape: Vec<u64>,
     pub chunk_shape: Vec<u64>,
+    chunk_shape_reduced: Vec<StrengthReducedU64>,
     scaled_dim_sz: Vec<u64>,
     dim_sz: Vec<u64>,
     chunk_dim_sz: Vec<u64>,
@@ -74,10 +75,13 @@ impl Dataset {
             .into_iter()
             .map(|u| u as u64)
             .collect::<Vec<u64>>();
+
         let chunk_shape = ds.chunks().map_or_else(
             || shape.clone(),
             |cs| cs.into_iter().map(|u| u as u64).collect(),
         );
+
+        let chunk_shape_reduced = chunk_shape.iter().map(|c| StrengthReducedU64::new(*c)).collect();
 
         // scaled dimensions
         let scaled_dim_sz = {
@@ -132,6 +136,7 @@ impl Dataset {
             chunks,
             shape,
             chunk_shape,
+            chunk_shape_reduced,
             scaled_dim_sz,
             dim_sz,
             chunk_dim_sz,
@@ -169,23 +174,15 @@ impl Dataset {
     }
 
     pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk {
-        // scale coordinates
-        let mut scaled = SmallVec::<[u64; COORD_SZ]>::with_capacity(indices.len());
-        unsafe {
-            scaled.set_len(indices.len());
+        assert_eq!(indices.len(), self.chunk_shape_reduced.len());
+        assert_eq!(indices.len(), self.scaled_dim_sz.len());
+
+        let mut offset = 0;
+        for i in 0..indices.len() {
+            offset += (indices[i] / self.chunk_shape_reduced[i]) * self.scaled_dim_sz[i];
         }
 
-        for (s, i, csz) in izip!(&mut scaled, indices, &self.chunk_shape) {
-            *s = i / csz;
-        }
-
-        let scaled_offset = scaled
-            .iter()
-            .zip(&self.scaled_dim_sz)
-            .map(|(c, sz)| c * sz)
-            .sum::<u64>();
-
-        &self.chunks[scaled_offset as usize]
+        &self.chunks[offset as usize]
     }
 }
 
@@ -339,6 +336,7 @@ mod tests {
             order: hdf5::ByteOrder::BigEndian,
             shape: vec![20, 20],
             chunk_shape: vec![10, 10],
+            chunk_shape_reduced: [10u64, 10].iter().map(|i| StrengthReducedU64::new(*i)).collect(),
             scaled_dim_sz: vec![2, 1],
             dim_sz: vec![20, 1],
             chunk_dim_sz: vec![10, 1],
