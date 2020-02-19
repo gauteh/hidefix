@@ -86,7 +86,17 @@ mod tests {
                 addr: 50,
             },
             Chunk {
-                offset: vec![10, 1, 0],
+                offset: vec![10, 10, 0],
+                size: 1,
+                addr: 1,
+            },
+            Chunk {
+                offset: vec![0, 10, 0],
+                size: 1,
+                addr: 1,
+            },
+            Chunk {
+                offset: vec![0, 0, 10],
                 size: 1,
                 addr: 1,
             },
@@ -94,8 +104,10 @@ mod tests {
         v.sort();
 
         assert_eq!(v[0].offset, [0, 0, 0]);
-        assert_eq!(v[1].offset, [10, 0, 0]);
-        assert_eq!(v[2].offset, [10, 1, 0]);
+        assert_eq!(v[1].offset, [0, 0, 10]);
+        assert_eq!(v[2].offset, [0, 10, 0]);
+        assert_eq!(v[3].offset, [10, 0, 0]);
+        assert_eq!(v[4].offset, [10, 10, 0]);
     }
 
     #[test]

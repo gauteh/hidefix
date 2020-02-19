@@ -78,6 +78,8 @@ impl Dataset {
             |cs| cs.into_iter().map(|u| u as u64).collect(),
         );
 
+        assert_eq!(chunks.len(), shape.iter().zip(&chunk_shape).map(|(s, c)| s / c).product::<u64>() as usize);
+
         let chunk_shape_reduced = chunk_shape
             .iter()
             .map(|c| StrengthReducedU64::new(*c))
