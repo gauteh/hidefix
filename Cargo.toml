@@ -17,6 +17,7 @@ futures-util = "0.3"
 itertools = "0.8"
 lru = "0.4"
 smallvec = "1.2.0"
+strength_reduce = "*"
 
 [dependencies.hdf5]
 branch = "hidefix"
@@ -24,7 +25,7 @@ git = "https://github.com/gauteh/hdf5-rust"
 
 [dependencies.hdf5-sys]
 branch = "hidefix"
-features = [ "static", "zlib" ]
+features = ["static", "zlib"]
 git = "https://github.com/gauteh/hdf5-rust"
 
 [dependencies.rio]

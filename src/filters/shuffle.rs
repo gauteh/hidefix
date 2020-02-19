@@ -37,7 +37,9 @@ where
 
     for i in 0..wsz {
         for j in 0..sz {
-            unsafe { *dest.get_unchecked_mut(i * sz + j) = *src.get_unchecked(j * wsz + i); }
+            unsafe {
+                *dest.get_unchecked_mut(i * sz + j) = *src.get_unchecked(j * wsz + i);
+            }
         }
     }
 }
@@ -58,7 +60,9 @@ where
 
     for i in 0..wsz {
         for j in 0..sz {
-            unsafe { *dest.get_unchecked_mut(j * wsz + i) = *src.get_unchecked(i * sz + j); }
+            unsafe {
+                *dest.get_unchecked_mut(j * wsz + i) = *src.get_unchecked(i * sz + j);
+            }
         }
     }
 }

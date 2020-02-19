@@ -32,13 +32,14 @@ fn read_2d_chunked_cache(b: &mut Bencher) {
 fn read_2d_shuffled_cache(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_shuffled_twoD.h5").unwrap();
     let mut r =
-        cache::DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path()).unwrap();
+        cache::DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path())
+            .unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
 
 #[bench]
-fn read_2d_shuffled_cache_nat(b: &mut Bencher) {
+fn read_2d_shuffled_nat(b: &mut Bencher) {
     let h = hdf5::File::open("tests/data/dmrpp/chunked_shuffled_twoD.h5").unwrap();
     let d = h.dataset("d_4_shuffled_chunks").unwrap();
 
@@ -49,13 +50,14 @@ fn read_2d_shuffled_cache_nat(b: &mut Bencher) {
 fn read_2d_compressed_cache(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_gzipped_twoD.h5").unwrap();
     let mut r =
-        cache::DatasetReader::with_dataset(i.dataset("d_4_gzipped_chunks").unwrap(), i.path()).unwrap();
+        cache::DatasetReader::with_dataset(i.dataset("d_4_gzipped_chunks").unwrap(), i.path())
+            .unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
 
 #[bench]
-fn read_2d_compressed_cache_nat(b: &mut Bencher) {
+fn read_2d_compressed_nat(b: &mut Bencher) {
     let h = hdf5::File::open("tests/data/dmrpp/chunked_gzipped_twoD.h5").unwrap();
     let d = h.dataset("d_4_gzipped_chunks").unwrap();
 
@@ -66,19 +68,19 @@ fn read_2d_compressed_cache_nat(b: &mut Bencher) {
 fn read_2d_shuffled_compressed_cache(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
     let mut r =
-        cache::DatasetReader::with_dataset(i.dataset("d_4_shufzip_chunks").unwrap(), i.path()).unwrap();
+        cache::DatasetReader::with_dataset(i.dataset("d_4_shufzip_chunks").unwrap(), i.path())
+            .unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
 
 #[bench]
-fn read_2d_shuffled_compressed_cache_nat(b: &mut Bencher) {
+fn read_2d_shuffled_compressed_nat(b: &mut Bencher) {
     let h = hdf5::File::open("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
     let d = h.dataset("d_4_shufzip_chunks").unwrap();
 
     b.iter(|| d.read_raw::<f32>().unwrap())
 }
-
 
 #[bench]
 fn read_2d_chunked_idx_stream(b: &mut Bencher) {

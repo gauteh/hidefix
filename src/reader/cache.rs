@@ -2,9 +2,9 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
-use lru::LruCache;
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use hdf5::ByteOrder;
+use lru::LruCache;
 
 use crate::filters;
 use crate::filters::byteorder::{Order, ToNative};
@@ -14,7 +14,7 @@ pub struct DatasetReader<'a> {
     ds: &'a Dataset,
     fd: File,
     cache: LruCache<u64, Vec<u8>>,
-    chunk_sz: u64
+    chunk_sz: u64,
 }
 
 impl<'a> DatasetReader<'a> {
@@ -32,7 +32,7 @@ impl<'a> DatasetReader<'a> {
             ds,
             fd,
             cache: LruCache::new(cache_sz as usize),
-            chunk_sz
+            chunk_sz,
         })
     }
 
@@ -70,7 +70,9 @@ impl<'a> DatasetReader<'a> {
                 // we assume decompression comes before unshuffling
                 let cache = if let Some(_) = self.ds.gzip {
                     let mut decache: Vec<u8> = Vec::with_capacity(self.chunk_sz as usize);
-                    unsafe { decache.set_len(self.chunk_sz as usize); }
+                    unsafe {
+                        decache.set_len(self.chunk_sz as usize);
+                    }
 
                     let mut dz = flate2::read::ZlibDecoder::new(&cache[..]);
                     dz.read_exact(&mut decache)?;
@@ -190,9 +192,8 @@ mod tests {
     #[test]
     fn read_chunked_gzipped_2d() {
         let i = Index::index("tests/data/dmrpp/chunked_gzipped_twoD.h5").unwrap();
-        let mut r =
-            DatasetReader::with_dataset(i.dataset("d_4_gzipped_chunks").unwrap(), i.path())
-                .unwrap();
+        let mut r = DatasetReader::with_dataset(i.dataset("d_4_gzipped_chunks").unwrap(), i.path())
+            .unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 

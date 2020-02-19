@@ -1,5 +1,6 @@
 use itertools::izip;
 use smallvec::{smallvec, SmallVec};
+use strength_reduce::StrengthReducedU64;
 use std::cmp::min;
 
 use super::chunk::Chunk;
@@ -195,14 +196,13 @@ pub struct ChunkSlicer<'a> {
     start_coords: SmallVec<[u64; COORD_SZ]>,
     indices: SmallVec<[u64; COORD_SZ]>,
     counts: SmallVec<[u64; COORD_SZ]>,
+    counts_reduced: Vec<StrengthReducedU64>,
     end: u64,
-    slice_sz: SmallVec<[u64; COORD_SZ]>,
 }
 
 impl<'a> ChunkSlicer<'a> {
     pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer<'a> {
         // size of slice dimensions
-        let slice_sz = Self::dim_sz(&counts);
         let end = counts.iter().product::<u64>();
 
         ChunkSlicer {
@@ -211,43 +211,24 @@ impl<'a> ChunkSlicer<'a> {
             offset_coords: smallvec![0; indices.len()],
             start_coords: SmallVec::from_slice(&indices),
             indices: SmallVec::from_vec(indices),
+            counts_reduced: counts.iter().map(|c| StrengthReducedU64::new(*c)).collect(),
             counts: SmallVec::from_vec(counts),
             end,
-            slice_sz,
-        }
-    }
-
-    fn dim_sz(dims: &[u64]) -> SmallVec<[u64; COORD_SZ]> {
-        let mut d = dims
-            .iter()
-            .rev()
-            .scan(1, |p, &c| {
-                let sz = *p;
-                *p *= c;
-                Some(sz)
-            })
-            .collect::<SmallVec<[u64; COORD_SZ]>>();
-        d.reverse();
-        d
-    }
-
-    fn coords_at_offset(mut offset: u64, dim_sz: &[u64], coords: &mut [u64]) {
-        for (c, sz) in coords.iter_mut().zip(dim_sz) {
-            *c = offset / sz;
-            offset %= sz;
         }
     }
 
     /// Offset from chunk offset coordinates. `dim_sz` is dimension size of chunk
     /// dimensions.
     fn chunk_start(coords: &[u64], chunk_offset: &[u64], dim_sz: &[u64]) -> u64 {
-        coords
-            .iter()
-            .zip(chunk_offset)
-            .map(|(o, c)| o - c)
-            .zip(dim_sz)
-            .map(|(d, sz)| d * sz)
-            .sum::<u64>()
+        assert_eq!(coords.len(), chunk_offset.len());
+        assert_eq!(coords.len(), dim_sz.len());
+
+        let mut start = 0;
+        for i in 0..coords.len() {
+            start += (coords[i] - chunk_offset[i]) * dim_sz[i];
+        }
+
+        start
     }
 }
 
@@ -259,9 +240,7 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             return None;
         }
 
-        let chunk: &Chunk = self
-            .dataset
-            .chunk_at_coord(&self.start_coords);
+        let chunk: &Chunk = self.dataset.chunk_at_coord(&self.start_coords);
 
         // position in chunk of current offset
         let chunk_start = Self::chunk_start(
@@ -282,12 +261,14 @@ impl<'a> Iterator for ChunkSlicer<'a> {
         // as well.
         let mut advanced = 0;
         let mut carry = 0;
+        let mut i = 0;
 
-        for (idx, start, offset, count, chunk_offset, chunk_len, chunk_dim_sz) in izip!(
+        for (idx, start, offset, count, count_reduced, chunk_offset, chunk_len, chunk_dim_sz) in izip!(
             &self.indices,
             &mut self.start_coords,
             &mut self.offset_coords,
             &self.counts,
+            &self.counts_reduced,
             &chunk.offset,
             &self.dataset.chunk_shape,
             &self.dataset.chunk_dim_sz
@@ -296,7 +277,7 @@ impl<'a> Iterator for ChunkSlicer<'a> {
         {
             *offset += carry;
             *start = idx + *offset;
-            carry = *offset / count;
+            carry = *offset / *count_reduced;
 
             let last = *offset;
 
@@ -307,9 +288,10 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             advanced += diff;
             self.offset += diff;
 
-            carry += *offset / count;
-            *offset %= count;
+            carry += *offset / *count_reduced;
+            *offset = *offset % *count_reduced;
             *start = idx + *offset;
+            i += 1;
 
             if self.offset >= self.end
                 || start != chunk_offset
@@ -320,12 +302,21 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             }
         }
 
-        // update offset coords
-        Self::coords_at_offset(self.offset, &self.slice_sz, &mut self.offset_coords);
-
-        // update start coords
-        for (i, o, s) in izip!(&self.indices, &self.offset_coords, &mut self.start_coords) {
-            *s = *i + *o;
+        for (idx, start, offset, count) in izip!(
+            &self.indices[..i],
+            &mut self.start_coords[..i],
+            &mut self.offset_coords[..i],
+            &self.counts_reduced[..i]
+        )
+        .rev()
+        {
+            *offset += carry;
+            carry = *offset / *count;
+            *offset = *offset % *count;
+            *start = idx + *offset;
+            if carry == 0 {
+                break;
+            }
         }
 
         debug_assert!(advanced > 0);
@@ -413,29 +404,12 @@ mod tests {
     }
 
     #[bench]
-    fn coords_at_offset(b: &mut Bencher) {
-        let dim_sz = vec![30 * 40, 30, 1];
-
-        let mut coords = vec![10, 10, 10];
-        let offset = 30 * 10 + 40 * 10 + 10;
-
-        b.iter(|| test::black_box(ChunkSlicer::coords_at_offset(offset, &dim_sz, &mut coords)))
-    }
-
-    #[bench]
     fn chunk_start(b: &mut Bencher) {
         let dim_sz = vec![10, 1];
         let coords = vec![20, 10];
         let ch_offset = vec![20, 10];
 
         b.iter(|| test::black_box(ChunkSlicer::chunk_start(&coords, &ch_offset, &dim_sz)))
-    }
-
-    #[bench]
-    fn dim_sz(b: &mut Bencher) {
-        let counts = vec![12, 180, 90];
-
-        b.iter(|| test::black_box(ChunkSlicer::dim_sz(&counts)))
     }
 
     #[test]
