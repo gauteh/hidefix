@@ -28,7 +28,7 @@ impl<'a> DatasetReader<'a> {
     ) -> Result<Vec<u8>, anyhow::Error> {
         let counts: &[u64] = counts.unwrap_or_else(|| self.ds.shape.as_slice());
 
-        let dsz = self.ds.dtype.size() as u64;
+        let dsz = self.ds.dsize as u64;
         let vsz = counts.iter().product::<u64>() * dsz;
         let mut buf = Vec::with_capacity(vsz as usize);
         unsafe {

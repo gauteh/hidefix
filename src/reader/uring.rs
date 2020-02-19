@@ -27,7 +27,7 @@ impl<'a> DatasetReader<'a> {
     ) -> Result<Vec<u8>, anyhow::Error> {
         let counts: &[u64] = counts.unwrap_or(self.ds.shape.as_slice());
 
-        let dsz = self.ds.dtype.size() as u64;
+        let dsz = self.ds.dsize as u64;
         let vsz = counts.iter().product::<u64>() * dsz;
 
         // TODO: will only work on slices up to 512 bytes.

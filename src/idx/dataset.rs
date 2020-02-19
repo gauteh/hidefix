@@ -1,19 +1,15 @@
 use itertools::izip;
-use smallvec::{smallvec, SmallVec};
-use strength_reduce::StrengthReducedU64;
 use std::cmp::min;
+use strength_reduce::StrengthReducedU64;
 
 use super::chunk::Chunk;
 
 use hdf5::{ByteOrder, Datatype};
 
-/// Size of coordinate vectors used which do not require allocations. Slicing variables with
-/// greater dimensions than this will be slower.
-const COORD_SZ: usize = 4;
-
 #[derive(Debug)]
 pub struct Dataset {
     pub dtype: Datatype,
+    pub dsize: usize,
     pub order: ByteOrder,
     pub chunks: Vec<Chunk>,
     pub shape: Vec<u64>,
@@ -69,6 +65,7 @@ impl Dataset {
         chunks.sort();
 
         let dtype = ds.dtype()?;
+        let dsize = dtype.size();
         let order = dtype.byte_order();
         let shape = ds
             .shape()
@@ -81,7 +78,10 @@ impl Dataset {
             |cs| cs.into_iter().map(|u| u as u64).collect(),
         );
 
-        let chunk_shape_reduced = chunk_shape.iter().map(|c| StrengthReducedU64::new(*c)).collect();
+        let chunk_shape_reduced = chunk_shape
+            .iter()
+            .map(|c| StrengthReducedU64::new(*c))
+            .collect();
 
         // scaled dimensions
         let scaled_dim_sz = {
@@ -132,6 +132,7 @@ impl Dataset {
 
         Ok(Dataset {
             dtype,
+            dsize,
             order,
             chunks,
             shape,
@@ -177,10 +178,9 @@ impl Dataset {
         assert_eq!(indices.len(), self.chunk_shape_reduced.len());
         assert_eq!(indices.len(), self.scaled_dim_sz.len());
 
-        let mut offset = 0;
-        for i in 0..indices.len() {
-            offset += (indices[i] / self.chunk_shape_reduced[i]) * self.scaled_dim_sz[i];
-        }
+        let offset = (0..indices.len()).fold(0, |offset, i| {
+            offset + (indices[i] / self.chunk_shape_reduced[i]) * self.scaled_dim_sz[i]
+        });
 
         &self.chunks[offset as usize]
     }
@@ -189,10 +189,10 @@ impl Dataset {
 pub struct ChunkSlicer<'a> {
     dataset: &'a Dataset,
     offset: u64,
-    offset_coords: SmallVec<[u64; COORD_SZ]>,
-    start_coords: SmallVec<[u64; COORD_SZ]>,
-    indices: SmallVec<[u64; COORD_SZ]>,
-    counts: SmallVec<[u64; COORD_SZ]>,
+    offset_coords: Vec<u64>,
+    start_coords: Vec<u64>,
+    indices: Vec<u64>,
+    counts: Vec<u64>,
     counts_reduced: Vec<StrengthReducedU64>,
     end: u64,
 }
@@ -205,11 +205,11 @@ impl<'a> ChunkSlicer<'a> {
         ChunkSlicer {
             dataset,
             offset: 0,
-            offset_coords: smallvec![0; indices.len()],
-            start_coords: SmallVec::from_slice(&indices),
-            indices: SmallVec::from_vec(indices),
+            offset_coords: vec![0; indices.len()],
+            start_coords: indices.clone(),
+            indices: indices,
             counts_reduced: counts.iter().map(|c| StrengthReducedU64::new(*c)).collect(),
-            counts: SmallVec::from_vec(counts),
+            counts: counts,
             end,
         }
     }
@@ -220,12 +220,9 @@ impl<'a> ChunkSlicer<'a> {
         assert_eq!(coords.len(), chunk_offset.len());
         assert_eq!(coords.len(), dim_sz.len());
 
-        let mut start = 0;
-        for i in 0..coords.len() {
-            start += (coords[i] - chunk_offset[i]) * dim_sz[i];
-        }
-
-        start
+        (0..coords.len()).fold(0, |start, i| {
+            start + (coords[i] - chunk_offset[i]) * dim_sz[i]
+        })
     }
 }
 
@@ -260,17 +257,18 @@ impl<'a> Iterator for ChunkSlicer<'a> {
         let mut carry = 0;
         let mut i = 0;
 
-        for (idx, start, offset, count, count_reduced, chunk_offset, chunk_len, chunk_dim_sz) in izip!(
-            &self.indices,
-            &mut self.start_coords,
-            &mut self.offset_coords,
-            &self.counts,
-            &self.counts_reduced,
-            &chunk.offset,
-            &self.dataset.chunk_shape,
-            &self.dataset.chunk_dim_sz
-        )
-        .rev()
+        for (idx, start, offset, count, count_reduced, chunk_offset, chunk_len, chunk_dim_sz) in
+            izip!(
+                &self.indices,
+                &mut self.start_coords,
+                &mut self.offset_coords,
+                &self.counts,
+                &self.counts_reduced,
+                &chunk.offset,
+                &self.dataset.chunk_shape,
+                &self.dataset.chunk_dim_sz
+            )
+            .rev()
         {
             *offset += carry;
             *start = idx + *offset;
@@ -333,10 +331,14 @@ mod tests {
     fn test_dataset() -> Dataset {
         Dataset {
             dtype: Datatype::from_type::<f32>().unwrap(),
+            dsize: 4,
             order: hdf5::ByteOrder::BigEndian,
             shape: vec![20, 20],
             chunk_shape: vec![10, 10],
-            chunk_shape_reduced: [10u64, 10].iter().map(|i| StrengthReducedU64::new(*i)).collect(),
+            chunk_shape_reduced: [10u64, 10]
+                .iter()
+                .map(|i| StrengthReducedU64::new(*i))
+                .collect(),
             scaled_dim_sz: vec![2, 1],
             dim_sz: vec![20, 1],
             chunk_dim_sz: vec![10, 1],

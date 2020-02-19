@@ -32,7 +32,7 @@ impl<'a> DatasetReader<'a> {
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
     ) -> impl Stream<Item = Result<Vec<u8>, anyhow::Error>> {
-        let dsz = self.ds.dtype.size() as u64;
+        let dsz = self.ds.dsize as u64;
 
         let counts: &[u64] = counts.unwrap_or_else(|| self.ds.shape.as_slice());
         let slices = self
