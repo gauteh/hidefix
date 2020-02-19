@@ -1,4 +1,4 @@
-#![feature(vec_into_raw_parts)]
+#![recursion_limit = "512"]
 #![feature(test)]
 extern crate test;
 

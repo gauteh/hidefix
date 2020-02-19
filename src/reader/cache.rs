@@ -26,7 +26,7 @@ impl<'a> DatasetReader<'a> {
 
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
-        let cache_sz = CACHE_SZ / chunk_sz;
+        let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
 
         Ok(DatasetReader {
             ds,
