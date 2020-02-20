@@ -10,15 +10,18 @@ version = "0.1.0"
 anyhow = "1.0.26"
 async-stream = "0.2"
 byte-slice-cast = "0.3.5"
-flate2 = "*"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
 itertools = "0.8"
 lru = "0.4"
+ndarray = "*"
 smallvec = "1.2.0"
 strength_reduce = "*"
-tokio = { version = "*", features = ["sync"] }
+
+[dependencies.flate2]
+features = ["zlib"]
+version = "*"
 
 [dependencies.hdf5]
 branch = "hidefix"
@@ -32,6 +35,10 @@ git = "https://github.com/gauteh/hdf5-rust"
 [dependencies.rio]
 optional = true
 version = "0.9"
+
+[dependencies.tokio]
+features = ["sync"]
+version = "*"
 
 [dev-dependencies]
 byteorder = "1.3.2"

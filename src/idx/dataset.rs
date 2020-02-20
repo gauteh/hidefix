@@ -49,17 +49,24 @@ impl Dataset {
                 (0..n)
                     .map(|i| {
                         ds.chunk_info(i)
-                            .map(|ci| Chunk {
+                            .map(|ci| {
+                                assert!(ci.filter_mask == 0);
+                                Chunk {
                                 offset: ci.offset,
                                 size: ci.size,
                                 addr: ci.addr,
-                            })
+                            }})
                             .ok_or_else(|| anyhow!("{}: Could not get chunk info", ds.name()))
                     })
                     .collect()
             }
 
-            _ => Err(anyhow!("{}: Unsupported data layout (chunked: {}, offset: {:?})", ds.name(), ds.is_chunked(), ds.offset())),
+            _ => Err(anyhow!(
+                "{}: Unsupported data layout (chunked: {}, offset: {:?})",
+                ds.name(),
+                ds.is_chunked(),
+                ds.offset()
+            )),
         }?;
 
         chunks.sort();
@@ -78,19 +85,35 @@ impl Dataset {
             |cs| cs.into_iter().map(|u| u as u64).collect(),
         );
 
-        assert_eq!(chunks.len(), shape.iter().zip(&chunk_shape).map(|(s, c)| s / c).product::<u64>() as usize);
+        {
+            let expected_chunks = shape.iter()
+                .zip(&chunk_shape).map(|(s, c)| (s + (c - 1)) / c).product::<u64>() as usize;
 
+            anyhow::ensure!(
+                chunks.len() == expected_chunks,
+                "{}: unexpected number of chunks given dataset size (is_chunked: {}, chunks: {} != {} (expected), shape: {:?}, chunk shape: {:?})",
+                ds.name(),
+                ds.is_chunked(),
+                chunks.len(),
+                expected_chunks,
+                shape,
+                chunk_shape);
+        }
+
+        // optimized divisor for chunk shape
         let chunk_shape_reduced = chunk_shape
             .iter()
             .map(|c| StrengthReducedU64::new(*c))
             .collect();
 
-        // scaled dimensions
+        // scaled dimension size: dimension size of dataset in chunk offset coordinates.
+        // the dimension size is rounded up. when the dataset size is not a multiple of
+        // chunk size we have a partially filled chunk which is also present in the list of chunks.
         let scaled_dim_sz = {
             let mut d = shape
                 .iter()
                 .zip(&chunk_shape)
-                .map(|(d, z)| d / z)
+                .map(|(d, z)| (d + (z - 1)) / z)
                 .rev()
                 .scan(1, |p, c| {
                     let sz = *p;
@@ -148,6 +171,7 @@ impl Dataset {
         })
     }
 
+    /// Number of elements in dataset.
     #[must_use]
     pub fn size(&self) -> usize {
         self.shape.iter().product::<u64>() as usize
@@ -181,7 +205,7 @@ impl Dataset {
         assert_eq!(indices.len(), self.scaled_dim_sz.len());
 
         let offset = (0..indices.len()).fold(0, |offset, i| {
-            offset + (indices[i] / self.chunk_shape_reduced[i]) * self.scaled_dim_sz[i]
+            offset + indices[i] / self.chunk_shape_reduced[i] * self.scaled_dim_sz[i]
         });
 
         &self.chunks[offset as usize]
@@ -240,7 +264,7 @@ impl<'a> Iterator for ChunkSlicer<'a> {
 
         debug_assert!(
             chunk.contains(&self.start_coords, &self.dataset.chunk_shape)
-            == std::cmp::Ordering::Equal
+                == std::cmp::Ordering::Equal
         );
 
         // position in chunk of current offset
@@ -249,7 +273,6 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             &chunk.offset,
             &self.dataset.chunk_dim_sz,
         );
-
 
         // Starting from the last dimension we can advance the offset to the end of the dimension
         // of chunk or to the end of the dimension in the slice. As long as these are the
@@ -317,7 +340,9 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             }
         }
 
-        debug_assert!(advanced > 0);
+        debug_assert!(carry == 0);
+
+        assert!(advanced > 0, "slice iterator not advancing: stuck infinitely.");
 
         // position in chunk of new offset
         let chunk_end = chunk_start + advanced;

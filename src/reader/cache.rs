@@ -27,6 +27,7 @@ impl<'a> DatasetReader<'a> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
         let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
+        println!("cache_sz: {}", cache_sz);
 
         Ok(DatasetReader {
             ds,
@@ -74,7 +75,7 @@ impl<'a> DatasetReader<'a> {
                         decache.set_len(self.chunk_sz as usize);
                     }
 
-                    let mut dz = flate2::read::ZlibDecoder::new(&cache[..]);
+                    let mut dz = flate2::read::ZlibDecoder::new_with_buf(&cache[..], vec![0_u8; 32 * 1024 * 1024]);
                     dz.read_exact(&mut decache)?;
 
                     decache
@@ -208,5 +209,29 @@ mod tests {
             .unwrap();
 
         assert_eq!(vs, hvs);
+    }
+
+    #[test]
+    fn read_meps() {
+        println!("meps");
+        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        println!("idx index: done");
+        let mut r = DatasetReader::with_dataset(i.dataset("x_wind_ml").unwrap(), i.path()).unwrap();
+
+        println!("ds size: {}", r.ds.size());
+        println!("cshape: {:?}", r.ds.chunk_shape);
+
+        let vs = r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5])).unwrap();
+        println!("idx read: done: {}", vs.len());
+
+        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let hvs = h.dataset("x_wind_ml").unwrap().read_dyn::<i32>().unwrap();
+        let cont = hvs.slice(s![0..2, 0..2, 0..1, 0..256]).iter().map(|v| *v).collect::<Vec<i32>>();
+        println!("native: {}", hvs.len());
+        println!("native: done");
+
+        use ndarray::{s, Array};
+
+        assert_eq!(vs, hvs.slice(s![0..2, 0..2, 0..1, 0..5]).iter().map(|v| *v).collect::<Vec<i32>>());
     }
 }
