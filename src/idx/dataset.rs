@@ -297,8 +297,9 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             .rev()
         {
             *offset += carry;
-            *start = idx + *offset;
             carry = *offset / *count_reduced;
+            *offset = *offset % *count_reduced;
+            *start = idx + *offset;
 
             let last = *offset;
 
@@ -323,6 +324,7 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             }
         }
 
+        i = self.indices.len() - i;
         for (idx, start, offset, count) in izip!(
             &self.indices[..i],
             &mut self.start_coords[..i],
@@ -339,9 +341,6 @@ impl<'a> Iterator for ChunkSlicer<'a> {
                 break;
             }
         }
-
-        debug_assert!(carry == 0);
-
         assert!(advanced > 0, "slice iterator not advancing: stuck infinitely.");
 
         // position in chunk of new offset
