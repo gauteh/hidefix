@@ -31,7 +31,6 @@ impl Index {
             .iter()
             .map(|m| hf.dataset(m).map(|d| (m, d)))
             .filter_map(Result::ok)
-            .filter(|(m, _)| *m == "x_wind_ml")
             .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
             .map(|(m, d)| Dataset::index(&d).map(|d| (m.clone(), d)))
             .collect::<Result<HashMap<String, Dataset>, _>>()?;

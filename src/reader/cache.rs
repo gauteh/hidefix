@@ -27,7 +27,6 @@ impl<'a> DatasetReader<'a> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
         let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
-        println!("cache_sz: {}", cache_sz);
 
         Ok(DatasetReader {
             ds,
@@ -211,6 +210,7 @@ mod tests {
         assert_eq!(vs, hvs);
     }
 
+    #[ignore]
     #[test]
     fn read_meps() {
         println!("meps");
@@ -226,11 +226,10 @@ mod tests {
 
         let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
         let hvs = h.dataset("x_wind_ml").unwrap().read_dyn::<i32>().unwrap();
-        let cont = hvs.slice(s![0..2, 0..2, 0..1, 0..256]).iter().map(|v| *v).collect::<Vec<i32>>();
         println!("native: {}", hvs.len());
         println!("native: done");
 
-        use ndarray::{s, Array};
+        use ndarray::s;
 
         assert_eq!(vs, hvs.slice(s![0..2, 0..2, 0..1, 0..5]).iter().map(|v| *v).collect::<Vec<i32>>());
     }
