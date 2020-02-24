@@ -3,11 +3,10 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
-use hdf5::ByteOrder;
 use lru::LruCache;
 
 use crate::filters;
-use crate::filters::byteorder::{Order, ToNative};
+use crate::filters::byteorder::ToNative;
 use crate::idx::Dataset;
 
 pub struct DatasetReader<'a> {
@@ -111,14 +110,7 @@ impl<'a> DatasetReader<'a> {
         //       caller keeps ownership of slice too.
 
         let mut values = self.read(indices, counts)?.into_vec_of::<T>()?;
-
-        let order: Order = match self.ds.order {
-            ByteOrder::BigEndian => Order::BE,
-            ByteOrder::LittleEndian => Order::LE,
-            _ => unimplemented!(),
-        };
-
-        values.to_native(order);
+        values.to_native(self.ds.order);
 
         Ok(values)
     }

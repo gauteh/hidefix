@@ -1,12 +1,34 @@
 use itertools::izip;
 use std::cmp::min;
 use strength_reduce::StrengthReducedU64;
+use serde::{Serialize, Deserialize, Serializer, Deserializer};
 
+use crate::filters::byteorder::Order as ByteOrder;
 use super::chunk::Chunk;
 
-use hdf5::{ByteOrder, Datatype};
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Datatype {
+    UInt(usize),
+    Int(usize),
+    Float(usize),
+    Unknown
+}
 
-#[derive(Debug)]
+impl From<hdf5::Datatype> for Datatype {
+    fn from(dtype: hdf5::Datatype) -> Self {
+        match dtype {
+            _ if dtype.is::<u8>() => Datatype::UInt(dtype.size()),
+            _ if dtype.is::<u32>() => Datatype::UInt(dtype.size()),
+            _ if dtype.is::<i32>() => Datatype::Int(dtype.size()),
+            _ if dtype.is::<i64>() => Datatype::Int(dtype.size()),
+            _ if dtype.is::<f32>() => Datatype::Float(dtype.size()),
+            _ if dtype.is::<f64>() => Datatype::Float(dtype.size()),
+            _ => Datatype::Unknown
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Dataset {
     pub dtype: Datatype,
     pub dsize: usize,
@@ -14,12 +36,27 @@ pub struct Dataset {
     pub chunks: Vec<Chunk>,
     pub shape: Vec<u64>,
     pub chunk_shape: Vec<u64>,
+
+    #[serde(serialize_with = "serialize_sru64", deserialize_with = "deserialize_sru64")]
     chunk_shape_reduced: Vec<StrengthReducedU64>,
+
     scaled_dim_sz: Vec<u64>,
     dim_sz: Vec<u64>,
     chunk_dim_sz: Vec<u64>,
     pub shuffle: bool,
     pub gzip: Option<u8>,
+}
+
+fn serialize_sru64<S>(v: &Vec<StrengthReducedU64>, s: S) -> Result<S::Ok, S::Error>
+where S: Serializer {
+    let b: Vec<u64> = v.iter().map(|s| s.get()).collect();
+    b.serialize(s)
+}
+
+fn deserialize_sru64<'de, D>(d: D) -> Result<Vec<StrengthReducedU64>, D::Error>
+where D: Deserializer<'de> {
+    let v = Vec::<u64>::deserialize(d)?;
+    Ok(v.iter().map(|v| StrengthReducedU64::new(*v)).collect())
 }
 
 impl Dataset {
@@ -34,7 +71,7 @@ impl Dataset {
             return Err(anyhow!("{}: Unsupported filter", ds.name()));
         }
 
-        let mut chunks: Vec<Chunk> = match (ds.is_chunked(), ds.offset()) {
+        let mut chunks: Vec<Chunk> = match (ds.num_chunks().is_some(), ds.offset()) {
             // Continuous
             (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
                 offset: vec![0; ds.ndim()],
@@ -52,11 +89,11 @@ impl Dataset {
                             .map(|ci| {
                                 assert!(ci.filter_mask == 0);
                                 Chunk {
-                                offset: ci.offset,
-                                size: ci.size,
-                                addr: ci.addr,
-                            }})
-                            .ok_or_else(|| anyhow!("{}: Could not get chunk info", ds.name()))
+                                    offset: ci.offset,
+                                    size: ci.size,
+                                    addr: ci.addr,
+                                }
+                            }).ok_or_else(|| anyhow!("{}: Could not get chunk info", ds.name()))
                     })
                     .collect()
             }
@@ -72,7 +109,7 @@ impl Dataset {
         chunks.sort();
 
         let dtype = ds.dtype()?;
-        let dsize = dtype.size();
+        let dsize = ds.dtype()?.size();
         let order = dtype.byte_order();
         let shape = ds
             .shape()
@@ -156,9 +193,9 @@ impl Dataset {
         };
 
         Ok(Dataset {
-            dtype,
+            dtype: dtype.into(),
             dsize,
-            order,
+            order: order.into(),
             chunks,
             shape,
             chunk_shape,
@@ -357,9 +394,9 @@ mod tests {
 
     fn test_dataset() -> Dataset {
         Dataset {
-            dtype: Datatype::from_type::<f32>().unwrap(),
+            dtype: Datatype::Float(4),
             dsize: 4,
-            order: hdf5::ByteOrder::BigEndian,
+            order: ByteOrder::BE,
             shape: vec![20, 20],
             chunk_shape: vec![10, 10],
             chunk_shape_reduced: [10u64, 10]
@@ -535,5 +572,19 @@ mod tests {
             "slices: {}",
             d.chunk_slices(None, None).collect::<Vec<_>>().len()
         );
+    }
+
+    #[test]
+    fn serialize() {
+        let d = test_dataset();
+
+        let s = serde_json::to_string(&d).unwrap();
+        println!("serialized: {}", s);
+
+        let md: Dataset = serde_json::from_str(&s).unwrap();
+
+        for (a,b) in izip!(d.chunk_shape_reduced, md.chunk_shape_reduced) {
+            assert_eq!(a.get(), b.get());
+        }
     }
 }

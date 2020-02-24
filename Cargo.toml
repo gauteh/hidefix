@@ -15,7 +15,7 @@ futures-core = "0.3"
 futures-util = "0.3"
 itertools = "0.8"
 lru = "0.4"
-ndarray = "*"
+ndarray = "0.12.1"
 smallvec = "1.2.0"
 strength_reduce = "*"
 
@@ -36,6 +36,10 @@ git = "https://github.com/gauteh/hdf5-rust"
 optional = true
 version = "0.9"
 
+[dependencies.serde]
+features = ["derive"]
+version = "*"
+
 [dependencies.tokio]
 features = ["sync"]
 version = "*"
@@ -43,6 +47,7 @@ version = "*"
 [dev-dependencies]
 byteorder = "1.3.2"
 rand = "0.7.3"
+serde_json = "*"
 
 [features]
 io_uring = ["rio"]

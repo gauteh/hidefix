@@ -1,7 +1,22 @@
-#[derive(Copy, Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum Order {
     BE,
     LE,
+    Unknown
+}
+
+impl From<hdf5::ByteOrder> for Order {
+    fn from(byo: hdf5::ByteOrder) -> Self {
+        use hdf5::ByteOrder;
+
+        match byo {
+            ByteOrder::BigEndian => Order::BE,
+            ByteOrder::LittleEndian => Order::LE,
+            _ => Order::Unknown
+        }
+    }
 }
 
 pub trait ToNative {
@@ -16,6 +31,24 @@ pub trait ToBigEndian {
 
 pub trait Swap {
     fn swap(&self) -> Self;
+}
+
+impl Swap for u16 {
+    fn swap(&self) -> Self {
+        self.swap_bytes()
+    }
+}
+
+impl Swap for u32 {
+    fn swap(&self) -> Self {
+        self.swap_bytes()
+    }
+}
+
+impl Swap for u64 {
+    fn swap(&self) -> Self {
+        self.swap_bytes()
+    }
 }
 
 impl Swap for i32 {
@@ -42,12 +75,6 @@ impl Swap for f64 {
     }
 }
 
-impl Swap for u32 {
-    fn swap(&self) -> Self {
-        self.swap_bytes()
-    }
-}
-
 impl ToNative for [u8] {
     // no-op
     fn to_native(&mut self, _order: Order) {}
@@ -70,7 +97,8 @@ where
                     for n in self {
                         *n = n.swap()
                     }
-                }
+                },
+                _ => unimplemented!()
             }
         } else {
             match order {
@@ -80,6 +108,7 @@ where
                     }
                 }
                 Order::LE => (),
+                _ => unimplemented!()
             }
         }
     }
@@ -96,7 +125,38 @@ where
                 for n in self {
                     *n = n.swap()
                 }
-            }
+            },
+            _ => unimplemented!()
         }
     }
 }
+
+/// Swap bytes of `buf` if necessary so that they are big_endian. `dsz` is the size of the data
+/// type.
+///
+/// Fails if `buf` size is not a multiple of `dsz`.
+pub fn to_big_e_sized(buf: &mut [u8], order: Order, dsz: usize) -> Result<(), anyhow::Error> {
+    use byte_slice_cast::AsMutSliceOf;
+
+    if let Order::LE = order {
+        match dsz {
+            1 => (),
+            2 => {
+                let v = buf.as_mut_slice_of::<u16>()?;
+                v.to_big_e(order);
+            },
+            4 => {
+                let v = buf.as_mut_slice_of::<u32>()?;
+                v.to_big_e(order);
+            },
+            8 => {
+                let v = buf.as_mut_slice_of::<u64>()?;
+                v.to_big_e(order);
+            }
+            _ => unimplemented!()
+        }
+    }
+
+    Ok(())
+}
+

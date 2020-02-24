@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use serde::{Serialize, Deserialize};
 
 /// A HDF5 chunk. A chunk is read and written in its entirety by the HDF5 library. This is
 /// usually necessary since the chunk can be compressed and filtered.
@@ -7,7 +8,7 @@ use std::hash::{Hash, Hasher};
 /// > Note: The official HDF5 library uses a 1MB dataset cache by default.
 ///
 /// [HDF5 chunking](https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html).
-#[derive(Debug, Eq, Clone)]
+#[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct Chunk {
     pub addr: u64,
     pub offset: Vec<u64>,

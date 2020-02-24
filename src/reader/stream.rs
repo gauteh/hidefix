@@ -9,11 +9,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
-use hdf5::ByteOrder;
 use lru::LruCache;
 
 use crate::filters;
-use crate::filters::byteorder::{Order, ToNative};
+use crate::filters::byteorder::ToNative;
 use crate::idx::Dataset;
 
 pub struct DatasetReader<'a> {
@@ -122,12 +121,7 @@ impl<'a> DatasetReader<'a> {
         // TODO: use as_slice_of() to avoid copy, or possible values_to(&mut buf) so that
         //       caller keeps ownership of slice too.
         let reader = self.stream(indices, counts);
-
-        let order: Order = match self.ds.order {
-            ByteOrder::BigEndian => Order::BE,
-            ByteOrder::LittleEndian => Order::LE,
-            _ => unimplemented!(),
-        };
+        let order = self.ds.order;
 
         stream! {
             pin_mut!(reader);
