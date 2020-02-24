@@ -228,8 +228,6 @@ mod coads {
         let i = Index::index("../data/coads_climatology.nc4").unwrap();
         let r = stream::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 
-        use futures::executor::block_on_stream;
-
         b.iter(|| {
             let v = r.stream(None, None);
             pin_mut!(v);
