@@ -78,32 +78,6 @@ mod tests {
     #[test]
     fn index_meps() {
         println!("indexing meps");
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
-
-        let s = serde_json::to_string(&i).unwrap();
-
-        use std::io::prelude::*;
-        let mut f = std::fs::File::create("/tmp/meps.idx").unwrap();
-        f.write_all(s.as_bytes()).unwrap();
-    }
-
-    #[ignore]
-    #[test]
-    fn deserialize_meps() {
-        use std::io::prelude::*;
-        let f = std::fs::File::open("/tmp/meps.idx").unwrap();
-
-        let i: Index = serde_json::from_reader(f).unwrap();
-
-        println!("deserialized");
-
-        loop {
-            use std::{thread, time};
-
-            let ten_millis = time::Duration::from_millis(10);
-            let now = time::Instant::now();
-
-            thread::sleep(ten_millis);
-        }
+        let _i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
     }
 }
