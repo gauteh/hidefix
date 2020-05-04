@@ -147,17 +147,28 @@ mod tests {
     }
 
     #[bench]
+    fn unshuffle_4kb(b: &mut Bencher) {
+        use rand::distributions::Standard;
+        use rand::{thread_rng, Rng};
+
+        let v: Vec<i32> = thread_rng().sample_iter(Standard).take(1024).collect();
+        let mut d = vec![0_u8; 1024 * 4];
+
+        b.iter(|| shuffle(&v, &mut d))
+    }
+
+    #[bench]
     fn shuffle_4mb(b: &mut Bencher) {
         use rand::distributions::Standard;
         use rand::{thread_rng, Rng};
 
-        let v: Vec<i32> = thread_rng()
+        let v: Vec<u8> = thread_rng()
             .sample_iter(Standard)
-            .take(1024 * 1024)
+            .take(4 * 1024 * 1024)
             .collect();
-        let mut d = vec![0_u8; 1024 * 1024 * 4];
+        let mut d = vec![0_i32; 1024 * 1024];
 
-        b.iter(|| shuffle(&v, &mut d))
+        b.iter(|| unshuffle(&v, &mut d))
     }
 
     #[bench]
