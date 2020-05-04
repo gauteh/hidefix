@@ -379,7 +379,6 @@ dependencies = [
  "rio",
  "serde",
  "serde_json",
- "smallvec 1.4.0",
  "strength_reduce",
  "tokio",
 ]
@@ -554,7 +553,7 @@ dependencies = [
  "rand 0.6.5",
  "redox_syscall",
  "rustc_version",
- "smallvec 0.6.13",
+ "smallvec",
  "winapi",
 ]
 
@@ -906,12 +905,6 @@ checksum = "f7b0758c52e15a8b5e3691eae6cc559f08eee9406e548a4477ba4e67770a82b6"
 dependencies = [
  "maybe-uninit",
 ]
-
-[[package]]
-name = "smallvec"
-version = "1.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7cb5678e1615754284ec264d9bb5b4c27d2018577fd90ac0ceb578591ed5ee4"
 
 [[package]]
 name = "strength_reduce"

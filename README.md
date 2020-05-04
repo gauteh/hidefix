@@ -1,5 +1,7 @@
 # HIDEFIX
 
+[![Build Status](https://travis-ci.org/gauteh/hidefix.svg?branch=master)](https://travis-ci.org/gauteh/hidefix)
+
 <img src="https://raw.githubusercontent.com/gauteh/hidefix/master/idefix.png">
 
 This builds an index of a [HDF5](https://support.hdfgroup.org/HDF5/doc/H5.format.html) file for direct and concurrent access to data chunks.
