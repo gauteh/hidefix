@@ -141,7 +141,7 @@ mod coads {
 
     #[bench]
     fn native(b: &mut Bencher) {
-        let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();
+        let h = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
         let d = h.dataset("SST").unwrap();
 
         b.iter(|| d.read_raw::<f32>().unwrap())
@@ -149,12 +149,12 @@ mod coads {
 
     #[bench]
     fn idx(b: &mut Bencher) {
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let mut r =
             simple::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 
         {
-            let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();
+            let h = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
             let d = h.dataset("SST").unwrap();
 
             assert_eq!(
@@ -168,7 +168,7 @@ mod coads {
 
     #[bench]
     fn chunk_at_coord(b: &mut Bencher) {
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
 
         b.iter(|| d.chunk_at_coord(&[5, 15, 40]))
@@ -176,7 +176,7 @@ mod coads {
 
     #[bench]
     fn chunk_slices_range(b: &mut Bencher) {
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
 
         b.iter(|| d.chunk_slices(None, None).for_each(drop));
@@ -184,12 +184,12 @@ mod coads {
 
     #[bench]
     fn cache(b: &mut Bencher) {
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let mut r =
             cache::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 
         {
-            let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();
+            let h = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
             let d = h.dataset("SST").unwrap();
 
             assert_eq!(
@@ -203,7 +203,7 @@ mod coads {
 
     #[bench]
     fn stream(b: &mut Bencher) {
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let r = stream::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 
         {
@@ -211,7 +211,7 @@ mod coads {
             pin_mut!(v);
             let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
-            let h = hdf5::File::open("../data/coads_climatology.nc4").unwrap();
+            let h = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
             let d = h.dataset("SST").unwrap();
             assert_eq!(d.read_raw::<f32>().unwrap(), vs);
         }
@@ -225,7 +225,7 @@ mod coads {
 
     #[bench]
     fn stream_bytes(b: &mut Bencher) {
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let r = stream::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 
         b.iter(|| {
@@ -237,7 +237,7 @@ mod coads {
 
     #[bench]
     fn idx_bytes(b: &mut Bencher) {
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let mut r =
             simple::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
 

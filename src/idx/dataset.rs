@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn coads_slice_all() {
         use crate::idx::Index;
-        let i = Index::index("../data/coads_climatology.nc4").unwrap();
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
 
         println!(

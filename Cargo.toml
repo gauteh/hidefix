@@ -4,8 +4,9 @@ edition = "2018"
 keywords = ["hdf"]
 license = "LGPL"
 name = "hidefix"
-repository = "https://github.com/gauteh/dars"
+repository = "https://github.com/gauteh/hidefix"
 version = "0.1.0"
+
 [dependencies]
 anyhow = "1.0.26"
 async-stream = "0.2"
