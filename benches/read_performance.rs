@@ -64,7 +64,7 @@ fn read_2d_shuffled_compressed_nat(b: &mut Bencher) {
 }
 
 #[bench]
-fn read_2d_chunked_idx_stream(b: &mut Bencher) {
+fn read_2d_chunked_stream(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let r = i.streamer("d_4_chunks").unwrap();
 
@@ -84,11 +84,27 @@ fn read_2d_chunked_nat(b: &mut Bencher) {
 }
 
 #[bench]
+fn read_t_float32_cache(b: &mut Bencher) {
+    let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
+    let mut r = i.reader("d32_1").unwrap();
+
+    b.iter(|| r.values::<f32>(None, None).unwrap())
+}
+
+#[bench]
 fn read_t_float32_nat(b: &mut Bencher) {
     let h = hdf5::File::open("tests/data/dmrpp/t_float.h5").unwrap();
     let d = h.dataset("d32_1").unwrap();
 
     b.iter(|| d.read_raw::<f32>().unwrap())
+}
+
+#[bench]
+fn read_chunked_1d_cache(b: &mut Bencher) {
+    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
+    let mut r = i.reader("d_4_chunks").unwrap();
+
+    b.iter(|| r.values::<f32>(None, None).unwrap())
 }
 
 #[bench]

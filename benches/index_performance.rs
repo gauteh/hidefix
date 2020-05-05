@@ -5,7 +5,7 @@ use test::Bencher;
 use hidefix::idx::Index;
 
 #[bench]
-fn read_2d_chunked_idx(b: &mut Bencher) {
+fn chunked_1d(b: &mut Bencher) {
     b.iter(|| Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap())
 }
 
