@@ -46,7 +46,7 @@ version = "*"
 [dev-dependencies]
 byteorder = "1.3.2"
 rand = "0.7.3"
-ndarray = "0.12.1"
+ndarray = "0.13.1"
 serde_json = "*"
 rayon = "*"
 bincode = "*"
