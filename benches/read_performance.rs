@@ -5,25 +5,12 @@ use test::Bencher;
 use futures::executor::block_on_stream;
 use futures::pin_mut;
 
-use hidefix::{
-    idx::Index,
-    reader::{cache, simple, stream},
-};
-
-#[bench]
-fn read_2d_chunked_idx(b: &mut Bencher) {
-    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
-    let mut r =
-        simple::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
-
-    b.iter(|| r.values::<f32>(None, None).unwrap())
-}
+use hidefix::idx::Index;
 
 #[bench]
 fn read_2d_chunked_cache(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
-    let mut r =
-        cache::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+    let mut r = i.reader("d_4_chunks").unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
@@ -31,9 +18,7 @@ fn read_2d_chunked_cache(b: &mut Bencher) {
 #[bench]
 fn read_2d_shuffled_cache(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_shuffled_twoD.h5").unwrap();
-    let mut r =
-        cache::DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path())
-            .unwrap();
+    let mut r = i.reader("d_4_shuffled_chunks").unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
@@ -49,9 +34,7 @@ fn read_2d_shuffled_nat(b: &mut Bencher) {
 #[bench]
 fn read_2d_compressed_cache(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_gzipped_twoD.h5").unwrap();
-    let mut r =
-        cache::DatasetReader::with_dataset(i.dataset("d_4_gzipped_chunks").unwrap(), i.path())
-            .unwrap();
+    let mut r = i.reader("d_4_gzipped_chunks").unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
@@ -67,9 +50,7 @@ fn read_2d_compressed_nat(b: &mut Bencher) {
 #[bench]
 fn read_2d_shuffled_compressed_cache(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
-    let mut r =
-        cache::DatasetReader::with_dataset(i.dataset("d_4_shufzip_chunks").unwrap(), i.path())
-            .unwrap();
+    let mut r = i.reader("d_4_shufzip_chunks").unwrap();
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
@@ -85,8 +66,7 @@ fn read_2d_shuffled_compressed_nat(b: &mut Bencher) {
 #[bench]
 fn read_2d_chunked_idx_stream(b: &mut Bencher) {
     let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
-    let r =
-        stream::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+    let r = i.streamer("d_4_chunks").unwrap();
 
     b.iter(|| {
         let v = r.stream_values::<f32>(None, None);
@@ -104,28 +84,11 @@ fn read_2d_chunked_nat(b: &mut Bencher) {
 }
 
 #[bench]
-fn read_t_float32_idx(b: &mut Bencher) {
-    let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
-    let mut r = simple::DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
-
-    b.iter(|| r.values::<f32>(None, None).unwrap())
-}
-
-#[bench]
 fn read_t_float32_nat(b: &mut Bencher) {
     let h = hdf5::File::open("tests/data/dmrpp/t_float.h5").unwrap();
     let d = h.dataset("d32_1").unwrap();
 
     b.iter(|| d.read_raw::<f32>().unwrap())
-}
-
-#[bench]
-fn read_chunked_1d_idx(b: &mut Bencher) {
-    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
-    let mut r =
-        simple::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
-
-    b.iter(|| r.values::<f32>(None, None).unwrap())
 }
 
 #[bench]
@@ -148,25 +111,6 @@ mod coads {
     }
 
     #[bench]
-    fn idx(b: &mut Bencher) {
-        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
-        let mut r =
-            simple::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
-
-        {
-            let h = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
-            let d = h.dataset("SST").unwrap();
-
-            assert_eq!(
-                d.read_raw::<f32>().unwrap(),
-                r.values::<f32>(None, None).unwrap()
-            );
-        }
-
-        b.iter(|| r.values::<f32>(None, None).unwrap())
-    }
-
-    #[bench]
     fn chunk_at_coord(b: &mut Bencher) {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
@@ -185,8 +129,7 @@ mod coads {
     #[bench]
     fn cache(b: &mut Bencher) {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
-        let mut r =
-            cache::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("SST").unwrap();
 
         {
             let h = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
@@ -204,7 +147,7 @@ mod coads {
     #[bench]
     fn stream(b: &mut Bencher) {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
-        let r = stream::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
+        let r = i.streamer("SST").unwrap();
 
         {
             let v = r.stream_values::<f32>(None, None);
@@ -226,22 +169,13 @@ mod coads {
     #[bench]
     fn stream_bytes(b: &mut Bencher) {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
-        let r = stream::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
+        let r = i.streamer("SST").unwrap();
 
         b.iter(|| {
             let v = r.stream(None, None);
             pin_mut!(v);
             block_on_stream(v).for_each(drop);
         })
-    }
-
-    #[bench]
-    fn idx_bytes(b: &mut Bencher) {
-        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
-        let mut r =
-            simple::DatasetReader::with_dataset(i.dataset("SST").unwrap(), i.path()).unwrap();
-
-        b.iter(|| r.read(None, None).unwrap())
     }
 }
 

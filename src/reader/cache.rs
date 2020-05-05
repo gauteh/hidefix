@@ -1,6 +1,4 @@
-use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::path::Path;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
@@ -9,20 +7,16 @@ use crate::filters;
 use crate::filters::byteorder::ToNative;
 use crate::idx::Dataset;
 
-pub struct DatasetReader<'a> {
+pub struct DatasetReader<'a, R: Read + Seek> {
     ds: &'a Dataset,
-    fd: File,
+    fd: R,
     cache: LruCache<u64, Vec<u8>>,
     chunk_sz: u64,
 }
 
-impl<'a> DatasetReader<'a> {
-    pub fn with_dataset<P>(ds: &'a Dataset, p: P) -> Result<DatasetReader, anyhow::Error>
-    where
-        P: AsRef<Path>,
+impl<'a, R: Read + Seek> DatasetReader<'a, R> {
+    pub fn with_dataset(ds: &'a Dataset, fd: R) -> Result<DatasetReader<'a, R>, anyhow::Error>
     {
-        let fd = File::open(p)?;
-
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
         let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
@@ -118,13 +112,12 @@ impl<'a> DatasetReader<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::idx::Index;
 
     #[test]
     fn read_t_float32() {
         let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
-        let mut r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("d32_1").unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
@@ -137,8 +130,7 @@ mod tests {
     #[test]
     fn read_chunked_1d() {
         let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
-        let mut r =
-            DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("d_4_chunks").unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
@@ -151,8 +143,7 @@ mod tests {
     #[test]
     fn read_chunked_2d() {
         let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
-        let mut r =
-            DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("d_4_chunks").unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
@@ -165,9 +156,7 @@ mod tests {
     #[test]
     fn read_chunked_shuffled_2d() {
         let i = Index::index("tests/data/dmrpp/chunked_shuffled_twoD.h5").unwrap();
-        let mut r =
-            DatasetReader::with_dataset(i.dataset("d_4_shuffled_chunks").unwrap(), i.path())
-                .unwrap();
+        let mut r = i.reader("d_4_shuffled_chunks").unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
@@ -184,8 +173,7 @@ mod tests {
     #[test]
     fn read_chunked_gzipped_2d() {
         let i = Index::index("tests/data/dmrpp/chunked_gzipped_twoD.h5").unwrap();
-        let mut r = DatasetReader::with_dataset(i.dataset("d_4_gzipped_chunks").unwrap(), i.path())
-            .unwrap();
+        let mut r = i.reader("d_4_gzipped_chunks").unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
 
@@ -208,7 +196,7 @@ mod tests {
         println!("meps");
         let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
         println!("idx index: done");
-        let mut r = DatasetReader::with_dataset(i.dataset("x_wind_ml").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("x_wind_ml").unwrap();
 
         println!("ds size: {}", r.ds.size());
         println!("cshape: {:?}", r.ds.chunk_shape);

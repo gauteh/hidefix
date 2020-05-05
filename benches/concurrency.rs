@@ -3,10 +3,7 @@ extern crate test;
 use std::sync::Arc;
 use test::Bencher;
 
-use hidefix::{
-    idx::Index,
-    reader::cache,
-};
+use hidefix::idx::Index;
 
 // const OVERSUBSCRIBE_THREADS: usize = 50;
 const ITERATIONS: usize = 100;
@@ -35,9 +32,7 @@ mod shuffled_compressed {
     #[bench]
     fn cache_sequential(b: &mut Bencher) {
         let i = Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
-        let mut r =
-            cache::DatasetReader::with_dataset(i.dataset("d_4_shufzip_chunks").unwrap(), i.path())
-                .unwrap();
+        let mut r = i.reader("d_4_shufzip_chunks").unwrap();
 
         b.iter(|| {
             for _ in 0..ITERATIONS {
@@ -78,11 +73,7 @@ mod shuffled_compressed {
                     let i = Arc::clone(&i);
 
                     s.spawn(move |_| {
-                        let mut r = cache::DatasetReader::with_dataset(
-                            i.dataset("d_4_shufzip_chunks").unwrap(),
-                            i.path(),
-                        )
-                        .unwrap();
+                        let mut r = i.reader("d_4_shufzip_chunks").unwrap();
                         for _ in 0..REPETITIONS {
                             test::black_box(&r.values::<f32>(None, None).unwrap());
                         }

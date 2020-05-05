@@ -2,10 +2,7 @@
 extern crate test;
 use test::Bencher;
 
-use hidefix::{
-    idx::Index,
-    reader::cache
-};
+use hidefix::idx::Index;
 
 mod meps {
     use super::*;
@@ -15,7 +12,7 @@ mod meps {
     #[bench]
     fn idx_small_slice(b: &mut Bencher) {
         let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let mut r = cache::DatasetReader::with_dataset(i.dataset("x_wind_ml").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("x_wind_ml").unwrap();
 
         // test against native
         let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
@@ -40,7 +37,7 @@ mod meps {
     #[bench]
     fn idx_med_slice(b: &mut Bencher) {
         let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let mut r = cache::DatasetReader::with_dataset(i.dataset("x_wind_ml").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("x_wind_ml").unwrap();
 
         // test against native
         let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
@@ -65,7 +62,7 @@ mod meps {
     #[bench]
     fn idx_big_slice(b: &mut Bencher) {
         let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let mut r = cache::DatasetReader::with_dataset(i.dataset("x_wind_ml").unwrap(), i.path()).unwrap();
+        let mut r = i.reader("x_wind_ml").unwrap();
 
         // test against native
         let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();

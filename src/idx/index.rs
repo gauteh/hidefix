@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::fs;
 use serde::{Serialize, Deserialize};
 
 use hdf5::File;
 
 use super::dataset::Dataset;
+use crate::reader::{cache, stream};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Index {
@@ -46,6 +48,40 @@ impl Index {
     #[must_use]
     pub fn path(&self) -> &Path {
         self.path.as_ref()
+    }
+
+    /// Create a cached reader for dataset.
+    ///
+    /// This is a convenience method to use a standard `std::fs::File` with a `cached` reader, you are
+    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
+    ///
+    /// This method assumes the HDF5 file has the same location as at the time of
+    /// indexing.
+    pub fn reader(
+        &self,
+        ds: &str,
+    ) -> Result<cache::DatasetReader<fs::File>, anyhow::Error> {
+        match self.dataset(ds) {
+            Some(ds) => cache::DatasetReader::with_dataset(&ds, fs::File::open(self.path())?),
+            None => Err(anyhow!("dataset does not exist")),
+        }
+    }
+
+    /// Create a streaming reader for dataset.
+    ///
+    /// This is a convenience method to use a standard `std::fs::File` with a `stream` reader, you are
+    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
+    ///
+    /// This method assumes the HDF5 file has the same location as at the time of
+    /// indexing.
+    pub fn streamer(
+        &self,
+        ds: &str,
+    ) -> Result<stream::DatasetReader, anyhow::Error> {
+        match self.dataset(ds) {
+            Some(ds) => stream::DatasetReader::with_dataset(&ds, self.path()),
+            None => Err(anyhow!("dataset does not exist")),
+        }
     }
 }
 

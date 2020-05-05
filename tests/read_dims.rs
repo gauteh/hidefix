@@ -2,11 +2,7 @@
 extern crate test;
 
 use ndarray::s;
-
-use hidefix::{
-    idx::Index,
-    reader::cache,
-};
+use hidefix::idx::Index;
 
 /// Test whether datasets of various rank are correctly sliced.
 
@@ -15,7 +11,7 @@ fn chunked_2d() {
     type T = f32;
 
     let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
-    let mut r = cache::DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+    let mut r = i.reader("d_4_chunks").unwrap();
 
     let values = r.values::<T>(None, None).unwrap();
 
@@ -36,7 +32,7 @@ fn chunked_3d() {
     type T = f32;
 
     let i = Index::index("tests/data/dmrpp/chunked_threeD.h5").unwrap();
-    let mut r = cache::DatasetReader::with_dataset(i.dataset("d_8_chunks").unwrap(), i.path()).unwrap();
+    let mut r = i.reader("d_8_chunks").unwrap();
 
     let values = r.values::<T>(None, None).unwrap();
 
@@ -57,7 +53,7 @@ fn chunked_4d() {
     type T = f32;
 
     let i = Index::index("tests/data/dmrpp/chunked_fourD.h5").unwrap();
-    let mut r = cache::DatasetReader::with_dataset(i.dataset("d_16_chunks").unwrap(), i.path()).unwrap();
+    let mut r = i.reader("d_16_chunks").unwrap();
 
     let values = r.values::<T>(None, None).unwrap();
 
