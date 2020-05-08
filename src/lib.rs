@@ -1,4 +1,4 @@
-#![recursion_limit = "512"]
+#![recursion_limit = "512"] // for Stream reader stream! macro
 #![feature(test)]
 extern crate test;
 
@@ -9,5 +9,3 @@ pub mod filters;
 pub mod idx;
 pub mod reader;
 
-#[cfg(test)]
-mod tests {}

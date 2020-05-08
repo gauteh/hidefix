@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use crate::filters::byteorder::Order as ByteOrder;
 use super::chunk::Chunk;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Datatype {
     UInt(usize),
     Int(usize),

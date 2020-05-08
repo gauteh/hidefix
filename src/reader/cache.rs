@@ -115,6 +115,19 @@ mod tests {
     use crate::idx::Index;
 
     #[test]
+    fn read_coads_sst() {
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
+        let mut r = i.reader("SST").unwrap();
+
+        let vs = r.values::<f32>(None, None).unwrap();
+
+        let h = hdf5::File::open(i.path()).unwrap();
+        let hvs = h.dataset("SST").unwrap().read_raw::<f32>().unwrap();
+
+        assert_eq!(vs, hvs);
+    }
+
+    #[test]
     fn read_t_float32() {
         let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
         let mut r = i.reader("d32_1").unwrap();
