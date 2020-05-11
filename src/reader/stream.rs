@@ -15,6 +15,11 @@ use crate::filters;
 use crate::filters::byteorder::ToNative;
 use crate::idx::Dataset;
 
+// This stream should be re-done as a wrapper around CacheReader:
+//
+// * CacheReader needs to have a Send + Sync cache
+// * CacheReader cannot pass fd around
+
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
     p: PathBuf,

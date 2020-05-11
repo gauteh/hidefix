@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-use serde::{Serialize, Deserialize};
 
 /// A HDF5 chunk. A chunk is read and written in its entirety by the HDF5 library. This is
 /// usually necessary since the chunk can be compressed and filtered.

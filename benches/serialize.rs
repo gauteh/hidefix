@@ -89,4 +89,3 @@ mod serde_bincode {
         })
     }
 }
-

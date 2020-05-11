@@ -1,17 +1,17 @@
 use itertools::izip;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::min;
 use strength_reduce::StrengthReducedU64;
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
 
-use crate::filters::byteorder::Order as ByteOrder;
 use super::chunk::Chunk;
+use crate::filters::byteorder::Order as ByteOrder;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Datatype {
     UInt(usize),
     Int(usize),
     Float(usize),
-    Unknown
+    Unknown,
 }
 
 impl From<hdf5::Datatype> for Datatype {
@@ -23,7 +23,7 @@ impl From<hdf5::Datatype> for Datatype {
             _ if dtype.is::<i64>() => Datatype::Int(dtype.size()),
             _ if dtype.is::<f32>() => Datatype::Float(dtype.size()),
             _ if dtype.is::<f64>() => Datatype::Float(dtype.size()),
-            _ => Datatype::Unknown
+            _ => Datatype::Unknown,
         }
     }
 }
@@ -37,7 +37,10 @@ pub struct Dataset {
     pub shape: Vec<u64>,
     pub chunk_shape: Vec<u64>,
 
-    #[serde(serialize_with = "serialize_sru64", deserialize_with = "deserialize_sru64")]
+    #[serde(
+        serialize_with = "serialize_sru64",
+        deserialize_with = "deserialize_sru64"
+    )]
     chunk_shape_reduced: Vec<StrengthReducedU64>,
 
     scaled_dim_sz: Vec<u64>,
@@ -48,13 +51,17 @@ pub struct Dataset {
 }
 
 fn serialize_sru64<S>(v: &Vec<StrengthReducedU64>, s: S) -> Result<S::Ok, S::Error>
-where S: Serializer {
+where
+    S: Serializer,
+{
     let b: Vec<u64> = v.iter().map(|s| s.get()).collect();
     b.serialize(s)
 }
 
 fn deserialize_sru64<'de, D>(d: D) -> Result<Vec<StrengthReducedU64>, D::Error>
-where D: Deserializer<'de> {
+where
+    D: Deserializer<'de>,
+{
     let v = Vec::<u64>::deserialize(d)?;
     Ok(v.iter().map(|v| StrengthReducedU64::new(*v)).collect())
 }
@@ -93,7 +100,8 @@ impl Dataset {
                                     size: ci.size,
                                     addr: ci.addr,
                                 }
-                            }).ok_or_else(|| anyhow!("{}: Could not get chunk info", ds.name()))
+                            })
+                            .ok_or_else(|| anyhow!("{}: Could not get chunk info", ds.name()))
                     })
                     .collect()
             }
@@ -123,8 +131,11 @@ impl Dataset {
         );
 
         {
-            let expected_chunks = shape.iter()
-                .zip(&chunk_shape).map(|(s, c)| (s + (c - 1)) / c).product::<u64>() as usize;
+            let expected_chunks = shape
+                .iter()
+                .zip(&chunk_shape)
+                .map(|(s, c)| (s + (c - 1)) / c)
+                .product::<u64>() as usize;
 
             anyhow::ensure!(
                 chunks.len() == expected_chunks,
@@ -238,12 +249,16 @@ impl Dataset {
     }
 
     pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk {
-        assert_eq!(indices.len(), self.chunk_shape_reduced.len());
-        assert_eq!(indices.len(), self.scaled_dim_sz.len());
+        debug_assert_eq!(indices.len(), self.chunk_shape_reduced.len());
+        debug_assert_eq!(indices.len(), self.scaled_dim_sz.len());
 
-        let offset = (0..indices.len()).fold(0, |offset, i| {
-            offset + indices[i] / self.chunk_shape_reduced[i] * self.scaled_dim_sz[i]
-        });
+        let offset = indices
+            .iter()
+            .zip(&self.chunk_shape_reduced)
+            .zip(&self.scaled_dim_sz)
+            .fold(0, |offset, ((&index, &ch_sh), &sz)| {
+                offset + index / ch_sh * sz
+            });
 
         &self.chunks[offset as usize]
     }
@@ -280,12 +295,16 @@ impl<'a> ChunkSlicer<'a> {
     /// Offset from chunk offset coordinates. `dim_sz` is dimension size of chunk
     /// dimensions.
     fn chunk_start(coords: &[u64], chunk_offset: &[u64], dim_sz: &[u64]) -> u64 {
-        assert_eq!(coords.len(), chunk_offset.len());
-        assert_eq!(coords.len(), dim_sz.len());
+        debug_assert_eq!(coords.len(), chunk_offset.len());
+        debug_assert_eq!(coords.len(), dim_sz.len());
 
-        (0..coords.len()).fold(0, |start, i| {
-            start + (coords[i] - chunk_offset[i]) * dim_sz[i]
-        })
+        coords
+            .iter()
+            .zip(chunk_offset)
+            .zip(dim_sz)
+            .fold(0, |start, ((&coord, &offset), &sz)| {
+                start + (coord - offset) * sz
+            })
     }
 }
 
@@ -378,7 +397,11 @@ impl<'a> Iterator for ChunkSlicer<'a> {
                 break;
             }
         }
-        assert!(advanced > 0, "slice iterator not advancing: stuck infinitely.");
+
+        debug_assert!(
+            advanced > 0,
+            "slice iterator not advancing: stuck indefinitely."
+        );
 
         // position in chunk of new offset
         let chunk_end = chunk_start + advanced;
@@ -583,7 +606,7 @@ mod tests {
 
         let md: Dataset = serde_json::from_str(&s).unwrap();
 
-        for (a,b) in izip!(d.chunk_shape_reduced, md.chunk_shape_reduced) {
+        for (a, b) in izip!(d.chunk_shape_reduced, md.chunk_shape_reduced) {
             assert_eq!(a.get(), b.get());
         }
     }

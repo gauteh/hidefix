@@ -15,8 +15,7 @@ pub struct DatasetReader<'a, R: Read + Seek> {
 }
 
 impl<'a, R: Read + Seek> DatasetReader<'a, R> {
-    pub fn with_dataset(ds: &'a Dataset, fd: R) -> Result<DatasetReader<'a, R>, anyhow::Error>
-    {
+    pub fn with_dataset(ds: &'a Dataset, fd: R) -> Result<DatasetReader<'a, R>, anyhow::Error> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
         let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
@@ -67,7 +66,10 @@ impl<'a, R: Read + Seek> DatasetReader<'a, R> {
                         decache.set_len(self.chunk_sz as usize);
                     }
 
-                    let mut dz = flate2::read::ZlibDecoder::new_with_buf(&cache[..], vec![0_u8; 32 * 1024 * 1024]);
+                    let mut dz = flate2::read::ZlibDecoder::new_with_buf(
+                        &cache[..],
+                        vec![0_u8; 32 * 1024 * 1024],
+                    );
                     dz.read_exact(&mut decache)?;
 
                     decache
@@ -214,7 +216,9 @@ mod tests {
         println!("ds size: {}", r.ds.size());
         println!("cshape: {:?}", r.ds.chunk_shape);
 
-        let vs = r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5])).unwrap();
+        let vs = r
+            .values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
+            .unwrap();
         println!("idx read: done: {}", vs.len());
 
         let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
@@ -224,6 +228,12 @@ mod tests {
 
         use ndarray::s;
 
-        assert_eq!(vs, hvs.slice(s![0..2, 0..2, 0..1, 0..5]).iter().map(|v| *v).collect::<Vec<i32>>());
+        assert_eq!(
+            vs,
+            hvs.slice(s![0..2, 0..2, 0..1, 0..5])
+                .iter()
+                .map(|v| *v)
+                .collect::<Vec<i32>>()
+        );
     }
 }

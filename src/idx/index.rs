@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::fs;
-use serde::{Serialize, Deserialize};
+use std::path::{Path, PathBuf};
 
 use hdf5::File;
 
@@ -57,10 +57,7 @@ impl Index {
     ///
     /// This method assumes the HDF5 file has the same location as at the time of
     /// indexing.
-    pub fn reader(
-        &self,
-        ds: &str,
-    ) -> Result<cache::DatasetReader<fs::File>, anyhow::Error> {
+    pub fn reader(&self, ds: &str) -> Result<cache::DatasetReader<fs::File>, anyhow::Error> {
         match self.dataset(ds) {
             Some(ds) => cache::DatasetReader::with_dataset(&ds, fs::File::open(self.path())?),
             None => Err(anyhow!("dataset does not exist")),
@@ -74,10 +71,7 @@ impl Index {
     ///
     /// This method assumes the HDF5 file has the same location as at the time of
     /// indexing.
-    pub fn streamer(
-        &self,
-        ds: &str,
-    ) -> Result<stream::DatasetReader, anyhow::Error> {
+    pub fn streamer(&self, ds: &str) -> Result<stream::DatasetReader, anyhow::Error> {
         match self.dataset(ds) {
             Some(ds) => stream::DatasetReader::with_dataset(&ds, self.path()),
             None => Err(anyhow!("dataset does not exist")),

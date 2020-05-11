@@ -1,10 +1,10 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum Order {
     BE,
     LE,
-    Unknown
+    Unknown,
 }
 
 impl From<hdf5::ByteOrder> for Order {
@@ -14,7 +14,7 @@ impl From<hdf5::ByteOrder> for Order {
         match byo {
             ByteOrder::BigEndian => Order::BE,
             ByteOrder::LittleEndian => Order::LE,
-            _ => Order::Unknown
+            _ => Order::Unknown,
         }
     }
 }
@@ -97,8 +97,8 @@ where
                     for n in self {
                         *n = n.swap()
                     }
-                },
-                _ => unimplemented!()
+                }
+                _ => unimplemented!(),
             }
         } else {
             match order {
@@ -108,7 +108,7 @@ where
                     }
                 }
                 Order::LE => (),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
     }
@@ -125,8 +125,8 @@ where
                 for n in self {
                     *n = n.swap()
                 }
-            },
-            _ => unimplemented!()
+            }
+            _ => unimplemented!(),
         }
     }
 }
@@ -144,19 +144,18 @@ pub fn to_big_e_sized(buf: &mut [u8], order: Order, dsz: usize) -> Result<(), an
             2 => {
                 let v = buf.as_mut_slice_of::<u16>()?;
                 v.to_big_e(order);
-            },
+            }
             4 => {
                 let v = buf.as_mut_slice_of::<u32>()?;
                 v.to_big_e(order);
-            },
+            }
             8 => {
                 let v = buf.as_mut_slice_of::<u64>()?;
                 v.to_big_e(order);
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 
     Ok(())
 }
-

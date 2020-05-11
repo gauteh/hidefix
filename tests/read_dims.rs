@@ -1,8 +1,8 @@
 #![feature(test)]
 extern crate test;
 
-use ndarray::s;
 use hidefix::idx::Index;
+use ndarray::s;
 
 /// Test whether datasets of various rank are correctly sliced.
 
@@ -23,7 +23,11 @@ fn chunked_2d() {
 
     let values = r.values::<T>(Some(&[10, 10]), Some(&[15, 15])).unwrap();
     let hvs = d.read_dyn::<T>().unwrap();
-    let hval = hvs.slice(s![10..25, 10..25]).iter().map(|v| *v).collect::<Vec<T>>();
+    let hval = hvs
+        .slice(s![10..25, 10..25])
+        .iter()
+        .map(|v| *v)
+        .collect::<Vec<T>>();
     assert_eq!(values, hval);
 }
 
@@ -42,9 +46,15 @@ fn chunked_3d() {
 
     assert_eq!(values, hval);
 
-    let values = r.values::<T>(Some(&[10, 10, 10]), Some(&[1, 2, 1])).unwrap();
+    let values = r
+        .values::<T>(Some(&[10, 10, 10]), Some(&[1, 2, 1]))
+        .unwrap();
     let hvs = d.read_dyn::<T>().unwrap();
-    let hval = hvs.slice(s![10..11, 10..12, 10..11]).iter().map(|v| *v).collect::<Vec<T>>();
+    let hval = hvs
+        .slice(s![10..11, 10..12, 10..11])
+        .iter()
+        .map(|v| *v)
+        .collect::<Vec<T>>();
     assert_eq!(values, hval);
 }
 
@@ -63,9 +73,14 @@ fn chunked_4d() {
 
     assert_eq!(values, hval);
 
-    let values = r.values::<T>(Some(&[10, 10, 10, 5]), Some(&[15, 15, 15, 14])).unwrap();
+    let values = r
+        .values::<T>(Some(&[10, 10, 10, 5]), Some(&[15, 15, 15, 14]))
+        .unwrap();
     let hvs = d.read_dyn::<T>().unwrap();
-    let hval = hvs.slice(s![10..25, 10..25, 10..25, 5..19]).iter().map(|v| *v).collect::<Vec<T>>();
+    let hval = hvs
+        .slice(s![10..25, 10..25, 10..25, 5..19])
+        .iter()
+        .map(|v| *v)
+        .collect::<Vec<T>>();
     assert_eq!(values, hval);
-
 }

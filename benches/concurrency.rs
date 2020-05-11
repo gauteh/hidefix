@@ -29,6 +29,7 @@ const REPETITIONS: usize = 100;
 mod shuffled_compressed {
     use super::*;
 
+    #[ignore]
     #[bench]
     fn cache_sequential(b: &mut Bencher) {
         let i = Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
@@ -43,6 +44,7 @@ mod shuffled_compressed {
         })
     }
 
+    #[ignore]
     #[bench]
     fn native_sequential(b: &mut Bencher) {
         let h = hdf5::File::open("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
@@ -57,6 +59,7 @@ mod shuffled_compressed {
         })
     }
 
+    #[ignore]
     #[bench]
     fn cache_concurrent_reads(b: &mut Bencher) {
         let i = Arc::new(Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap());
@@ -83,6 +86,7 @@ mod shuffled_compressed {
         })
     }
 
+    #[ignore]
     #[bench]
     fn native_concurrent_reads(b: &mut Bencher) {
         let h = hdf5::File::open("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
