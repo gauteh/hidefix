@@ -8,14 +8,14 @@ repository = "https://github.com/gauteh/hidefix"
 version = "0.0.0"
 
 [dependencies]
-anyhow = "1.0.26"
-async-stream = "0.2"
-byte-slice-cast = "0.3.5"
-futures = "0.3"
-futures-core = "0.3"
-futures-util = "0.3"
-itertools = "0.8"
-lru = "0.4"
+anyhow = "*"
+async-stream = "*"
+byte-slice-cast = "*"
+futures = "*"
+futures-core = "*"
+futures-util = "*"
+itertools = "*"
+lru = "*"
 strength_reduce = "*"
 
 [dependencies.flate2]
@@ -33,7 +33,7 @@ git = "https://github.com/gauteh/hdf5-rust"
 
 [dependencies.rio]
 optional = true
-version = "0.9"
+version = "*"
 
 [dependencies.serde]
 features = ["derive"]
@@ -44,9 +44,9 @@ features = ["sync"]
 version = "*"
 
 [dev-dependencies]
-byteorder = "1.3.2"
-rand = "0.7.3"
-ndarray = "0.13.1"
+byteorder = "*"
+rand = "*"
+ndarray = "*"
 serde_json = "*"
 rayon = "*"
 bincode = "*"
