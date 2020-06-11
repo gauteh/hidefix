@@ -150,13 +150,13 @@ mod tests {
     #[test]
     fn read_t_float32() {
         let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path()).unwrap();
+        let r = DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path().unwrap()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
         pin_mut!(v);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d32_1").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
@@ -165,13 +165,13 @@ mod tests {
     #[test]
     fn read_chunked_1d() {
         let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path().unwrap()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
         pin_mut!(v);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
@@ -180,13 +180,13 @@ mod tests {
     #[test]
     fn read_chunked_2d() {
         let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path()).unwrap();
+        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path().unwrap()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
         pin_mut!(v);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);

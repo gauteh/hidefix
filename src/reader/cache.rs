@@ -59,7 +59,7 @@ impl<'a, R: Read + Seek> DatasetReader<'a, R> {
                 self.fd.seek(SeekFrom::Start(c.addr))?;
                 self.fd.read_exact(&mut cache)?;
 
-                // we assume decompression comes before unshuffling
+                // Decompression comes before unshuffling
                 let cache = if let Some(_) = self.ds.gzip {
                     let mut decache: Vec<u8> = Vec::with_capacity(self.chunk_sz as usize);
                     unsafe {
@@ -123,7 +123,7 @@ mod tests {
 
         let vs = r.values::<f32>(None, None).unwrap();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("SST").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
@@ -136,7 +136,7 @@ mod tests {
 
         let vs = r.values::<f32>(None, None).unwrap();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d32_1").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
@@ -149,7 +149,7 @@ mod tests {
 
         let vs = r.values::<f32>(None, None).unwrap();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
@@ -162,7 +162,7 @@ mod tests {
 
         let vs = r.values::<f32>(None, None).unwrap();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
 
         assert_eq!(vs, hvs);
@@ -175,7 +175,7 @@ mod tests {
 
         let vs = r.values::<f32>(None, None).unwrap();
 
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h
             .dataset("d_4_shuffled_chunks")
             .unwrap()
@@ -195,7 +195,7 @@ mod tests {
         // println!("{:?}", vs);
 
         // hdf5 having issues loading zlib
-        let h = hdf5::File::open(i.path()).unwrap();
+        let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h
             .dataset("d_4_gzipped_chunks")
             .unwrap()

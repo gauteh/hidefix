@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::convert::TryFrom;
 
 use hdf5::File;
 
@@ -10,8 +11,24 @@ use crate::reader::{cache, stream};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Index {
-    path: PathBuf,
+    path: Option<PathBuf>,
     datasets: HashMap<String, Dataset>,
+}
+
+impl TryFrom<&Path> for Index {
+    type Error = anyhow::Error;
+
+    fn try_from(p: &Path) -> Result<Index, anyhow::Error> {
+        Index::index(p)
+    }
+}
+
+impl TryFrom<&hdf5::File> for Index {
+    type Error = anyhow::Error;
+
+    fn try_from(f: &hdf5::File) -> Result<Index, anyhow::Error> {
+        Index::index_file::<&str>(f, None)
+    }
 }
 
 impl Index {
@@ -23,7 +40,13 @@ impl Index {
         let path = path.as_ref();
 
         let hf = File::open(path)?;
+        Index::index_file(&hf, Some(path))
+    }
 
+    /// Index an open HDF5 file.
+    pub fn index_file<P>(hf: &hdf5::File, path: Option<P>) -> Result<Index, anyhow::Error>
+        where P: Into<PathBuf>
+    {
         let datasets = hf
             .group("/")?
             .member_names()?
@@ -35,7 +58,7 @@ impl Index {
             .collect::<Result<HashMap<String, Dataset>, _>>()?;
 
         Ok(Index {
-            path: path.into(),
+            path: path.map(|p| p.into()),
             datasets,
         })
     }
@@ -46,8 +69,8 @@ impl Index {
     }
 
     #[must_use]
-    pub fn path(&self) -> &Path {
-        self.path.as_ref()
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_ref().map(|p| p.as_ref())
     }
 
     /// Create a cached reader for dataset.
@@ -58,8 +81,10 @@ impl Index {
     /// This method assumes the HDF5 file has the same location as at the time of
     /// indexing.
     pub fn reader(&self, ds: &str) -> Result<cache::DatasetReader<fs::File>, anyhow::Error> {
+        let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
+
         match self.dataset(ds) {
-            Some(ds) => cache::DatasetReader::with_dataset(&ds, fs::File::open(self.path())?),
+            Some(ds) => cache::DatasetReader::with_dataset(&ds, fs::File::open(path)?),
             None => Err(anyhow!("dataset does not exist")),
         }
     }
@@ -72,8 +97,10 @@ impl Index {
     /// This method assumes the HDF5 file has the same location as at the time of
     /// indexing.
     pub fn streamer(&self, ds: &str) -> Result<stream::DatasetReader, anyhow::Error> {
+        let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
+
         match self.dataset(ds) {
-            Some(ds) => stream::DatasetReader::with_dataset(&ds, self.path()),
+            Some(ds) => stream::DatasetReader::with_dataset(&ds, path),
             None => Err(anyhow!("dataset does not exist")),
         }
     }
