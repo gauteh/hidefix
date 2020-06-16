@@ -50,6 +50,7 @@ ndarray = "*"
 serde_json = "*"
 rayon = "*"
 bincode = "*"
+async-std = "*"
 
 [features]
 io_uring = ["rio"]

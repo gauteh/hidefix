@@ -161,6 +161,31 @@ mod coads {
     }
 
     #[bench]
+    fn async_cache(b: &mut Bencher) {
+        use futures::executor::block_on;
+        use futures::io::AsyncReadExt;
+        use async_std::fs;
+        use byte_slice_cast::IntoVecOf;
+        use hidefix::filters::byteorder::ToNative;
+        use hidefix::reader::async_cache;
+
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
+        let ds = i.dataset("SST").unwrap();
+
+        b.iter(|| block_on(async {
+            let fd = fs::File::open(i.path().unwrap()).await.unwrap();
+            let mut r = async_cache::DatasetReader::with_dataset_read(ds, fd, None, None).unwrap();
+            let mut buf = Vec::with_capacity(r.size());
+
+            // let mut r = BufReader::new(r);
+
+            r.read_to_end(&mut buf).await.unwrap();
+            let mut vs = buf.into_vec_of::<f32>().unwrap();
+            vs.to_native(ds.order)
+        }))
+    }
+
+    #[bench]
     fn stream(b: &mut Bencher) {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let r = i.streamer("SST").unwrap();

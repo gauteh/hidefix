@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::convert::TryFrom;
 
 use hdf5::File;
 
@@ -45,7 +45,8 @@ impl Index {
 
     /// Index an open HDF5 file.
     pub fn index_file<P>(hf: &hdf5::File, path: Option<P>) -> Result<Index, anyhow::Error>
-        where P: Into<PathBuf>
+    where
+        P: Into<PathBuf>,
     {
         let datasets = hf
             .group("/")?
