@@ -175,7 +175,7 @@ mod coads {
         b.iter(|| block_on(async {
             let fd = fs::File::open(i.path().unwrap()).await.unwrap();
             let mut r = async_cache::DatasetReader::with_dataset_read(ds, fd, None, None).unwrap();
-            let mut buf = Vec::with_capacity(r.size());
+            let mut buf = Vec::new();
 
             // let mut r = BufReader::new(r);
 
@@ -217,6 +217,25 @@ mod coads {
             pin_mut!(v);
             block_on_stream(v).for_each(drop);
         })
+    }
+
+    #[bench]
+    fn stream_bytes_async_read(b: &mut Bencher) {
+        use futures::stream::StreamExt;
+        use futures::stream::TryStreamExt;
+        use futures::executor::block_on;
+        use futures::io::AsyncReadExt;
+
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
+        let r = i.streamer("SST").unwrap();
+
+        b.iter(|| block_on(async {
+            let v = r.stream(None, None).map_err(|_| std::io::ErrorKind::UnexpectedEof.into());
+            pin_mut!(v);
+            let mut r = v.into_async_read();
+            let mut buf = Vec::with_capacity(8 * 1024);
+            r.read_to_end(&mut buf).await.unwrap();
+        }))
     }
 }
 
