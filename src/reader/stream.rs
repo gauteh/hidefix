@@ -12,7 +12,7 @@ use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
 
 use crate::filters;
-use crate::filters::byteorder::ToNative;
+use crate::filters::byteorder::{Order, ToNative};
 use crate::idx::Dataset;
 
 // This stream should be re-done as a wrapper around CacheReader:
@@ -112,6 +112,10 @@ impl<'a> DatasetReader<'a> {
                 }
             }
         }
+    }
+
+    pub fn order(&self) -> Order {
+        self.ds.order
     }
 
     pub fn stream_values<T>(
