@@ -186,7 +186,7 @@ mod coads {
     }
 
     #[bench]
-    fn stream(b: &mut Bencher) {
+    fn stream_values(b: &mut Bencher) {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let r = i.streamer("SST").unwrap();
 
@@ -221,7 +221,6 @@ mod coads {
 
     #[bench]
     fn stream_bytes_async_read(b: &mut Bencher) {
-        use futures::stream::StreamExt;
         use futures::stream::TryStreamExt;
         use futures::executor::block_on;
         use futures::io::AsyncReadExt;
