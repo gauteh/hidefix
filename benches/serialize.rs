@@ -49,7 +49,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn serialize_meps_bincode(b: &mut Bencher) {
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
 
         b.iter(|| bincode::serialize(&i).unwrap())
     }
@@ -57,7 +57,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn deserialize_meps_bincode(b: &mut Bencher) {
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let bb = bincode::serialize(&i).unwrap();
 
         b.iter(|| bincode::deserialize::<Index>(&bb).unwrap())
@@ -66,7 +66,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn serialize_meps_bincode_file(b: &mut Bencher) {
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
 
         b.iter(|| {
             let f = std::fs::File::create("/tmp/meps.idx.bc").unwrap();
@@ -78,7 +78,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn deserialize_meps_bincode_file(b: &mut Bencher) {
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let f = std::fs::File::create("/tmp/meps.idx.bc").unwrap();
         bincode::serialize_into(f, &i).unwrap();
 

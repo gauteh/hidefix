@@ -11,11 +11,11 @@ mod meps {
     #[ignore]
     #[bench]
     fn idx_small_slice(b: &mut Bencher) {
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let mut r = i.reader("x_wind_ml").unwrap();
 
         // test against native
-        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let d = h.dataset("x_wind_ml").unwrap();
         let hv = d
             .read_slice::<i32, _, _>(s![0..2, 0..2, 0..1, 0..5])
@@ -41,7 +41,7 @@ mod meps {
     #[ignore]
     #[bench]
     fn native_small_slice(b: &mut Bencher) {
-        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let d = h.dataset("x_wind_ml").unwrap();
 
         b.iter(|| {
@@ -55,11 +55,11 @@ mod meps {
     #[ignore]
     #[bench]
     fn idx_med_slice(b: &mut Bencher) {
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let mut r = i.reader("x_wind_ml").unwrap();
 
         // test against native
-        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let d = h.dataset("x_wind_ml").unwrap();
         let hv = d
             .read_slice::<i32, _, _>(s![0..10, 0..10, 0..1, 0..20000])
@@ -85,7 +85,7 @@ mod meps {
     #[ignore]
     #[bench]
     fn native_med_slice(b: &mut Bencher) {
-        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let d = h.dataset("x_wind_ml").unwrap();
 
         b.iter(|| {
@@ -99,11 +99,11 @@ mod meps {
     #[ignore]
     #[bench]
     fn idx_big_slice(b: &mut Bencher) {
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let mut r = i.reader("x_wind_ml").unwrap();
 
         // test against native
-        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let d = h.dataset("x_wind_ml").unwrap();
         let hv = d
             .read_slice::<i32, _, _>(s![0..65, 0..65, 0..1, 0..20000])
@@ -129,7 +129,7 @@ mod meps {
     #[ignore]
     #[bench]
     fn native_big_slice(b: &mut Bencher) {
-        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let d = h.dataset("x_wind_ml").unwrap();
 
         b.iter(|| {

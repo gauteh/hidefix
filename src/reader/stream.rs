@@ -1,5 +1,5 @@
 use async_stream::stream;
-use futures::stream::{Stream, StreamExt};
+use futures::{Stream, StreamExt};
 use futures_util::pin_mut;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};

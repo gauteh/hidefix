@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn read_meps() {
         println!("meps");
-        let i = Index::index("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         println!("idx index: done");
         let mut r = i.reader("x_wind_ml").unwrap();
 
@@ -221,7 +221,7 @@ mod tests {
             .unwrap();
         println!("idx read: done: {}", vs.len());
 
-        let h = hdf5::File::open("../data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let hvs = h.dataset("x_wind_ml").unwrap().read_dyn::<i32>().unwrap();
         println!("native: {}", hvs.len());
         println!("native: done");
