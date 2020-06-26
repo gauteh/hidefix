@@ -10,9 +10,10 @@ use tokio::sync::RwLock;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
+use bytes::{Bytes, BytesMut};
 
 use crate::filters;
-use crate::filters::byteorder::{Order, ToNative};
+use crate::filters::byteorder::{self, Order, ToNative};
 use crate::idx::Dataset;
 
 // This stream should be re-done as a wrapper around CacheReader:
@@ -23,7 +24,7 @@ use crate::idx::Dataset;
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
     p: PathBuf,
-    cache: Arc<RwLock<LruCache<u64, Vec<u8>>>>,
+    cache: Arc<RwLock<LruCache<u64, Bytes>>>,
     chunk_sz: u64,
 }
 
@@ -48,7 +49,7 @@ impl<'a> DatasetReader<'a> {
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
-    ) -> impl Stream<Item = Result<Vec<u8>, anyhow::Error>> {
+    ) -> impl Stream<Item = Result<Bytes, anyhow::Error>> {
         let dsz = self.ds.dsize as u64;
         let counts: &[u64] = counts.unwrap_or_else(|| self.ds.shape.as_slice());
         let slices = self
@@ -62,6 +63,7 @@ impl<'a> DatasetReader<'a> {
         let gzip = self.ds.gzip;
         let chunk_sz = self.chunk_sz;
         let ds_cache = Arc::clone(&self.cache);
+        let order = self.order();
 
         stream! {
             let mut fd = File::open(p)?;
@@ -74,9 +76,9 @@ impl<'a> DatasetReader<'a> {
                 let mut ds_cache = ds_cache.write().await;
 
                 if let Some(cache) = ds_cache.get(&addr) {
-                    yield Ok((&cache[start..end]).to_vec());
+                    yield Ok((cache.slice(start..end)));
                 } else {
-                    let mut cache: Vec<u8> = Vec::with_capacity(sz as usize);
+                    let mut cache = BytesMut::with_capacity(sz as usize);
                     unsafe {
                         cache.set_len(sz as usize);
                     }
@@ -86,7 +88,7 @@ impl<'a> DatasetReader<'a> {
 
                     // we assume decompression comes before unshuffling
                     let cache = if let Some(_) = gzip {
-                        let mut decache: Vec<u8> = Vec::with_capacity(chunk_sz as usize);
+                        let mut decache = BytesMut::with_capacity(chunk_sz as usize);
                         unsafe {
                             decache.set_len(chunk_sz as usize);
                         }
@@ -99,16 +101,18 @@ impl<'a> DatasetReader<'a> {
                         cache
                     };
 
-                    let cache = if shuffle {
-                        filters::shuffle::unshuffle_sized(&cache, dsz as usize)
+                    let mut cache = if shuffle {
+                        filters::shuffle::unshuffle_bytes(cache, dsz as usize)
                     } else {
                         cache
                     };
 
-                    let slice = Ok((&cache[start..end]).to_vec());
-                    ds_cache.put(addr, cache);
+                    byteorder::to_big_e_sized(&mut cache, order, dsz as usize)?;
+                    let cache = cache.freeze();
 
-                    yield slice;
+                    ds_cache.put(addr, cache.clone());
+
+                    yield Ok(cache.slice(start..end));
                 }
             }
         }
@@ -130,12 +134,12 @@ impl<'a> DatasetReader<'a> {
         // TODO: use as_slice_of() to avoid copy, or possible values_to(&mut buf) so that
         //       caller keeps ownership of slice too.
         let reader = self.stream(indices, counts);
-        let order = self.ds.order;
+        let order = Order::BE;
 
         stream! {
             pin_mut!(reader);
             while let Some(Ok(b)) = reader.next().await {
-                let mut values = b.into_vec_of::<T>()
+                let mut values = b.to_vec().into_vec_of::<T>()
                     .map_err(|_| anyhow!("could not cast to value"))?;
 
                 values.to_native(order);

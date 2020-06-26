@@ -2,6 +2,8 @@ use byte_slice_cast::{
     AsByteSlice, AsMutByteSlice, FromByteVec, IntoByteVec, ToByteSlice, ToMutByteSlice,
 };
 
+use bytes::BytesMut;
+
 /// Shuffle bytes according to HDF5 spec:
 ///
 /// https://support.hdfgroup.org/ftp/HDF5//documentation/doc1.6/TechNotes/shuffling-algorithm-report.pdf
@@ -65,6 +67,26 @@ where
             }
         }
     }
+}
+
+/// Unshuffle bytes representing array with word size `wsz` (e.g. `4` for `int32`).
+pub fn unshuffle_bytes(src: BytesMut, wsz: usize) -> BytesMut {
+    if wsz == 1 {
+        return src;
+    }
+
+    let sz = src.len();
+    let mut dest = BytesMut::with_capacity(sz);
+
+    for i in 0..wsz {
+        for j in 0..sz {
+            unsafe {
+                *dest.get_unchecked_mut(j * wsz + i) = *src.get_unchecked(i * sz + j);
+            }
+        }
+    }
+
+    dest
 }
 
 pub fn unshuffle_sized<T>(src: &[T], sz: usize) -> Vec<u8>

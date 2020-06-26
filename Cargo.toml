@@ -6,11 +6,11 @@ license = "LGPL"
 name = "hidefix"
 repository = "https://github.com/gauteh/hidefix"
 version = "0.0.0"
-
 [dependencies]
 anyhow = "*"
 async-stream = "*"
 byte-slice-cast = "*"
+bytes = "*"
 futures = "*"
 futures-core = "*"
 futures-util = "*"
@@ -44,13 +44,13 @@ features = ["sync"]
 version = "*"
 
 [dev-dependencies]
-byteorder = "*"
-rand = "*"
-ndarray = "*"
-serde_json = "*"
-rayon = "*"
-bincode = "*"
 async-std = "*"
+bincode = "*"
+byteorder = "*"
+ndarray = "*"
+rand = "*"
+rayon = "*"
+serde_json = "*"
 
 [features]
 io_uring = ["rio"]

@@ -2,7 +2,6 @@
 extern crate test;
 
 use hidefix::idx::Index;
-use ndarray::s;
 
 #[test]
 fn chunked_string_array() {
