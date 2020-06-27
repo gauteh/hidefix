@@ -18,6 +18,7 @@ futures-util = "*"
 itertools = "*"
 lru = "*"
 strength_reduce = "*"
+bincode = "*"
 
 [dependencies.flate2]
 features = ["zlib"]
@@ -42,7 +43,6 @@ version = "*"
 
 [dev-dependencies]
 async-std = "*"
-bincode = "*"
 byteorder = "*"
 ndarray = "*"
 rand = "*"

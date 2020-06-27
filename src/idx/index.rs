@@ -69,6 +69,10 @@ impl Index {
         self.datasets.get(s)
     }
 
+    pub fn datasets(&self) -> &HashMap<String, Dataset> {
+        &self.datasets
+    }
+
     #[must_use]
     pub fn path(&self) -> Option<&Path> {
         self.path.as_ref().map(|p| p.as_ref())
