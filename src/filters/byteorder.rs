@@ -7,6 +7,16 @@ pub enum Order {
     Unknown,
 }
 
+impl Order {
+    pub fn native() -> Self {
+        if cfg!(target_endian = "big") {
+            Order::BE
+        } else {
+            Order::LE
+        }
+    }
+}
+
 impl From<hdf5::ByteOrder> for Order {
     fn from(byo: hdf5::ByteOrder) -> Self {
         use hdf5::ByteOrder;

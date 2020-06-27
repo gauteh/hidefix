@@ -6,6 +6,7 @@ license = "LGPL"
 name = "hidefix"
 repository = "https://github.com/gauteh/hidefix"
 version = "0.0.0"
+
 [dependencies]
 anyhow = "*"
 async-stream = "*"
@@ -31,10 +32,6 @@ branch = "hidefix"
 features = ["static", "zlib"]
 git = "https://github.com/gauteh/hdf5-rust"
 
-[dependencies.rio]
-optional = true
-version = "*"
-
 [dependencies.serde]
 features = ["derive"]
 version = "*"
@@ -51,6 +48,3 @@ ndarray = "*"
 rand = "*"
 rayon = "*"
 serde_json = "*"
-
-[features]
-io_uring = ["rio"]

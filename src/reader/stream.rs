@@ -136,6 +136,9 @@ impl<'a> DatasetReader<'a> {
         let reader = self.stream(indices, counts);
         let order = Order::BE;
 
+        // XXX: This got a lot slower after always outputing big endian from stream(). Can probably
+        // fix that or make customizable. But need Big E for dars.
+
         stream! {
             pin_mut!(reader);
             while let Some(Ok(b)) = reader.next().await {
