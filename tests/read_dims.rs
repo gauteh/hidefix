@@ -84,3 +84,19 @@ fn chunked_4d() {
         .collect::<Vec<T>>();
     assert_eq!(values, hval);
 }
+
+#[test]
+fn scalar() {
+    type T = i32;
+
+    let i = Index::index("tests/data/dmrpp/t_int_scalar.h5").unwrap();
+    let mut r = i.reader("scalar").unwrap();
+
+    let values = r.values::<T>(None, None).unwrap();
+
+    let h = hdf5::File::open("tests/data/dmrpp/t_int_scalar.h5").unwrap();
+    let d = h.dataset("scalar").unwrap();
+    let hval = d.read_raw::<T>().unwrap();
+
+    assert_eq!(values, hval);
+}

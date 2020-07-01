@@ -225,6 +225,11 @@ impl Dataset {
         self.shape.iter().product::<u64>() as usize
     }
 
+    /// Dataset contains a single scalar value.
+    pub fn is_scalar(&self) -> bool {
+        self.shape.is_empty()
+    }
+
     /// Returns an iterator over chunk, offset and size which if joined will make up the specified slice through the
     /// variable.
     pub fn chunk_slices(
@@ -277,8 +282,18 @@ pub struct ChunkSlicer<'a> {
 
 impl<'a> ChunkSlicer<'a> {
     pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer<'a> {
-        // size of slice dimensions
-        let end = counts.iter().product::<u64>();
+        let end = if dataset.is_scalar() {
+            // scalar
+            assert!(indices.is_empty());
+            1
+        } else {
+            // size of slice dimensions
+            counts.iter().product::<u64>()
+        };
+
+        assert_eq!(indices.len(), dataset.shape.len());
+        assert_eq!(counts.len(), dataset.shape.len());
+        assert!(izip!(&indices, &counts, &dataset.shape).all(|(i, c, z)| i + c <= *z));
 
         ChunkSlicer {
             dataset,
@@ -314,6 +329,15 @@ impl<'a> Iterator for ChunkSlicer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset >= self.end {
             return None;
+        }
+
+        // scalar
+        if self.dataset.is_scalar() {
+            debug_assert!(self.dataset.chunks.len() == 1);
+            debug_assert!(self.dataset.shape.is_empty());
+            self.offset += 1;
+
+            return Some((&self.dataset.chunks[0], 0, 1));
         }
 
         let chunk: &Chunk = self.dataset.chunk_at_coord(&self.start_coords);

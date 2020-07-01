@@ -1,4 +1,4 @@
-///! Create an index serialized to bincode
+///! Create an index serialized to a flexbuffer.
 
 use std::env;
 
@@ -6,7 +6,8 @@ use std::env;
 extern crate anyhow;
 
 use hidefix::idx::Index;
-use bincode;
+use serde::ser::Serialize;
+use flexbuffers::FlexbufferSerializer as ser;
 
 fn usage() {
     println!("Usage: hfxidx input.h5 output.h5.idx");
@@ -23,16 +24,19 @@ fn main() -> Result<(), anyhow::Error> {
     let fin = &args[1];
     let fout = &args[2];
 
-    println!("Indexing {}..", fin);
+    print!("Indexing {}..", fin);
 
     let idx = Index::index(fin)?;
 
-    println!("Writing index to {} (as bincode)..", fout);
-    let f = std::fs::File::create(fout)?;
-    let w = std::io::BufWriter::new(f);
-    bincode::serialize_into(w, &idx)?;
+    println!("done.");
 
-    println!("Done.");
+    print!("Writing index to {} (as flxebuffer)..", fout);
+
+    let mut s = ser::new();
+    idx.serialize(&mut s)?;
+    std::fs::write(fout, s.view())?;
+
+    println!("done.");
 
     Ok(())
 }

@@ -1,15 +1,12 @@
-///! Dump an serialized index to stdout
+///! List a summary of a flexbuffer serialized index to stdout.
 
 use std::env;
 
 #[macro_use]
 extern crate anyhow;
 
-use hidefix::idx::Index;
-use bincode;
-
 fn usage() {
-    println!("Usage: hfxdump input.h5.idx");
+    println!("Usage: hfxlst input.h5.idx");
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -24,16 +21,18 @@ fn main() -> Result<(), anyhow::Error> {
 
     println!("Loading index from {}..", fin);
 
-    let f = std::fs::File::open("/tmp/meps.idx.bc")?;
-    let r = std::io::BufReader::new(f);
-    let idx = bincode::deserialize_from::<_, Index>(r)?;
+    let b = std::fs::read(fin)?;
+    let idx = flexbuffers::Reader::get_root(&b)?.as_map();
 
-    println!("Datasets (source path: {:?}):\n", idx.path());
+    println!("Datasets (source path: {:?}):\n", idx.idx("path").as_str());
     println!("{:4}{:30} shape:", "", "name:");
 
-    for (k, v) in idx.datasets() {
-        println!("{:4}{:30} {:?}", "", k, v.shape);
-    }
+    let datasets = idx.idx("datasets").as_map();
+
+    datasets.iter_keys().for_each(|k| {
+        let shape: Vec<u64> = datasets.idx(k).as_map().idx("shape").as_vector().iter().map(|r| r.as_u64()).collect();
+        println!("{:4}{:30} {:?}", "", k, shape);
+    });
 
     Ok(())
 }

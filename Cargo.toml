@@ -19,6 +19,7 @@ itertools = "*"
 lru = "*"
 strength_reduce = "*"
 bincode = "*"
+flexbuffers = "*"
 
 [dependencies.flate2]
 features = ["zlib"]
