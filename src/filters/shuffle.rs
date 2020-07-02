@@ -2,7 +2,7 @@ use byte_slice_cast::{
     AsByteSlice, AsMutByteSlice, FromByteVec, IntoByteVec, ToByteSlice, ToMutByteSlice,
 };
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 
 /// Shuffle bytes according to HDF5 spec:
 ///
@@ -70,13 +70,17 @@ where
 }
 
 /// Unshuffle bytes representing array with word size `wsz` (e.g. `4` for `int32`).
-pub fn unshuffle_bytes(src: BytesMut, wsz: usize) -> BytesMut {
-    if wsz == 1 {
-        return src;
+pub fn unshuffle_bytes(src: &Bytes, wsz: usize) -> BytesMut {
+    debug_assert!(wsz > 1);
+    assert_eq!(src.len() % wsz, 0);
+    let sz = src.len() / wsz;
+
+    let mut dest = BytesMut::with_capacity(src.len());
+    unsafe {
+        dest.set_len(src.len() as usize);
     }
 
-    let sz = src.len();
-    let mut dest = BytesMut::with_capacity(sz);
+    debug_assert_eq!(src.len(), dest.len());
 
     for i in 0..wsz {
         for j in 0..sz {
@@ -218,6 +222,22 @@ mod tests {
             .collect();
 
         b.iter(|| unshuffle_sized(&v, 4))
+    }
+
+    #[bench]
+    fn unshuffle_bytes_4mb(b: &mut Bencher) {
+        use rand::distributions::Standard;
+        use rand::{thread_rng, Rng};
+
+        let v: Vec<u8> = thread_rng()
+            .sample_iter(Standard)
+            .take(4 * 1024 * 1024)
+            .collect();
+        let vb: Bytes = Bytes::from(v);
+
+        b.iter(|| {
+            unshuffle_bytes(&vb, 4)
+        })
     }
 
     #[test]

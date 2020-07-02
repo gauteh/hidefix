@@ -71,17 +71,17 @@ impl<'a> DatasetReader<'a> {
             for (addr, sz, start, end) in slices {
                 let start = start as usize;
                 let end = end as usize;
-                let slice_sz = end - start;
+                debug_assert!(start <= end);
 
                 let mut ds_cache = ds_cache.write().await;
 
                 if let Some(cache) = ds_cache.get(&addr) {
+                    debug_assert!(start <= cache.len());
+                    debug_assert!(end <= cache.len());
                     yield Ok((cache.slice(start..end)));
                 } else {
                     let mut cache = BytesMut::with_capacity(sz as usize);
-                    unsafe {
-                        cache.set_len(sz as usize);
-                    }
+                    unsafe { cache.set_len(sz as usize); }
 
                     fd.seek(SeekFrom::Start(addr))?;
                     fd.read_exact(&mut cache)?;
@@ -89,9 +89,7 @@ impl<'a> DatasetReader<'a> {
                     // we assume decompression comes before unshuffling
                     let cache = if let Some(_) = gzip {
                         let mut decache = BytesMut::with_capacity(chunk_sz as usize);
-                        unsafe {
-                            decache.set_len(chunk_sz as usize);
-                        }
+                        unsafe { decache.set_len(chunk_sz as usize); }
 
                         let mut dz = flate2::read::ZlibDecoder::new(&cache[..]);
                         dz.read_exact(&mut decache)?;
@@ -101,8 +99,8 @@ impl<'a> DatasetReader<'a> {
                         cache
                     };
 
-                    let mut cache = if shuffle {
-                        filters::shuffle::unshuffle_bytes(cache, dsz as usize)
+                    let mut cache = if shuffle && dsz > 1 {
+                        filters::shuffle::unshuffle_bytes(&cache.freeze(), dsz as usize)
                     } else {
                         cache
                     };
@@ -112,6 +110,8 @@ impl<'a> DatasetReader<'a> {
 
                     ds_cache.put(addr, cache.clone());
 
+                    debug_assert!(start <= cache.len());
+                    debug_assert!(end <= cache.len());
                     yield Ok(cache.slice(start..end));
                 }
             }
