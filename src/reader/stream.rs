@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 
 use crate::filters;
 use crate::filters::byteorder::{self, Order, ToNative};
@@ -80,16 +80,20 @@ impl<'a> DatasetReader<'a> {
                     debug_assert!(end <= cache.len());
                     yield Ok((cache.slice(start..end)));
                 } else {
-                    let mut cache = BytesMut::with_capacity(sz as usize);
-                    unsafe { cache.set_len(sz as usize); }
+                    let mut cache: Vec<u8> = Vec::with_capacity(sz as usize);
+                    unsafe {
+                        cache.set_len(sz as usize);
+                    }
 
                     fd.seek(SeekFrom::Start(addr))?;
                     fd.read_exact(&mut cache)?;
 
                     // we assume decompression comes before unshuffling
                     let cache = if let Some(_) = gzip {
-                        let mut decache = BytesMut::with_capacity(chunk_sz as usize);
-                        unsafe { decache.set_len(chunk_sz as usize); }
+                        let mut decache: Vec<u8> = Vec::with_capacity(chunk_sz as usize);
+                        unsafe {
+                            decache.set_len(chunk_sz as usize);
+                        }
 
                         let mut dz = flate2::read::ZlibDecoder::new(&cache[..]);
                         dz.read_exact(&mut decache)?;
@@ -99,14 +103,14 @@ impl<'a> DatasetReader<'a> {
                         cache
                     };
 
-                    let mut cache = if shuffle && dsz > 1 {
-                        filters::shuffle::unshuffle_bytes(&cache.freeze(), dsz as usize)
+                    let mut cache = if shuffle {
+                        filters::shuffle::unshuffle_sized(&cache, dsz as usize)
                     } else {
                         cache
                     };
 
                     byteorder::to_big_e_sized(&mut cache, order, dsz as usize)?;
-                    let cache = cache.freeze();
+                    let cache = Bytes::from(cache);
 
                     ds_cache.put(addr, cache.clone());
 
