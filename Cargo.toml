@@ -6,20 +6,19 @@ license = "LGPL"
 name = "hidefix"
 repository = "https://github.com/gauteh/hidefix"
 version = "0.0.0"
-
 [dependencies]
 anyhow = "*"
 async-stream = "*"
+bincode = "*"
 byte-slice-cast = "*"
 bytes = "*"
+flexbuffers = "*"
 futures = "*"
 futures-core = "*"
 futures-util = "*"
 itertools = "*"
 lru = "*"
 strength_reduce = "*"
-bincode = "*"
-flexbuffers = "*"
 
 [dependencies.flate2]
 features = ["zlib"]

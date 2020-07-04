@@ -196,20 +196,24 @@ mod coads {
 
     #[bench]
     fn stream_bytes_async_read(b: &mut Bencher) {
-        use futures::stream::TryStreamExt;
         use futures::executor::block_on;
         use futures::io::AsyncReadExt;
+        use futures::stream::TryStreamExt;
 
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let r = i.streamer("SST").unwrap();
 
-        b.iter(|| block_on(async {
-            let v = r.stream(None, None).map_err(|_| std::io::ErrorKind::UnexpectedEof.into());
-            pin_mut!(v);
-            let mut r = v.into_async_read();
-            let mut buf = Vec::with_capacity(8 * 1024);
-            r.read_to_end(&mut buf).await.unwrap();
-        }))
+        b.iter(|| {
+            block_on(async {
+                let v = r
+                    .stream(None, None)
+                    .map_err(|_| std::io::ErrorKind::UnexpectedEof.into());
+                pin_mut!(v);
+                let mut r = v.into_async_read();
+                let mut buf = Vec::with_capacity(8 * 1024);
+                r.read_to_end(&mut buf).await.unwrap();
+            })
+        })
     }
 }
 

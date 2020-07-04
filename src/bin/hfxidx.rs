@@ -1,13 +1,12 @@
 ///! Create an index serialized to a flexbuffer.
-
 use std::env;
 
 #[macro_use]
 extern crate anyhow;
 
+use flexbuffers::FlexbufferSerializer as ser;
 use hidefix::idx::Index;
 use serde::ser::Serialize;
-use flexbuffers::FlexbufferSerializer as ser;
 
 fn usage() {
     println!("Usage: hfxidx input.h5 output.h5.idx");
@@ -40,4 +39,3 @@ fn main() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
-

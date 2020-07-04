@@ -1,5 +1,4 @@
 ///! List a summary of a flexbuffer serialized index to stdout.
-
 use std::env;
 
 #[macro_use]
@@ -30,10 +29,16 @@ fn main() -> Result<(), anyhow::Error> {
     let datasets = idx.idx("datasets").as_map();
 
     datasets.iter_keys().for_each(|k| {
-        let shape: Vec<u64> = datasets.idx(k).as_map().idx("shape").as_vector().iter().map(|r| r.as_u64()).collect();
+        let shape: Vec<u64> = datasets
+            .idx(k)
+            .as_map()
+            .idx("shape")
+            .as_vector()
+            .iter()
+            .map(|r| r.as_u64())
+            .collect();
         println!("{:4}{:30} {:?}", "", k, shape);
     });
 
     Ok(())
 }
-

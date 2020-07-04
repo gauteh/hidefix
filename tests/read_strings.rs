@@ -14,5 +14,8 @@ fn chunked_string_array() {
     let strs = std::str::from_utf8(&values).unwrap();
     println!("{:?}", strs);
 
-    assert_eq!(strs, "wqwqt\u{0}\u{0}\u{0}jhgjhgjhkjhkjhk\u{0}ddsfdsg\u{0}njiuh\u{0}\u{0}\u{0}");
+    assert_eq!(
+        strs,
+        "wqwqt\u{0}\u{0}\u{0}jhgjhgjhkjhkjhk\u{0}ddsfdsg\u{0}njiuh\u{0}\u{0}\u{0}"
+    );
 }

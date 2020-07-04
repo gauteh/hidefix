@@ -235,9 +235,7 @@ mod tests {
             .collect();
         let vb: Bytes = Bytes::from(v);
 
-        b.iter(|| {
-            unshuffle_bytes(&vb, 4)
-        })
+        b.iter(|| unshuffle_bytes(&vb, 4))
     }
 
     #[test]

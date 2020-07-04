@@ -5,42 +5,35 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
-use std::sync::Arc;
-use tokio::sync::RwLock;
-
 use byte_slice_cast::{FromByteVec, IntoVecOf};
-use lru::LruCache;
 use bytes::Bytes;
+use lru::LruCache;
 
 use crate::filters;
 use crate::filters::byteorder::{self, Order, ToNative};
 use crate::idx::Dataset;
 
-// This stream should be re-done as a wrapper around CacheReader:
-//
-// * CacheReader needs to have a Send + Sync cache
-// * CacheReader cannot pass fd around
-
+/// The stream reader is intended to be used in network applications. The cache is currently local
+/// to each `stream` call.
 pub struct DatasetReader<'a> {
     ds: &'a Dataset,
     p: PathBuf,
-    cache: Arc<RwLock<LruCache<u64, Bytes>>>,
     chunk_sz: u64,
 }
+
+/// The maximum cache size in bytes. Will not be lower than the size of one chunk.
+const CACHE_SZ: u64 = 32 * 1024 * 1024;
 
 impl<'a> DatasetReader<'a> {
     pub fn with_dataset<P>(ds: &'a Dataset, p: P) -> Result<DatasetReader<'a>, anyhow::Error>
     where
         P: AsRef<Path>,
     {
-        const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
-        let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
 
         Ok(DatasetReader {
             ds,
             p: p.as_ref().into(),
-            cache: Arc::new(RwLock::new(LruCache::new(cache_sz as usize))),
             chunk_sz,
         })
     }
@@ -62,18 +55,17 @@ impl<'a> DatasetReader<'a> {
         let shuffle = self.ds.shuffle;
         let gzip = self.ds.gzip;
         let chunk_sz = self.chunk_sz;
-        let ds_cache = Arc::clone(&self.cache);
         let order = self.order();
+        let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
 
         stream! {
             let mut fd = File::open(p)?;
+            let mut ds_cache = LruCache::<u64, Bytes>::new(cache_sz as usize);
 
             for (addr, sz, start, end) in slices {
                 let start = start as usize;
                 let end = end as usize;
                 debug_assert!(start <= end);
-
-                let mut ds_cache = ds_cache.write().await;
 
                 if let Some(cache) = ds_cache.get(&addr) {
                     debug_assert!(start <= cache.len());
