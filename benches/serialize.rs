@@ -75,6 +75,7 @@ mod serde_bincode {
         })
     }
 
+    #[ignore]
     #[bench]
     fn deserialize_meps_bincode_file(b: &mut Bencher) {
         let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
@@ -149,6 +150,7 @@ mod serde_flexbuffers {
         })
     }
 
+    #[ignore]
     #[bench]
     fn deserialize_meps_file(b: &mut Bencher) {
         let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
