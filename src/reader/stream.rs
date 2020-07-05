@@ -38,6 +38,7 @@ impl<'a> DatasetReader<'a> {
         })
     }
 
+    /// A stream of bytes from the variable. Always in Big Endian.
     pub fn stream(
         &self,
         indices: Option<&[u64]>,
@@ -80,7 +81,6 @@ impl<'a> DatasetReader<'a> {
                     fd.seek(SeekFrom::Start(addr))?;
                     fd.read_exact(&mut cache)?;
 
-                    // we assume decompression comes before unshuffling
                     let cache = if let Some(_) = gzip {
                         let mut decache: Vec<u8> = Vec::with_capacity(chunk_sz as usize);
                         unsafe {
@@ -95,7 +95,7 @@ impl<'a> DatasetReader<'a> {
                         cache
                     };
 
-                    let mut cache = if shuffle {
+                    let mut cache = if shuffle && dsz > 1 {
                         filters::shuffle::unshuffle_sized(&cache, dsz as usize)
                     } else {
                         cache

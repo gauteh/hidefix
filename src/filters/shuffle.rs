@@ -100,7 +100,9 @@ where
     match sz {
         1 => {
             // noop
+            let src = src.as_byte_slice();
             let mut v = Vec::<u8>::with_capacity(src.len());
+            unsafe { v.set_len(src.len()) };
             v.copy_from_slice(&src.as_byte_slice());
             v
         }
