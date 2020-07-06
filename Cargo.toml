@@ -17,12 +17,9 @@ futures = "*"
 futures-core = "*"
 futures-util = "*"
 itertools = "*"
+libdeflater = "*"
 lru = "*"
 strength_reduce = "*"
-
-[dependencies.flate2]
-features = ["zlib"]
-version = "*"
 
 [dependencies.hdf5]
 branch = "hidefix"

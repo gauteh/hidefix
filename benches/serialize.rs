@@ -93,7 +93,6 @@ mod serde_bincode {
 mod serde_flexbuffers {
     use super::*;
     use flexbuffers::FlexbufferSerializer as ser;
-    use serde::de::Deserialize;
     use serde::ser::Serialize;
 
     #[bench]
@@ -123,8 +122,6 @@ mod serde_flexbuffers {
 
     #[bench]
     fn serialize_coads_file(b: &mut Bencher) {
-        use std::io::Write;
-
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
 
         b.iter(|| {
@@ -136,8 +133,6 @@ mod serde_flexbuffers {
 
     #[bench]
     fn deserialize_coads_file(b: &mut Bencher) {
-        use std::io::{Read, Write};
-
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let mut s = ser::new();
         i.serialize(&mut s).unwrap();

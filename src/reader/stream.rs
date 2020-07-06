@@ -87,8 +87,7 @@ impl<'a> DatasetReader<'a> {
                             decache.set_len(chunk_sz as usize);
                         }
 
-                        let mut dz = flate2::read::ZlibDecoder::new(&cache[..]);
-                        dz.read_exact(&mut decache)?;
+                        filters::gzip::decompress(&cache, &mut decache)?;
 
                         decache
                     } else {

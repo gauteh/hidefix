@@ -115,6 +115,18 @@ fn read_chunked_1d_nat(b: &mut Bencher) {
     b.iter(|| d.read_raw::<f32>().unwrap())
 }
 
+#[bench]
+fn read_gzip_shuffle_2d_stream_bytes(b: &mut Bencher) {
+    let i = Index::index("tests/data/gzip_shuffle_2d.h5").unwrap();
+    let r = i.streamer("data").unwrap();
+
+    b.iter(|| {
+        let v = r.stream(None, None);
+        pin_mut!(v);
+        block_on_stream(v).for_each(drop);
+    })
+}
+
 mod coads {
     use super::*;
 
