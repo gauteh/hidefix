@@ -150,15 +150,15 @@ dependencies = [
 
 [[package]]
 name = "cache-padded"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24508e28c677875c380c20f4d28124fab6f8ed4ef929a1397d7b1a31e92f1005"
+checksum = "631ae5198c9be5e753e5cc215e1bd73c2b466a3565173db433f52bb9d3e66dba"
 
 [[package]]
 name = "cc"
-version = "1.0.56"
+version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c1f1d60091c1b73e2b1f4560ab419204b178e625fa945ded7b660becd2bd46"
+checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
 
 [[package]]
 name = "cfg-if"
@@ -280,9 +280,9 @@ checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 
 [[package]]
 name = "fastrand"
-version = "1.3.2"
+version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b90eb1dec02087df472ab9f0db65f27edaa654a746830042688bcc2eaf68090f"
+checksum = "36a9cb09840f81cd211e435d00a4e487edd263dc3c8ff815c32dd76ad668ebed"
 
 [[package]]
 name = "flexbuffers"
@@ -435,7 +435,7 @@ dependencies = [
 [[package]]
 name = "hdf5"
 version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#88b8ec7c2a5c3509d848aa75ebdb6168224f9eeb"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
 dependencies = [
  "bitflags",
  "hdf5-derive",
@@ -452,7 +452,7 @@ dependencies = [
 [[package]]
 name = "hdf5-derive"
 version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#88b8ec7c2a5c3509d848aa75ebdb6168224f9eeb"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -462,7 +462,7 @@ dependencies = [
 [[package]]
 name = "hdf5-src"
 version = "0.1.0"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#88b8ec7c2a5c3509d848aa75ebdb6168224f9eeb"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -471,7 +471,7 @@ dependencies = [
 [[package]]
 name = "hdf5-sys"
 version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#88b8ec7c2a5c3509d848aa75ebdb6168224f9eeb"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
 dependencies = [
  "hdf5-src",
  "libc",
@@ -487,7 +487,7 @@ dependencies = [
 [[package]]
 name = "hdf5-types"
 version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#88b8ec7c2a5c3509d848aa75ebdb6168224f9eeb"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
 dependencies = [
  "ascii",
  "libc",
@@ -495,9 +495,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9586eedd4ce6b3c498bc3b4dd92fc9f11166aa908a914071953768066c67909"
+checksum = "3deed196b6e7f9e44a2ae8d94225d80302d81208b1bb673fd21fe634645c85a9"
 dependencies = [
  "libc",
 ]
@@ -557,9 +557,9 @@ dependencies = [
 
 [[package]]
 name = "kv-log-macro"
-version = "1.0.6"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ff57d6d215f7ca7eb35a9a64d656ba4d9d2bef114d741dc08048e75e2f5d418"
+checksum = "0de8b303297635ad57c9f5059fd9cee7a47f8e8daa09df0fcd07dd39fb22977f"
 dependencies = [
  "log",
 ]
@@ -572,9 +572,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.71"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9457b06509d27052635f90d6466700c65095fdf75409b3fbdd903e988b886f49"
+checksum = "a9f8082297d534141b30c8d39e9b1773713ab50fdbe4ff30f750d063b3bfd701"
 
 [[package]]
 name = "libdeflate-sys"
@@ -646,9 +646,9 @@ dependencies = [
 
 [[package]]
 name = "lru"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "297efb9401445cf7b6986a583d7ac194023334b46b294ff7da0d36662c1251c2"
+checksum = "35c456c123957de3a220cd03786e0d86aa542a88b46029973b542f426da6ef34"
 dependencies = [
  "hashbrown",
 ]
@@ -765,9 +765,9 @@ checksum = "0b631f7e854af39a1739f401cf34a8a013dfe09eac4fa4dba91e9768bd28168d"
 
 [[package]]
 name = "parking"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4029bc3504a62d92e42f30b9095fdef73b8a0b2a06aa41ce2935143b05a1a06"
+checksum = "1efcee3c6d23b94012e240525f131c6abaa9e5eeb8f211002d93beec3b7be350"
 
 [[package]]
 name = "parking_lot"
@@ -1059,9 +1059,9 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
 name = "smallvec"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7cb5678e1615754284ec264d9bb5b4c27d2018577fd90ac0ceb578591ed5ee4"
+checksum = "3757cb9d89161a2f24e1cf78efa0c1fcff485d18e3f55e0aa3480824ddaa0f3f"
 
 [[package]]
 name = "smol"
