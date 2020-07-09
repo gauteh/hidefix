@@ -11,4 +11,3 @@ fn slicer(b: &mut Bencher) {
 
     b.iter(|| d.chunk_slices(None, None).for_each(drop))
 }
-

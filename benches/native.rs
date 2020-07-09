@@ -57,4 +57,3 @@ fn coads_values(b: &mut Bencher) {
 
     b.iter(|| d.read_raw::<f32>().unwrap())
 }
-

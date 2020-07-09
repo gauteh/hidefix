@@ -1,7 +1,7 @@
 #![feature(test)]
 extern crate test;
-use test::Bencher;
 use hidefix::idx::Index;
+use test::Bencher;
 
 #[bench]
 fn read_2d_chunked(b: &mut Bencher) {
@@ -68,5 +68,3 @@ fn coads(b: &mut Bencher) {
 
     b.iter(|| r.values::<f32>(None, None).unwrap())
 }
-
-

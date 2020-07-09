@@ -1,9 +1,9 @@
 #![feature(test)]
 extern crate test;
-use test::Bencher;
 use futures::executor::block_on_stream;
 use futures::pin_mut;
 use hidefix::idx::Index;
+use test::Bencher;
 
 #[bench]
 fn chunked_1d_values(b: &mut Bencher) {
@@ -84,4 +84,3 @@ fn coads_async_read(b: &mut Bencher) {
         })
     })
 }
-
