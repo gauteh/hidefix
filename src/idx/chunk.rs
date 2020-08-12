@@ -7,17 +7,24 @@ use std::hash::{Hash, Hasher};
 ///
 /// > Note: The official HDF5 library uses a 1MB dataset cache by default.
 ///
-/// [HDF5 chunking](https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html).
+/// HDF5 can store chunks in various types of data structures internally (`BTreeMap`, etc.), so
+/// it is not necessarily a simple sorted array (presumably because chunks can be added at a later
+/// time). The `get_chunk_info` methods iterate over this structure internally to get the requested
+/// chunk (based on a predicate function set up internally). It would be far more efficient for us
+/// if we could retrieve all chunks through one iteration, rather than do a full iteration for all
+/// chunks which is obviously extremely inefficient -- and the main reason that indexing is slow.
+///
+/// Reference: [HDF5 chunking](https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html).
 #[derive(Debug, Eq, Clone, Serialize, Deserialize)]
-pub struct Chunk {
+pub struct Chunk<const D: usize> {
     pub addr: u64,
-    pub offset: Vec<u64>,
+    pub offset: [u64; D],
 
     /// Chunk size in bytes (storage size)
     pub size: u64,
 }
 
-impl Chunk {
+impl<const D: usize> Chunk<D> {
     /// Is the point described by the indices inside the chunk (`Equal`), before (`Less`) or after
     /// (`Greater`).
     #[must_use]
@@ -37,13 +44,13 @@ impl Chunk {
     }
 }
 
-impl Hash for Chunk {
+impl<const D: usize> Hash for Chunk<D> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.addr.hash(state);
     }
 }
 
-impl Ord for Chunk {
+impl<const D: usize> Ord for Chunk<D> {
     fn cmp(&self, other: &Self) -> Ordering {
         for (aa, bb) in self.offset.iter().zip(&other.offset) {
             match aa.cmp(&bb) {
@@ -57,13 +64,13 @@ impl Ord for Chunk {
     }
 }
 
-impl PartialOrd for Chunk {
+impl<const D: usize> PartialOrd for Chunk<D> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for Chunk {
+impl<const D: usize> PartialEq for Chunk<D> {
     fn eq(&self, other: &Self) -> bool {
         self.addr == other.addr
     }

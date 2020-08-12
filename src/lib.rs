@@ -1,5 +1,6 @@
-#![recursion_limit = "1024"] // for Stream reader stream! macro
+#![recursion_limit = "1024"]
 #![feature(test)]
+#![feature(const_generics)]
 extern crate test;
 
 #[macro_use]
