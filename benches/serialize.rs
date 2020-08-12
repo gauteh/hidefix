@@ -145,6 +145,18 @@ mod serde_flexbuffers {
         })
     }
 
+    #[bench]
+    fn deserialize_coads_file_only_read(b: &mut Bencher) {
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
+        let mut s = ser::new();
+        i.serialize(&mut s).unwrap();
+        std::fs::write("/tmp/coads.idx.fx", s.view()).unwrap();
+
+        b.iter(|| {
+            let b = test::black_box(std::fs::read("/tmp/coads.idx.fx").unwrap());
+        })
+    }
+
     #[ignore]
     #[bench]
     fn deserialize_meps_file(b: &mut Bencher) {
@@ -157,6 +169,19 @@ mod serde_flexbuffers {
             let b = std::fs::read("/tmp/meps.idx.fx").unwrap();
             let r = flexbuffers::Reader::get_root(&b).unwrap().as_map();
             r.iter_keys().for_each(drop);
+        })
+    }
+
+    #[ignore]
+    #[bench]
+    fn deserialize_meps_file_only_read(b: &mut Bencher) {
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+        let mut s = ser::new();
+        i.serialize(&mut s).unwrap();
+        std::fs::write("/tmp/meps.idx.fx", s.view()).unwrap();
+
+        b.iter(|| {
+            let b = test::black_box(std::fs::read("/tmp/meps.idx.fx").unwrap());
         })
     }
 }
