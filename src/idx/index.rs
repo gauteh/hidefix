@@ -6,13 +6,13 @@ use std::path::{Path, PathBuf};
 
 use hdf5::File;
 
-use super::dataset::Dataset;
+use super::dataset::DatasetD;
 use crate::reader::{cache, stream};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Index {
     path: Option<PathBuf>,
-    datasets: HashMap<String, Dataset>,
+    datasets: HashMap<String, DatasetD>,
 }
 
 impl TryFrom<&Path> for Index {
@@ -55,8 +55,8 @@ impl Index {
             .map(|m| hf.dataset(m).map(|d| (m, d)))
             .filter_map(Result::ok)
             .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
-            .map(|(m, d)| Dataset::index(&d).map(|d| (m.clone(), d)))
-            .collect::<Result<HashMap<String, Dataset>, _>>()?;
+            .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
+            .collect::<Result<HashMap<String, DatasetD>, _>>()?;
 
         Ok(Index {
             path: path.map(|p| p.into()),
@@ -65,11 +65,11 @@ impl Index {
     }
 
     #[must_use]
-    pub fn dataset(&self, s: &str) -> Option<&Dataset> {
+    pub fn dataset(&self, s: &str) -> Option<&DatasetD> {
         self.datasets.get(s)
     }
 
-    pub fn datasets(&self) -> &HashMap<String, Dataset> {
+    pub fn datasets(&self) -> &HashMap<String, DatasetD> {
         &self.datasets
     }
 
@@ -78,37 +78,42 @@ impl Index {
         self.path.as_ref().map(|p| p.as_ref())
     }
 
-    /// Create a cached reader for dataset.
-    ///
-    /// This is a convenience method to use a standard `std::fs::File` with a `cached` reader, you are
-    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
-    ///
-    /// This method assumes the HDF5 file has the same location as at the time of
-    /// indexing.
-    pub fn reader(&self, ds: &str) -> Result<cache::DatasetReader<fs::File>, anyhow::Error> {
-        let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
+//    /// Create a cached reader for dataset.
+//    ///
+//    /// This is a convenience method to use a standard `std::fs::File` with a `cached` reader, you are
+//    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
+//    ///
+//    /// This method assumes the HDF5 file has the same location as at the time of
+//    /// indexing.
+    // pub fn reader(&self, ds: &str) -> Result<cache::DatasetReader<fs::File>, anyhow::Error> {
+    //     let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
-        match self.dataset(ds) {
-            Some(ds) => cache::DatasetReader::with_dataset(&ds, fs::File::open(path)?),
-            None => Err(anyhow!("dataset does not exist")),
-        }
-    }
+    //     match self.dataset(ds) {
+    //         Some(ds) => {
+    //             match ds {
+    //                 DatasetD::D1(ds) | DatasetD::D2(ds) => cache::DatasetReader::with_dataset(&ds, fs::File::open(path)?),
+    //                 _ => unimplemented!()
+    //             }
+    //         },
+    //         None => Err(anyhow!("dataset does not exist")),
+    //     }
+    // }
 
-    /// Create a streaming reader for dataset.
-    ///
-    /// This is a convenience method to use a standard `std::fs::File` with a `stream` reader, you are
-    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
-    ///
-    /// This method assumes the HDF5 file has the same location as at the time of
-    /// indexing.
-    pub fn streamer(&self, ds: &str) -> Result<stream::DatasetReader, anyhow::Error> {
-        let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
+//    /// Create a streaming reader for dataset.
+//    ///
+//    /// This is a convenience method to use a standard `std::fs::File` with a `stream` reader, you are
+//    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
+//    ///
+//    /// This method assumes the HDF5 file has the same location as at the time of
+//    /// indexing.
+    // pub fn streamer(&self, ds: &str) -> Result<stream::DatasetReader, anyhow::Error> {
+    //     let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
-        match self.dataset(ds) {
-            Some(ds) => stream::DatasetReader::with_dataset(&ds, path),
-            None => Err(anyhow!("dataset does not exist")),
-        }
-    }
+    //     match self.dataset(ds) {
+    //         Some(ds) => stream::DatasetReader::with_dataset(&ds, path),
+    //         None => Err(anyhow!("dataset does not exist")),
+    //     }
+    // }
 }
 
 #[cfg(test)]

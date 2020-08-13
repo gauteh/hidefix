@@ -1,4 +1,5 @@
 use std::io::{Read, Seek, SeekFrom};
+use std::convert::TryInto;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
@@ -7,20 +8,20 @@ use crate::filters;
 use crate::filters::byteorder::ToNative;
 use crate::idx::Dataset;
 
-pub struct DatasetReader<'a, R: Read + Seek> {
-    ds: &'a Dataset,
+pub struct CacheReader<'a, R: Read + Seek, const D: usize> where [u64; D]: std::array::LengthAtMost32 {
+    ds: &'a Dataset<D>,
     fd: R,
     cache: LruCache<u64, Vec<u8>>,
     chunk_sz: u64,
 }
 
-impl<'a, R: Read + Seek> DatasetReader<'a, R> {
-    pub fn with_dataset(ds: &'a Dataset, fd: R) -> Result<DatasetReader<'a, R>, anyhow::Error> {
+impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> where [u64; D]: std::array::LengthAtMost32 {
+    pub fn with_dataset(ds: &'a Dataset<D>, fd: R) -> Result<CacheReader<'a, R, D>, anyhow::Error> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
         let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
 
-        Ok(DatasetReader {
+        Ok(CacheReader {
             ds,
             fd,
             cache: LruCache::new(cache_sz as usize),
@@ -33,7 +34,10 @@ impl<'a, R: Read + Seek> DatasetReader<'a, R> {
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
     ) -> Result<Vec<u8>, anyhow::Error> {
-        let counts: &[u64] = counts.unwrap_or_else(|| self.ds.shape.as_slice());
+        let indices: Option<&[u64; D]> = indices.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
+
+        let counts: Option<&[u64; D]> = counts.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
+        let counts: &[u64; D] = counts.unwrap_or_else(|| &self.ds.shape);
 
         let dsz = self.ds.dsize as u64;
         let vsz = counts.iter().product::<u64>() * dsz;

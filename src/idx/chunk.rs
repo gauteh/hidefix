@@ -15,8 +15,8 @@ use std::hash::{Hash, Hasher};
 /// chunks which is obviously extremely inefficient -- and the main reason that indexing is slow.
 ///
 /// Reference: [HDF5 chunking](https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html).
-#[derive(Debug, Eq, Clone, Serialize, Deserialize)]
-pub struct Chunk<const D: usize> {
+#[derive(Debug, Eq, Clone)]
+pub struct Chunk<const D: usize> where [u64; D]: std::array::LengthAtMost32 {
     pub addr: u64,
     pub offset: [u64; D],
 
@@ -24,7 +24,7 @@ pub struct Chunk<const D: usize> {
     pub size: u64,
 }
 
-impl<const D: usize> Chunk<D> {
+impl<const D: usize> Chunk<D> where [u64; D]: std::array::LengthAtMost32 {
     /// Is the point described by the indices inside the chunk (`Equal`), before (`Less`) or after
     /// (`Greater`).
     #[must_use]
@@ -44,13 +44,13 @@ impl<const D: usize> Chunk<D> {
     }
 }
 
-impl<const D: usize> Hash for Chunk<D> {
+impl<const D: usize> Hash for Chunk<D> where [u64; D]: std::array::LengthAtMost32 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.addr.hash(state);
     }
 }
 
-impl<const D: usize> Ord for Chunk<D> {
+impl<const D: usize> Ord for Chunk<D> where [u64; D]: std::array::LengthAtMost32 {
     fn cmp(&self, other: &Self) -> Ordering {
         for (aa, bb) in self.offset.iter().zip(&other.offset) {
             match aa.cmp(&bb) {
@@ -64,13 +64,13 @@ impl<const D: usize> Ord for Chunk<D> {
     }
 }
 
-impl<const D: usize> PartialOrd for Chunk<D> {
+impl<const D: usize> PartialOrd for Chunk<D> where [u64; D]: std::array::LengthAtMost32 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<const D: usize> PartialEq for Chunk<D> {
+impl<const D: usize> PartialEq for Chunk<D> where [u64; D]: std::array::LengthAtMost32 {
     fn eq(&self, other: &Self) -> bool {
         self.addr == other.addr
     }

@@ -1,12 +1,39 @@
 use itertools::izip;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::min;
+use std::convert::TryInto;
 use strength_reduce::StrengthReducedU64;
 
 use super::chunk::Chunk;
 use crate::filters::byteorder::Order as ByteOrder;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+/// Dataset in possible dimensions.
+#[derive(Debug)]
+pub enum DatasetD {
+    D1(Dataset<1>),
+    D2(Dataset<2>),
+    D3(Dataset<3>),
+    D4(Dataset<4>),
+}
+
+impl DatasetD {
+    pub fn index(ds: &hdf5::Dataset) -> Result<DatasetD, anyhow::Error> {
+        use DatasetD::*;
+
+        match ds.ndim() {
+            1 => Ok(D1(Dataset::<1>::index(ds)?)),
+            2 => Ok(D2(Dataset::<2>::index(ds)?)),
+            3 => Ok(D3(Dataset::<3>::index(ds)?)),
+            4 => Ok(D4(Dataset::<4>::index(ds)?)),
+            _ => unimplemented!()
+        }
+    }
+
+    pub fn read(&self) -> () {
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Datatype {
     UInt(usize),
     Int(usize),
@@ -28,46 +55,49 @@ impl From<hdf5::Datatype> for Datatype {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Dataset {
+/// A Dataset can have a maximum of _32_ dimensions.
+#[derive(Debug)]
+pub struct Dataset<const D: usize> where [u64; D]: std::array::LengthAtMost32 {
     pub dtype: Datatype,
     pub dsize: usize,
     pub order: ByteOrder,
-    pub chunks: Vec<Chunk>,
-    pub shape: Vec<u64>,
-    pub chunk_shape: Vec<u64>,
+    pub chunks: Vec<Chunk<D>>,
+    pub shape: [u64; D],
+    pub chunk_shape: [u64; D],
 
-    #[serde(
-        serialize_with = "serialize_sru64",
-        deserialize_with = "deserialize_sru64"
-    )]
-    chunk_shape_reduced: Vec<StrengthReducedU64>,
+    // #[serde(
+    //     serialize_with = "serialize_sru64",
+    //     deserialize_with = "deserialize_sru64"
+    // )]
+    // chunk_shape_reduced: [StrengthReducedU64; D],
 
-    scaled_dim_sz: Vec<u64>,
-    dim_sz: Vec<u64>,
-    chunk_dim_sz: Vec<u64>,
+    scaled_dim_sz: [u64; D],
+    dim_sz: [u64; D],
+    chunk_dim_sz: [u64; D],
     pub shuffle: bool,
     pub gzip: Option<u8>,
 }
 
-fn serialize_sru64<S>(v: &Vec<StrengthReducedU64>, s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let b: Vec<u64> = v.iter().map(|s| s.get()).collect();
-    b.serialize(s)
-}
+// fn serialize_sru64<S>(v: &Vec<StrengthReducedU64>, s: S) -> Result<S::Ok, S::Error>
+// where
+//     S: Serializer,
+// {
+//     let b: Vec<u64> = v.iter().map(|s| s.get()).collect();
+//     b.serialize(s)
+// }
 
-fn deserialize_sru64<'de, D>(d: D) -> Result<Vec<StrengthReducedU64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let v = Vec::<u64>::deserialize(d)?;
-    Ok(v.iter().map(|v| StrengthReducedU64::new(*v)).collect())
-}
+// fn deserialize_sru64<'de, D>(d: D) -> Result<Vec<StrengthReducedU64>, D::Error>
+// where
+//     D: Deserializer<'de>,
+// {
+//     let v = Vec::<u64>::deserialize(d)?;
+//     Ok(v.iter().map(|v| StrengthReducedU64::new(*v)).collect())
+// }
 
-impl Dataset {
-    pub fn index(ds: &hdf5::Dataset) -> Result<Dataset, anyhow::Error> {
+impl<const D: usize> Dataset<D> where [u64; D]: std::array::LengthAtMost32 {
+    pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<D>, anyhow::Error> {
+        ensure!(ds.ndim() == D, "Dataset dimensions does not match!");
+
         let shuffle = ds.filters().get_shuffle();
         let gzip = ds.filters().get_gzip();
 
@@ -78,10 +108,10 @@ impl Dataset {
             return Err(anyhow!("{}: Unsupported filter", ds.name()));
         }
 
-        let mut chunks: Vec<Chunk> = match (ds.num_chunks().is_some(), ds.offset()) {
+        let mut chunks: Vec<Chunk<D>> = match (ds.num_chunks().is_some(), ds.offset()) {
             // Continuous
             (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
-                offset: vec![0; ds.ndim()],
+                offset: [0; D],
                 size: ds.storage_size(),
                 addr: offset,
             }]),
@@ -96,7 +126,7 @@ impl Dataset {
                             .map(|ci| {
                                 assert!(ci.filter_mask == 0);
                                 Chunk {
-                                    offset: ci.offset,
+                                    offset: ci.offset.as_slice().try_into().unwrap(),
                                     size: ci.size,
                                     addr: ci.addr,
                                 }
@@ -119,15 +149,17 @@ impl Dataset {
         let dtype = ds.dtype()?;
         let dsize = ds.dtype()?.size();
         let order = dtype.byte_order();
-        let shape = ds
+        let shape: [u64; D] = ds
             .shape()
             .into_iter()
             .map(|u| u as u64)
-            .collect::<Vec<u64>>();
+            .collect::<Vec<u64>>()
+            .as_slice()
+            .try_into()?;
 
         let chunk_shape = ds.chunks().map_or_else(
             || shape.clone(),
-            |cs| cs.into_iter().map(|u| u as u64).collect(),
+            |cs| cs.into_iter().map(|u| u as u64).collect::<Vec<u64>>().as_slice().try_into().unwrap(),
         );
 
         {
@@ -149,15 +181,15 @@ impl Dataset {
         }
 
         // optimized divisor for chunk shape
-        let chunk_shape_reduced = chunk_shape
-            .iter()
-            .map(|c| StrengthReducedU64::new(*c))
-            .collect();
+        // let chunk_shape_reduced = chunk_shape
+        //     .iter()
+        //     .map(|c| StrengthReducedU64::new(*c))
+        //     .collect();
 
         // scaled dimension size: dimension size of dataset in chunk offset coordinates.
         // the dimension size is rounded up. when the dataset size is not a multiple of
         // chunk size we have a partially filled chunk which is also present in the list of chunks.
-        let scaled_dim_sz = {
+        let scaled_dim_sz: [u64; D] = {
             let mut d = shape
                 .iter()
                 .zip(&chunk_shape)
@@ -171,10 +203,10 @@ impl Dataset {
                 .collect::<Vec<u64>>();
             d.reverse();
             d
-        };
+        }.as_slice().try_into()?;
 
         // size of dataset dimensions
-        let dim_sz = {
+        let dim_sz: [u64; D] = {
             let mut d = shape
                 .iter()
                 .rev()
@@ -186,10 +218,10 @@ impl Dataset {
                 .collect::<Vec<u64>>();
             d.reverse();
             d
-        };
+        }.as_slice().try_into()?;
 
         // size of chunk dimensions
-        let chunk_dim_sz = {
+        let chunk_dim_sz: [u64; D] = {
             let mut d = chunk_shape
                 .iter()
                 .rev()
@@ -201,7 +233,7 @@ impl Dataset {
                 .collect::<Vec<u64>>();
             d.reverse();
             d
-        };
+        }.as_slice().try_into()?;
 
         Ok(Dataset {
             dtype: dtype.into(),
@@ -210,7 +242,7 @@ impl Dataset {
             chunks,
             shape,
             chunk_shape,
-            chunk_shape_reduced,
+            // chunk_shape_reduced,
             scaled_dim_sz,
             dim_sz,
             chunk_dim_sz,
@@ -234,18 +266,18 @@ impl Dataset {
     /// variable.
     pub fn chunk_slices(
         &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-    ) -> impl Iterator<Item = (&Chunk, u64, u64)> {
-        let indices: Vec<u64> = indices.unwrap_or(&vec![0; self.shape.len()]).to_vec();
-        let counts: Vec<u64> = counts.unwrap_or(&self.shape).to_vec();
+        indices: Option<&[u64; D]>,
+        counts: Option<&[u64; D]>,
+    ) -> impl Iterator<Item = (&Chunk<D>, u64, u64)> {
+        let indices: [u64; D] = *indices.unwrap_or(&[0; D]);
+        let counts: [u64; D] = *counts.unwrap_or(&self.shape);
 
         assert!(
             indices
                 .iter()
-                .zip(&counts)
+                .zip(counts.iter())
                 .map(|(i, c)| i + c)
-                .zip(&self.shape)
+                .zip(self.shape.iter())
                 .all(|(l, &s)| l <= s),
             "out of bounds"
         );
@@ -253,13 +285,13 @@ impl Dataset {
         ChunkSlicer::new(self, indices, counts)
     }
 
-    pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk {
-        debug_assert_eq!(indices.len(), self.chunk_shape_reduced.len());
+    pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk<D> {
+        debug_assert_eq!(indices.len(), self.chunk_shape.len());
         debug_assert_eq!(indices.len(), self.scaled_dim_sz.len());
 
         let offset = indices
             .iter()
-            .zip(&self.chunk_shape_reduced)
+            .zip(&self.chunk_shape)
             .zip(&self.scaled_dim_sz)
             .fold(0, |offset, ((&index, &ch_sh), &sz)| {
                 offset + index / ch_sh * sz
@@ -269,19 +301,19 @@ impl Dataset {
     }
 }
 
-pub struct ChunkSlicer<'a> {
-    dataset: &'a Dataset,
+pub struct ChunkSlicer<'a, const D: usize> where [u64; D]: std::array::LengthAtMost32 {
+    dataset: &'a Dataset<D>,
     offset: u64,
-    offset_coords: Vec<u64>,
-    start_coords: Vec<u64>,
-    indices: Vec<u64>,
-    counts: Vec<u64>,
-    counts_reduced: Vec<StrengthReducedU64>,
+    offset_coords: [u64; D],
+    start_coords: [u64; D],
+    indices: [u64; D],
+    counts: [u64; D],
+    // counts_reduced: [StrengthReducedU64; D],
     end: u64,
 }
 
-impl<'a> ChunkSlicer<'a> {
-    pub fn new(dataset: &'a Dataset, indices: Vec<u64>, counts: Vec<u64>) -> ChunkSlicer<'a> {
+impl<'a, const D: usize> ChunkSlicer<'a, D> where [u64; D]: std::array::LengthAtMost32 {
+    pub fn new(dataset: &'a Dataset<D>, indices: [u64; D], counts: [u64; D]) -> ChunkSlicer<'a, D> {
         let end = if dataset.is_scalar() {
             // scalar
             assert!(indices.is_empty());
@@ -291,17 +323,17 @@ impl<'a> ChunkSlicer<'a> {
             counts.iter().product::<u64>()
         };
 
-        assert_eq!(indices.len(), dataset.shape.len());
-        assert_eq!(counts.len(), dataset.shape.len());
+        debug_assert_eq!(indices.len(), dataset.shape.len());
+        debug_assert_eq!(counts.len(), dataset.shape.len());
         assert!(izip!(&indices, &counts, &dataset.shape).all(|(i, c, z)| i + c <= *z));
 
         ChunkSlicer {
             dataset,
             offset: 0,
-            offset_coords: vec![0; indices.len()],
+            offset_coords: [0; D],
             start_coords: indices.clone(),
             indices: indices,
-            counts_reduced: counts.iter().map(|c| StrengthReducedU64::new(*c)).collect(),
+            // counts_reduced: counts.iter().map(|c| StrengthReducedU64::new(*c)).collect(),
             counts: counts,
             end,
         }
@@ -309,7 +341,7 @@ impl<'a> ChunkSlicer<'a> {
 
     /// Offset from chunk offset coordinates. `dim_sz` is dimension size of chunk
     /// dimensions.
-    fn chunk_start(coords: &[u64], chunk_offset: &[u64], dim_sz: &[u64]) -> u64 {
+    fn chunk_start(coords: &[u64; D], chunk_offset: &[u64; D], dim_sz: &[u64; D]) -> u64 {
         debug_assert_eq!(coords.len(), chunk_offset.len());
         debug_assert_eq!(coords.len(), dim_sz.len());
 
@@ -323,8 +355,8 @@ impl<'a> ChunkSlicer<'a> {
     }
 }
 
-impl<'a> Iterator for ChunkSlicer<'a> {
-    type Item = (&'a Chunk, u64, u64);
+impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> where [u64; D]: std::array::LengthAtMost32 {
+    type Item = (&'a Chunk<D>, u64, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset >= self.end {
@@ -340,7 +372,7 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             return Some((&self.dataset.chunks[0], 0, 1));
         }
 
-        let chunk: &Chunk = self.dataset.chunk_at_coord(&self.start_coords);
+        let chunk: &Chunk<D> = self.dataset.chunk_at_coord(&self.start_coords);
 
         debug_assert!(
             chunk.contains(&self.start_coords, &self.dataset.chunk_shape)
@@ -363,13 +395,13 @@ impl<'a> Iterator for ChunkSlicer<'a> {
         let mut carry = 0;
         let mut i = 0;
 
-        for (idx, start, offset, count, count_reduced, chunk_offset, chunk_len, chunk_dim_sz) in
+        for (idx, start, offset, count /* , count_reduced */, chunk_offset, chunk_len, chunk_dim_sz) in
             izip!(
                 &self.indices,
                 &mut self.start_coords,
                 &mut self.offset_coords,
                 &self.counts,
-                &self.counts_reduced,
+                // &self.counts_reduced,
                 &chunk.offset,
                 &self.dataset.chunk_shape,
                 &self.dataset.chunk_dim_sz
@@ -377,8 +409,8 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             .rev()
         {
             *offset += carry;
-            carry = *offset / *count_reduced;
-            *offset = *offset % *count_reduced;
+            carry = *offset / *count;
+            *offset = *offset % *count;
             *start = idx + *offset;
 
             let last = *offset;
@@ -390,8 +422,8 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             advanced += diff;
             self.offset += diff;
 
-            carry += *offset / *count_reduced;
-            *offset = *offset % *count_reduced;
+            carry += *offset / *count;
+            *offset = *offset % *count;
             *start = idx + *offset;
             i += 1;
 
@@ -409,7 +441,7 @@ impl<'a> Iterator for ChunkSlicer<'a> {
             &self.indices[..i],
             &mut self.start_coords[..i],
             &mut self.offset_coords[..i],
-            &self.counts_reduced[..i]
+            &self.counts[..i]
         )
         .rev()
         {
@@ -439,38 +471,38 @@ mod tests {
     use super::*;
     use test::Bencher;
 
-    fn test_dataset() -> Dataset {
-        Dataset {
+    fn test_dataset() -> Dataset<2> {
+        Dataset::<2> {
             dtype: Datatype::Float(4),
             dsize: 4,
             order: ByteOrder::BE,
-            shape: vec![20, 20],
-            chunk_shape: vec![10, 10],
-            chunk_shape_reduced: [10u64, 10]
-                .iter()
-                .map(|i| StrengthReducedU64::new(*i))
-                .collect(),
-            scaled_dim_sz: vec![2, 1],
-            dim_sz: vec![20, 1],
-            chunk_dim_sz: vec![10, 1],
+            shape: [20, 20],
+            chunk_shape: [10, 10],
+            // chunk_shape_reduced: [10u64, 10]
+            //     .iter()
+            //     .map(|i| StrengthReducedU64::new(*i))
+            //     .collect(),
+            scaled_dim_sz: [2, 1],
+            dim_sz: [20, 1],
+            chunk_dim_sz: [10, 1],
             chunks: vec![
-                Chunk {
-                    offset: vec![0, 0],
+                Chunk::<2> {
+                    offset: [0, 0],
                     size: 400,
                     addr: 0,
                 },
-                Chunk {
-                    offset: vec![0, 10],
+                Chunk::<2> {
+                    offset: [0, 10],
                     size: 400,
                     addr: 400,
                 },
-                Chunk {
-                    offset: vec![10, 0],
+                Chunk::<2> {
+                    offset: [10, 0],
                     size: 400,
                     addr: 800,
                 },
-                Chunk {
-                    offset: vec![10, 10],
+                Chunk::<2> {
+                    offset: [10, 10],
                     size: 400,
                     addr: 1200,
                 },

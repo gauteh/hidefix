@@ -1,6 +1,6 @@
 #![recursion_limit = "1024"]
 #![feature(test)]
-#![feature(const_generics)]
+#![feature(const_generics, const_generic_impls_guard)]
 extern crate test;
 
 #[macro_use]

@@ -4,6 +4,7 @@ use futures_util::pin_mut;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::convert::TryInto;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use bytes::Bytes;
@@ -15,8 +16,8 @@ use crate::idx::Dataset;
 
 /// The stream reader is intended to be used in network applications. The cache is currently local
 /// to each `stream` call.
-pub struct DatasetReader<'a> {
-    ds: &'a Dataset,
+pub struct DatasetReader<'a, const D: usize> where [u64; D]: std::array::LengthAtMost32 {
+    ds: &'a Dataset<D>,
     p: PathBuf,
     chunk_sz: u64,
 }
@@ -24,8 +25,8 @@ pub struct DatasetReader<'a> {
 /// The maximum cache size in bytes. Will not be lower than the size of one chunk.
 const CACHE_SZ: u64 = 32 * 1024 * 1024;
 
-impl<'a> DatasetReader<'a> {
-    pub fn with_dataset<P>(ds: &'a Dataset, p: P) -> Result<DatasetReader<'a>, anyhow::Error>
+impl<'a, const D: usize> DatasetReader<'a, D> where [u64; D]: std::array::LengthAtMost32 {
+    pub fn with_dataset<P>(ds: &'a Dataset<D>, p: P) -> Result<DatasetReader<'a, D>, anyhow::Error>
     where
         P: AsRef<Path>,
     {
@@ -45,10 +46,13 @@ impl<'a> DatasetReader<'a> {
         counts: Option<&[u64]>,
     ) -> impl Stream<Item = Result<Bytes, anyhow::Error>> {
         let dsz = self.ds.dsize as u64;
-        let counts: &[u64] = counts.unwrap_or_else(|| self.ds.shape.as_slice());
+
+        let indices: Option<&[u64; D]> = indices.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
+        let counts: Option<&[u64; D]> = counts.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
+
         let slices = self
             .ds
-            .chunk_slices(indices, Some(&counts))
+            .chunk_slices(indices, counts)
             .map(|(c, a, b)| (c.addr, c.size, a * dsz, b * dsz))
             .collect::<Vec<_>>();
 
