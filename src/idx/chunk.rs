@@ -102,27 +102,27 @@ mod tests {
     fn ordering() {
         let mut v = vec![
             Chunk {
-                offset: vec![10, 0, 0],
+                offset: [10, 0, 0],
                 size: 5,
                 addr: 5,
             },
             Chunk {
-                offset: vec![0, 0, 0],
+                offset: [0, 0, 0],
                 size: 10,
                 addr: 50,
             },
             Chunk {
-                offset: vec![10, 10, 0],
+                offset: [10, 10, 0],
                 size: 1,
                 addr: 1,
             },
             Chunk {
-                offset: vec![0, 10, 0],
+                offset: [0, 10, 0],
                 size: 1,
                 addr: 1,
             },
             Chunk {
-                offset: vec![0, 0, 10],
+                offset: [0, 0, 10],
                 size: 1,
                 addr: 1,
             },
@@ -141,7 +141,7 @@ mod tests {
         let shape = [10, 10];
 
         let c = Chunk {
-            offset: vec![10, 10],
+            offset: [10, 10],
             size: 10,
             addr: 0,
         };

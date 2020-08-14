@@ -1,22 +1,28 @@
-use std::io::{Read, Seek, SeekFrom};
 use std::convert::TryInto;
+use std::io::{Read, Seek, SeekFrom};
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
 
+use super::dataset::Reader;
 use crate::filters;
 use crate::filters::byteorder::ToNative;
 use crate::idx::Dataset;
-use super::dataset::Reader;
 
-pub struct CacheReader<'a, R: Read + Seek, const D: usize> where [u64; D]: std::array::LengthAtMost32 {
+pub struct CacheReader<'a, R: Read + Seek, const D: usize>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     ds: &'a Dataset<D>,
     fd: R,
     cache: LruCache<u64, Vec<u8>>,
     chunk_sz: u64,
 }
 
-impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> where [u64; D]: std::array::LengthAtMost32 {
+impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     pub fn with_dataset(ds: &'a Dataset<D>, fd: R) -> Result<CacheReader<'a, R, D>, anyhow::Error> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
@@ -32,16 +38,23 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> where [u64; D]: s
 }
 
 impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D>
- where [u64; D]: std::array::LengthAtMost32
+where
+    [u64; D]: std::array::LengthAtMost32,
 {
     fn read(
         &mut self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
     ) -> Result<Vec<u8>, anyhow::Error> {
-        let indices: Option<&[u64; D]> = indices.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
+        let indices: Option<&[u64; D]> = indices
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
 
-        let counts: Option<&[u64; D]> = counts.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
+        let counts: Option<&[u64; D]> = counts
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
         let counts: &[u64; D] = counts.unwrap_or_else(|| &self.ds.shape);
 
         let dsz = self.ds.dsize as u64;
@@ -120,6 +133,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D>
 #[cfg(test)]
 mod tests {
     use crate::idx::Index;
+    use crate::reader::Reader;
 
     #[test]
     fn read_coads_sst() {
@@ -218,8 +232,8 @@ mod tests {
         println!("idx index: done");
         let mut r = i.reader("x_wind_ml").unwrap();
 
-        println!("ds size: {}", r.ds.size());
-        println!("cshape: {:?}", r.ds.chunk_shape);
+        // println!("ds size: {}", r.ds.size());
+        // println!("cshape: {:?}", r.ds.chunk_shape);
 
         let vs = r
             .values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))

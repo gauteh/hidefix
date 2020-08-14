@@ -4,6 +4,7 @@ use futures::pin_mut;
 use byte_slice_cast::IntoVecOf;
 use hidefix::filters::byteorder::{Order, ToNative};
 use hidefix::idx::Index;
+use hidefix::reader::Reader;
 
 #[test]
 fn feb_nc4_double() {
