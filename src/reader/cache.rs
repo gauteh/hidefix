@@ -7,6 +7,7 @@ use lru::LruCache;
 use crate::filters;
 use crate::filters::byteorder::ToNative;
 use crate::idx::Dataset;
+use super::dataset::Reader;
 
 pub struct CacheReader<'a, R: Read + Seek, const D: usize> where [u64; D]: std::array::LengthAtMost32 {
     ds: &'a Dataset<D>,
@@ -28,8 +29,12 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> where [u64; D]: s
             chunk_sz,
         })
     }
+}
 
-    pub fn read(
+impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D>
+ where [u64; D]: std::array::LengthAtMost32
+{
+    fn read(
         &mut self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
@@ -93,7 +98,7 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> where [u64; D]: s
         Ok(buf)
     }
 
-    pub fn values<T>(
+    fn values<T>(
         &mut self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,

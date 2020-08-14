@@ -1,10 +1,10 @@
 use async_stream::stream;
 use futures::{Stream, StreamExt};
 use futures_util::pin_mut;
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::convert::TryInto;
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use bytes::Bytes;
@@ -16,7 +16,10 @@ use crate::idx::Dataset;
 
 /// The stream reader is intended to be used in network applications. The cache is currently local
 /// to each `stream` call.
-pub struct DatasetReader<'a, const D: usize> where [u64; D]: std::array::LengthAtMost32 {
+pub struct StreamReader<'a, const D: usize>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     ds: &'a Dataset<D>,
     p: PathBuf,
     chunk_sz: u64,
@@ -25,14 +28,17 @@ pub struct DatasetReader<'a, const D: usize> where [u64; D]: std::array::LengthA
 /// The maximum cache size in bytes. Will not be lower than the size of one chunk.
 const CACHE_SZ: u64 = 32 * 1024 * 1024;
 
-impl<'a, const D: usize> DatasetReader<'a, D> where [u64; D]: std::array::LengthAtMost32 {
-    pub fn with_dataset<P>(ds: &'a Dataset<D>, p: P) -> Result<DatasetReader<'a, D>, anyhow::Error>
+impl<'a, const D: usize> StreamReader<'a, D>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
+    pub fn with_dataset<P>(ds: &'a Dataset<D>, p: P) -> Result<StreamReader<'a, D>, anyhow::Error>
     where
         P: AsRef<Path>,
     {
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
 
-        Ok(DatasetReader {
+        Ok(StreamReader {
             ds,
             p: p.as_ref().into(),
             chunk_sz,
@@ -47,8 +53,14 @@ impl<'a, const D: usize> DatasetReader<'a, D> where [u64; D]: std::array::Length
     ) -> impl Stream<Item = Result<Bytes, anyhow::Error>> {
         let dsz = self.ds.dsize as u64;
 
-        let indices: Option<&[u64; D]> = indices.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
-        let counts: Option<&[u64; D]> = counts.map(|i| i.try_into()).map_or(Ok(None), |v| v.map(Some)).unwrap();
+        let indices: Option<&[u64; D]> = indices
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
+        let counts: Option<&[u64; D]> = counts
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
 
         let slices = self
             .ds
@@ -160,8 +172,7 @@ mod tests {
     #[test]
     fn read_t_float32() {
         let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
-        let r =
-            DatasetReader::with_dataset(i.dataset("d32_1").unwrap(), i.path().unwrap()).unwrap();
+        let r = StreamReader::with_dataset(i.dataset("d32_1").unwrap(), i.path().unwrap()).unwrap();
 
         let v = r.stream_values::<f32>(None, None);
         pin_mut!(v);
@@ -176,7 +187,7 @@ mod tests {
     #[test]
     fn read_chunked_1d() {
         let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path().unwrap())
+        let r = StreamReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path().unwrap())
             .unwrap();
 
         let v = r.stream_values::<f32>(None, None);
@@ -192,7 +203,7 @@ mod tests {
     #[test]
     fn read_chunked_2d() {
         let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
-        let r = DatasetReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path().unwrap())
+        let r = StreamReader::with_dataset(i.dataset("d_4_chunks").unwrap(), i.path().unwrap())
             .unwrap();
 
         let v = r.stream_values::<f32>(None, None);

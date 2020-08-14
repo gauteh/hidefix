@@ -2,10 +2,12 @@ use itertools::izip;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::min;
 use std::convert::TryInto;
+use std::path::Path;
 use strength_reduce::StrengthReducedU64;
 
 use super::chunk::Chunk;
 use crate::filters::byteorder::Order as ByteOrder;
+use crate::reader::{Reader, UnifyReader, UnifyStreamer};
 
 /// Dataset in possible dimensions.
 #[derive(Debug)]
@@ -25,11 +27,37 @@ impl DatasetD {
             2 => Ok(D2(Dataset::<2>::index(ds)?)),
             3 => Ok(D3(Dataset::<3>::index(ds)?)),
             4 => Ok(D4(Dataset::<4>::index(ds)?)),
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 
-    pub fn read(&self) -> () {
+    pub fn as_reader(&self, path: &Path) -> Result<impl Reader + '_, anyhow::Error> {
+        use crate::reader::cache::CacheReader;
+        use std::fs;
+        use DatasetD::*;
+
+        type UReader<'a, R> =
+            UnifyReader<CacheReader<'a, R, 1>, CacheReader<'a, R, 2>, CacheReader<'a, R, 3>>;
+
+        Ok(match self {
+            D1(ds) => UReader::R1(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D2(ds) => UReader::R2(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D3(ds) => UReader::R3(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            _ => unimplemented!(),
+        })
+    }
+
+    pub fn as_streamer(&self, path: &Path) -> Result<UnifyStreamer<'_>, anyhow::Error> {
+        use crate::reader::stream::StreamReader;
+        use std::fs;
+        use DatasetD::*;
+
+        Ok(match self {
+            D1(ds) => UnifyStreamer::R1(StreamReader::with_dataset(&ds, path)?),
+            D2(ds) => UnifyStreamer::R2(StreamReader::with_dataset(&ds, path)?),
+            D3(ds) => UnifyStreamer::R3(StreamReader::with_dataset(&ds, path)?),
+            _ => unimplemented!(),
+        })
     }
 }
 
@@ -57,7 +85,10 @@ impl From<hdf5::Datatype> for Datatype {
 
 /// A Dataset can have a maximum of _32_ dimensions.
 #[derive(Debug)]
-pub struct Dataset<const D: usize> where [u64; D]: std::array::LengthAtMost32 {
+pub struct Dataset<const D: usize>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     pub dtype: Datatype,
     pub dsize: usize,
     pub order: ByteOrder,
@@ -70,7 +101,6 @@ pub struct Dataset<const D: usize> where [u64; D]: std::array::LengthAtMost32 {
     //     deserialize_with = "deserialize_sru64"
     // )]
     // chunk_shape_reduced: [StrengthReducedU64; D],
-
     scaled_dim_sz: [u64; D],
     dim_sz: [u64; D],
     chunk_dim_sz: [u64; D],
@@ -94,7 +124,10 @@ pub struct Dataset<const D: usize> where [u64; D]: std::array::LengthAtMost32 {
 //     Ok(v.iter().map(|v| StrengthReducedU64::new(*v)).collect())
 // }
 
-impl<const D: usize> Dataset<D> where [u64; D]: std::array::LengthAtMost32 {
+impl<const D: usize> Dataset<D>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<D>, anyhow::Error> {
         ensure!(ds.ndim() == D, "Dataset dimensions does not match!");
 
@@ -159,7 +192,14 @@ impl<const D: usize> Dataset<D> where [u64; D]: std::array::LengthAtMost32 {
 
         let chunk_shape = ds.chunks().map_or_else(
             || shape.clone(),
-            |cs| cs.into_iter().map(|u| u as u64).collect::<Vec<u64>>().as_slice().try_into().unwrap(),
+            |cs| {
+                cs.into_iter()
+                    .map(|u| u as u64)
+                    .collect::<Vec<u64>>()
+                    .as_slice()
+                    .try_into()
+                    .unwrap()
+            },
         );
 
         {
@@ -203,7 +243,9 @@ impl<const D: usize> Dataset<D> where [u64; D]: std::array::LengthAtMost32 {
                 .collect::<Vec<u64>>();
             d.reverse();
             d
-        }.as_slice().try_into()?;
+        }
+        .as_slice()
+        .try_into()?;
 
         // size of dataset dimensions
         let dim_sz: [u64; D] = {
@@ -218,7 +260,9 @@ impl<const D: usize> Dataset<D> where [u64; D]: std::array::LengthAtMost32 {
                 .collect::<Vec<u64>>();
             d.reverse();
             d
-        }.as_slice().try_into()?;
+        }
+        .as_slice()
+        .try_into()?;
 
         // size of chunk dimensions
         let chunk_dim_sz: [u64; D] = {
@@ -233,7 +277,9 @@ impl<const D: usize> Dataset<D> where [u64; D]: std::array::LengthAtMost32 {
                 .collect::<Vec<u64>>();
             d.reverse();
             d
-        }.as_slice().try_into()?;
+        }
+        .as_slice()
+        .try_into()?;
 
         Ok(Dataset {
             dtype: dtype.into(),
@@ -301,7 +347,10 @@ impl<const D: usize> Dataset<D> where [u64; D]: std::array::LengthAtMost32 {
     }
 }
 
-pub struct ChunkSlicer<'a, const D: usize> where [u64; D]: std::array::LengthAtMost32 {
+pub struct ChunkSlicer<'a, const D: usize>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     dataset: &'a Dataset<D>,
     offset: u64,
     offset_coords: [u64; D],
@@ -312,7 +361,10 @@ pub struct ChunkSlicer<'a, const D: usize> where [u64; D]: std::array::LengthAtM
     end: u64,
 }
 
-impl<'a, const D: usize> ChunkSlicer<'a, D> where [u64; D]: std::array::LengthAtMost32 {
+impl<'a, const D: usize> ChunkSlicer<'a, D>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     pub fn new(dataset: &'a Dataset<D>, indices: [u64; D], counts: [u64; D]) -> ChunkSlicer<'a, D> {
         let end = if dataset.is_scalar() {
             // scalar
@@ -355,7 +407,10 @@ impl<'a, const D: usize> ChunkSlicer<'a, D> where [u64; D]: std::array::LengthAt
     }
 }
 
-impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> where [u64; D]: std::array::LengthAtMost32 {
+impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D>
+where
+    [u64; D]: std::array::LengthAtMost32,
+{
     type Item = (&'a Chunk<D>, u64, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -395,18 +450,25 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> where [u64; D]: std::ar
         let mut carry = 0;
         let mut i = 0;
 
-        for (idx, start, offset, count /* , count_reduced */, chunk_offset, chunk_len, chunk_dim_sz) in
-            izip!(
-                &self.indices,
-                &mut self.start_coords,
-                &mut self.offset_coords,
-                &self.counts,
-                // &self.counts_reduced,
-                &chunk.offset,
-                &self.dataset.chunk_shape,
-                &self.dataset.chunk_dim_sz
-            )
-            .rev()
+        for (
+            idx,
+            start,
+            offset,
+            count, /* , count_reduced */
+            chunk_offset,
+            chunk_len,
+            chunk_dim_sz,
+        ) in izip!(
+            &self.indices,
+            &mut self.start_coords,
+            &mut self.offset_coords,
+            &self.counts,
+            // &self.counts_reduced,
+            &chunk.offset,
+            &self.dataset.chunk_shape,
+            &self.dataset.chunk_dim_sz
+        )
+        .rev()
         {
             *offset += carry;
             carry = *offset / *count;

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use hdf5::File;
 
 use super::dataset::DatasetD;
-use crate::reader::{cache, stream};
+use crate::reader::{Reader, UnifyStreamer};
 
 #[derive(Debug)]
 pub struct Index {
@@ -78,42 +78,37 @@ impl Index {
         self.path.as_ref().map(|p| p.as_ref())
     }
 
-//    /// Create a cached reader for dataset.
-//    ///
-//    /// This is a convenience method to use a standard `std::fs::File` with a `cached` reader, you are
-//    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
-//    ///
-//    /// This method assumes the HDF5 file has the same location as at the time of
-//    /// indexing.
-    // pub fn reader(&self, ds: &str) -> Result<cache::DatasetReader<fs::File>, anyhow::Error> {
-    //     let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
+    /// Create a cached reader for dataset.
+    ///
+    /// This is a convenience method to use a standard `std::fs::File` with a `cached` reader, you are
+    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
+    ///
+    /// This method assumes the HDF5 file has the same location as at the time of
+    /// indexing.
+    pub fn reader(&self, ds: &str) -> Result<impl Reader + '_, anyhow::Error> {
+        let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
-    //     match self.dataset(ds) {
-    //         Some(ds) => {
-    //             match ds {
-    //                 DatasetD::D1(ds) | DatasetD::D2(ds) => cache::DatasetReader::with_dataset(&ds, fs::File::open(path)?),
-    //                 _ => unimplemented!()
-    //             }
-    //         },
-    //         None => Err(anyhow!("dataset does not exist")),
-    //     }
-    // }
+        match self.dataset(ds) {
+            Some(ds) => ds.as_reader(&path),
+            None => Err(anyhow!("dataset does not exist")),
+        }
+    }
 
-//    /// Create a streaming reader for dataset.
-//    ///
-//    /// This is a convenience method to use a standard `std::fs::File` with a `stream` reader, you are
-//    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
-//    ///
-//    /// This method assumes the HDF5 file has the same location as at the time of
-//    /// indexing.
-    // pub fn streamer(&self, ds: &str) -> Result<stream::DatasetReader, anyhow::Error> {
-    //     let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
+    /// Create a streaming reader for dataset.
+    ///
+    /// This is a convenience method to use a standard `std::fs::File` with a `stream` reader, you are
+    /// free to create use anything else with `std::io::Read` and `std::io::Seek`.
+    ///
+    /// This method assumes the HDF5 file has the same location as at the time of
+    /// indexing.
+    pub fn streamer(&self, ds: &str) -> Result<UnifyStreamer<'_>, anyhow::Error> {
+        let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
-    //     match self.dataset(ds) {
-    //         Some(ds) => stream::DatasetReader::with_dataset(&ds, path),
-    //         None => Err(anyhow!("dataset does not exist")),
-    //     }
-    // }
+        match self.dataset(ds) {
+            Some(ds) => ds.as_streamer(&path),
+            None => Err(anyhow!("dataset does not exist")),
+        }
+    }
 }
 
 #[cfg(test)]
