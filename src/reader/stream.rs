@@ -100,6 +100,8 @@ where
                     fd.seek(SeekFrom::Start(addr))?;
                     fd.read_exact(&mut cache)?;
 
+                    // TODO: Keep buffers around to avoid allocations.
+
                     let cache = if let Some(_) = gzip {
                         let mut decache: Vec<u8> = Vec::with_capacity(chunk_sz as usize);
                         unsafe {

@@ -40,15 +40,15 @@ from HDF5. The dataset is chunked, shuffled and compressed (using gzip):
 ```sh
 $ cargo bench --bench concurrency
 
-test shuffled_compressed::cache_concurrent_reads  ... bench:  26,602,751 ns/iter (+/- 24,391,376)
-test shuffled_compressed::cache_sequential        ... bench: 101,006,439 ns/iter (+/- 38,184,751)
-test shuffled_compressed::native_concurrent_reads ... bench: 455,274,764 ns/iter (+/- 85,119,929)
-test shuffled_compressed::native_sequential       ... bench: 105,945,871 ns/iter (+/- 12,992,272)
+test shuffled_compressed::cache_concurrent_reads  ... bench:  15,903,406 ns/iter (+/- 220,824)
+test shuffled_compressed::cache_sequential        ... bench:  59,778,761 ns/iter (+/- 602,316)
+test shuffled_compressed::native_concurrent_reads ... bench: 411,605,868 ns/iter (+/- 35,346,233)
+test shuffled_compressed::native_sequential       ... bench: 103,457,237 ns/iter (+/- 7,703,936)
 ```
 
 ## Inspiration and other projects
 
-This work based in part on the [DMR++
+This work is based in part on the [DMR++
 module](https://github.com/OPENDAP/bes/tree/master/modules/dmrpp_module) of the
 [OPeNDAP](https://www.opendap.org/) [Hyrax
 server](https://www.opendap.org/software/hyrax-data-server). The

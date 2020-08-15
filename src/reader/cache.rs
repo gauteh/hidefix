@@ -99,6 +99,8 @@ where
                     cache
                 };
 
+                // TODO: Keep buffers around to avoid allocations.
+                // TODO: Write directly to buf_slice when on last filter.
                 let cache = if self.ds.shuffle {
                     filters::shuffle::unshuffle_sized(&cache, dsz as usize)
                 } else {
