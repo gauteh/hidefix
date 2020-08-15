@@ -3,6 +3,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::min;
 use std::convert::TryInto;
 use std::path::Path;
+use std::borrow::Cow;
 use strength_reduce::StrengthReducedU64;
 
 use super::chunk::Chunk;
@@ -11,21 +12,21 @@ use crate::reader::{Reader, UnifyReader, UnifyStreamer};
 
 /// Dataset in possible dimensions.
 #[derive(Debug)]
-pub enum DatasetD {
-    D0(Dataset<0>),
-    D1(Dataset<1>),
-    D2(Dataset<2>),
-    D3(Dataset<3>),
-    D4(Dataset<4>),
-    D5(Dataset<5>),
-    D6(Dataset<6>),
-    D7(Dataset<7>),
-    D8(Dataset<8>),
-    D9(Dataset<9>),
+pub enum DatasetD<'a> {
+    D0(Dataset<'a, 0>),
+    D1(Dataset<'a, 1>),
+    D2(Dataset<'a, 2>),
+    D3(Dataset<'a, 3>),
+    D4(Dataset<'a, 4>),
+    D5(Dataset<'a, 5>),
+    D6(Dataset<'a, 6>),
+    D7(Dataset<'a, 7>),
+    D8(Dataset<'a, 8>),
+    D9(Dataset<'a, 9>),
 }
 
-impl DatasetD {
-    pub fn index(ds: &hdf5::Dataset) -> Result<DatasetD, anyhow::Error> {
+impl DatasetD<'_> {
+    pub fn index(ds: &hdf5::Dataset) -> Result<DatasetD<'static>, anyhow::Error> {
         use DatasetD::*;
 
         match ds.ndim() {
@@ -95,7 +96,7 @@ impl DatasetD {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Datatype {
     UInt(usize),
     Int(usize),
@@ -119,7 +120,7 @@ impl From<hdf5::Datatype> for Datatype {
 
 /// A Dataset can have a maximum of _32_ dimensions.
 #[derive(Debug)]
-pub struct Dataset<const D: usize>
+pub struct Dataset<'a, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
@@ -127,7 +128,7 @@ where
     pub dtype: Datatype,
     pub dsize: usize,
     pub order: ByteOrder,
-    pub chunks: Vec<Chunk<D>>,
+    pub chunks: Cow<'a, [Chunk<D>]>,
     pub shape: [u64; D],
     pub chunk_shape: [u64; D],
 
@@ -159,12 +160,12 @@ where
 //     Ok(v.iter().map(|v| StrengthReducedU64::new(*v)).collect())
 // }
 
-impl<const D: usize> Dataset<D>
+impl<const D: usize> Dataset<'_, D>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
-    pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<D>, anyhow::Error> {
+    pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<'static, D>, anyhow::Error> {
         ensure!(ds.ndim() == D, "Dataset dimensions does not match!");
 
         let shuffle = ds.filters().get_shuffle();
@@ -214,6 +215,7 @@ where
         }?;
 
         chunks.sort();
+        let chunks = Cow::from(chunks);
 
         let dtype = ds.dtype()?;
         let dsize = ds.dtype()?.size();
@@ -390,7 +392,7 @@ where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
-    dataset: &'a Dataset<D>,
+    dataset: &'a Dataset<'a, D>,
     offset: u64,
     offset_coords: [u64; D],
     start_coords: [u64; D],
@@ -574,7 +576,7 @@ mod tests {
     use super::*;
     use test::Bencher;
 
-    fn test_dataset() -> Dataset<2> {
+    fn test_dataset() -> Dataset<'static, 2> {
         Dataset::<2> {
             dtype: Datatype::Float(4),
             dsize: 4,
@@ -590,7 +592,7 @@ mod tests {
             scaled_dim_sz: [2, 1],
             dim_sz: [20, 1],
             chunk_dim_sz: [10, 1],
-            chunks: vec![
+            chunks: Cow::from(vec![
                 Chunk::<2> {
                     offset: [0, 0],
                     size: 400,
@@ -611,7 +613,7 @@ mod tests {
                     size: 400,
                     addr: 1200,
                 },
-            ],
+            ]),
             shuffle: false,
             gzip: None,
         }
@@ -633,9 +635,7 @@ mod tests {
 
     #[bench]
     fn chunk_at_coord(b: &mut Bencher) {
-        let mut d = test_dataset();
-
-        d.chunks.sort();
+        let d = test_dataset();
 
         println!("chunks: {:#?}", d.chunks);
 

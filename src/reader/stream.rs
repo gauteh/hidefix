@@ -22,7 +22,7 @@ where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
-    ds: &'a Dataset<D>,
+    ds: &'a Dataset<'a, D>,
     p: PathBuf,
     chunk_sz: u64,
 }

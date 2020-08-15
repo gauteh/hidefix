@@ -15,7 +15,7 @@ where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
-    ds: &'a Dataset<D>,
+    ds: &'a Dataset<'a, D>,
     fd: R,
     cache: LruCache<u64, Vec<u8>>,
     chunk_sz: u64,

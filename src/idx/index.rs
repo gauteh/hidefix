@@ -10,30 +10,30 @@ use super::dataset::DatasetD;
 use crate::reader::{Reader, UnifyStreamer};
 
 #[derive(Debug)]
-pub struct Index {
+pub struct Index<'a> {
     path: Option<PathBuf>,
-    datasets: HashMap<String, DatasetD>,
+    datasets: HashMap<String, DatasetD<'a>>,
 }
 
-impl TryFrom<&Path> for Index {
+impl TryFrom<&Path> for Index<'_> {
     type Error = anyhow::Error;
 
-    fn try_from(p: &Path) -> Result<Index, anyhow::Error> {
+    fn try_from(p: &Path) -> Result<Index<'static>, anyhow::Error> {
         Index::index(p)
     }
 }
 
-impl TryFrom<&hdf5::File> for Index {
+impl TryFrom<&hdf5::File> for Index<'_> {
     type Error = anyhow::Error;
 
-    fn try_from(f: &hdf5::File) -> Result<Index, anyhow::Error> {
+    fn try_from(f: &hdf5::File) -> Result<Index<'static>, anyhow::Error> {
         Index::index_file::<&str>(f, None)
     }
 }
 
-impl Index {
+impl Index<'_> {
     /// Open an existing HDF5 file and index all variables.
-    pub fn index<P>(path: P) -> Result<Index, anyhow::Error>
+    pub fn index<P>(path: P) -> Result<Index<'static>, anyhow::Error>
     where
         P: AsRef<Path>,
     {
@@ -44,7 +44,7 @@ impl Index {
     }
 
     /// Index an open HDF5 file.
-    pub fn index_file<P>(hf: &hdf5::File, path: Option<P>) -> Result<Index, anyhow::Error>
+    pub fn index_file<P>(hf: &hdf5::File, path: Option<P>) -> Result<Index<'static>, anyhow::Error>
     where
         P: Into<PathBuf>,
     {
@@ -56,7 +56,7 @@ impl Index {
             .filter_map(Result::ok)
             .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
             .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
-            .collect::<Result<HashMap<String, DatasetD>, _>>()?;
+            .collect::<Result<HashMap<String, DatasetD<'static>>, _>>()?;
 
         Ok(Index {
             path: path.map(|p| p.into()),
