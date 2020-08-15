@@ -69,6 +69,31 @@ where
     }
 }
 
+/// Optimized unshuffle.
+pub fn unshuffle_2<const N: usize>(src: &[u8], dest: &mut [u8])
+{
+    use std::convert::TryInto;
+
+    assert!(src.len() == dest.len());
+    assert!(src.len() % N == 0);
+    let n = src.len() / N;
+
+    let dest_ptr = dest.as_mut_ptr() as *mut _;
+    let dest_structured: &mut [[u8; N]] = unsafe {
+        std::slice::from_raw_parts_mut(dest_ptr, src.len() / N)
+    };
+
+    assert!(dest_structured.len() == dest.len() / N);
+
+    dest_structured.iter_mut().enumerate().for_each(|(j, d)| {
+        for i in 0..N {
+            unsafe {
+                *d.get_unchecked_mut(i) = *src.get_unchecked(i * n + j);
+            }
+        }
+    })
+}
+
 /// Unshuffle bytes representing array with word size `wsz` (e.g. `4` for `int32`).
 pub fn unshuffle_bytes(src: &Bytes, wsz: usize) -> BytesMut {
     debug_assert!(wsz > 1);
@@ -97,38 +122,28 @@ pub fn unshuffle_sized<T>(src: &[T], sz: usize) -> Vec<u8>
 where
     T: ToByteSlice + FromByteVec + Copy,
 {
+    let src = src.as_byte_slice();
+    let mut dest: Vec<u8> = Vec::with_capacity(src.len());
+    unsafe { dest.set_len(src.len()) };
+
     match sz {
         1 => {
             // noop
-            let src = src.as_byte_slice();
-            let mut v = Vec::<u8>::with_capacity(src.len());
-            unsafe { v.set_len(src.len()) };
-            v.copy_from_slice(&src.as_byte_slice());
-            v
+            dest.copy_from_slice(&src);
         }
         2 => {
-            let sz = src.len() * std::mem::size_of::<T>() / 2;
-            let mut d = Vec::<u16>::with_capacity(sz);
-            unsafe { d.set_len(sz) };
-            unshuffle(src, &mut d);
-            d.into_byte_vec()
+            unshuffle_2::<2>(src, &mut dest);
         }
         4 => {
-            let sz = src.len() * std::mem::size_of::<T>() / 4;
-            let mut d = Vec::<u32>::with_capacity(sz);
-            unsafe { d.set_len(sz) };
-            unshuffle(src, &mut d);
-            d.into_byte_vec()
+            unshuffle_2::<4>(src, &mut dest);
         }
         8 => {
-            let sz = src.len() * std::mem::size_of::<T>() / 8;
-            let mut d = Vec::<u64>::with_capacity(sz);
-            unsafe { d.set_len(sz) };
-            unshuffle(src, &mut d);
-            d.into_byte_vec()
+            unshuffle_2::<8>(src, &mut dest);
         }
         _ => unimplemented!(),
     }
+
+    dest
 }
 
 #[cfg(test)]
