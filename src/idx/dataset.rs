@@ -122,6 +122,7 @@ impl From<hdf5::Datatype> for Datatype {
 pub struct Dataset<const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     pub dtype: Datatype,
     pub dsize: usize,
@@ -134,7 +135,7 @@ where
     //     serialize_with = "serialize_sru64",
     //     deserialize_with = "deserialize_sru64"
     // )]
-    // chunk_shape_reduced: [StrengthReducedU64; D],
+    chunk_shape_reduced: [StrengthReducedU64; D],
     scaled_dim_sz: [u64; D],
     dim_sz: [u64; D],
     chunk_dim_sz: [u64; D],
@@ -161,6 +162,7 @@ where
 impl<const D: usize> Dataset<D>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<D>, anyhow::Error> {
         ensure!(ds.ndim() == D, "Dataset dimensions does not match!");
@@ -255,10 +257,12 @@ where
         }
 
         // optimized divisor for chunk shape
-        // let chunk_shape_reduced = chunk_shape
-        //     .iter()
-        //     .map(|c| StrengthReducedU64::new(*c))
-        //     .collect();
+        let chunk_shape_reduced = chunk_shape
+            .iter()
+            .map(|c| StrengthReducedU64::new(*c))
+            .collect::<Vec<_>>()
+            .as_slice()
+            .try_into()?;
 
         // scaled dimension size: dimension size of dataset in chunk offset coordinates.
         // the dimension size is rounded up. when the dataset size is not a multiple of
@@ -322,7 +326,7 @@ where
             chunks,
             shape,
             chunk_shape,
-            // chunk_shape_reduced,
+            chunk_shape_reduced,
             scaled_dim_sz,
             dim_sz,
             chunk_dim_sz,
@@ -371,7 +375,7 @@ where
 
         let offset = indices
             .iter()
-            .zip(&self.chunk_shape)
+            .zip(&self.chunk_shape_reduced)
             .zip(&self.scaled_dim_sz)
             .fold(0, |offset, ((&index, &ch_sh), &sz)| {
                 offset + index / ch_sh * sz
@@ -384,6 +388,7 @@ where
 pub struct ChunkSlicer<'a, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     dataset: &'a Dataset<D>,
     offset: u64,
@@ -391,13 +396,14 @@ where
     start_coords: [u64; D],
     indices: [u64; D],
     counts: [u64; D],
-    // counts_reduced: [StrengthReducedU64; D],
+    counts_reduced: [StrengthReducedU64; D],
     end: u64,
 }
 
 impl<'a, const D: usize> ChunkSlicer<'a, D>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     pub fn new(dataset: &'a Dataset<D>, indices: [u64; D], counts: [u64; D]) -> ChunkSlicer<'a, D> {
         let end = if dataset.is_scalar() {
@@ -419,7 +425,7 @@ where
             offset_coords: [0; D],
             start_coords: indices.clone(),
             indices: indices,
-            // counts_reduced: counts.iter().map(|c| StrengthReducedU64::new(*c)).collect(),
+            counts_reduced: counts.iter().map(|c| StrengthReducedU64::new(*c)).collect::<Vec<_>>().as_slice().try_into().unwrap(),
             counts: counts,
             end,
         }
@@ -444,6 +450,7 @@ where
 impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     type Item = (&'a Chunk<D>, u64, u64);
 
@@ -488,7 +495,7 @@ where
             idx,
             start,
             offset,
-            count, /* , count_reduced */
+            count, count_reduced,
             chunk_offset,
             chunk_len,
             chunk_dim_sz,
@@ -497,7 +504,7 @@ where
             &mut self.start_coords,
             &mut self.offset_coords,
             &self.counts,
-            // &self.counts_reduced,
+            &self.counts_reduced,
             &chunk.offset,
             &self.dataset.chunk_shape,
             &self.dataset.chunk_dim_sz
@@ -505,8 +512,8 @@ where
         .rev()
         {
             *offset += carry;
-            carry = *offset / *count;
-            *offset = *offset % *count;
+            carry = *offset / *count_reduced;
+            *offset = *offset % *count_reduced;
             *start = idx + *offset;
 
             let last = *offset;
@@ -518,8 +525,8 @@ where
             advanced += diff;
             self.offset += diff;
 
-            carry += *offset / *count;
-            *offset = *offset % *count;
+            carry += *offset / *count_reduced;
+            *offset = *offset % *count_reduced;
             *start = idx + *offset;
             i += 1;
 
@@ -537,7 +544,7 @@ where
             &self.indices[..i],
             &mut self.start_coords[..i],
             &mut self.offset_coords[..i],
-            &self.counts[..i]
+            &self.counts_reduced[..i]
         )
         .rev()
         {
@@ -574,10 +581,12 @@ mod tests {
             order: ByteOrder::BE,
             shape: [20, 20],
             chunk_shape: [10, 10],
-            // chunk_shape_reduced: [10u64, 10]
-            //     .iter()
-            //     .map(|i| StrengthReducedU64::new(*i))
-            //     .collect(),
+            chunk_shape_reduced: [10u64, 10]
+                .iter()
+                .map(|i| StrengthReducedU64::new(*i))
+                .collect::<Vec<_>>()
+                .as_slice()
+                .try_into().unwrap(),
             scaled_dim_sz: [2, 1],
             dim_sz: [20, 1],
             chunk_dim_sz: [10, 1],

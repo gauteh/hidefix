@@ -3,6 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
+use strength_reduce::StrengthReducedU64;
 
 use super::dataset::Reader;
 use crate::filters;
@@ -12,6 +13,7 @@ use crate::idx::Dataset;
 pub struct CacheReader<'a, R: Read + Seek, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     ds: &'a Dataset<D>,
     fd: R,
@@ -22,6 +24,7 @@ where
 impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     pub fn with_dataset(ds: &'a Dataset<D>, fd: R) -> Result<CacheReader<'a, R, D>, anyhow::Error> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
@@ -40,6 +43,7 @@ where
 impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     fn read(
         &mut self,

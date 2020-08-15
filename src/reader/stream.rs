@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use bytes::Bytes;
 use lru::LruCache;
+use strength_reduce::StrengthReducedU64;
 
 use crate::filters;
 use crate::filters::byteorder::{self, Order, ToNative};
@@ -19,6 +20,7 @@ use crate::idx::Dataset;
 pub struct StreamReader<'a, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     ds: &'a Dataset<D>,
     p: PathBuf,
@@ -31,6 +33,7 @@ const CACHE_SZ: u64 = 32 * 1024 * 1024;
 impl<'a, const D: usize> StreamReader<'a, D>
 where
     [u64; D]: std::array::LengthAtMost32,
+    [StrengthReducedU64; D]: std::array::LengthAtMost32,
 {
     pub fn with_dataset<P>(ds: &'a Dataset<D>, p: P) -> Result<StreamReader<'a, D>, anyhow::Error>
     where
