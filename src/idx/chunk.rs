@@ -21,6 +21,9 @@ pub struct Chunk<const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
 {
+    // WARNING: Do not alter repr, order or type of this struct or fields without verifying against
+    //          slice operations.
+
     /// Address or offset (bytes) in file where chunk starts.
     pub addr: u64,
 
@@ -57,7 +60,7 @@ where
     /// if I know what I am doing.
     ///
     /// Expressions in const-generics are not yet allowed.
-    pub fn as_slice(&self) -> &[u64] {
+    pub fn as_u64s(&self) -> &[u64] {
         let ptr = self as *const Chunk<D>;
         let slice: &[u64] = unsafe {
             let ptr = std::mem::transmute(ptr);
@@ -69,12 +72,44 @@ where
         slice
     }
 
-    pub fn from_slice(slice: &[u64]) -> &Chunk<D> {
+    /// Reinterpret a slice of `u64`s as a Chunk.
+    pub fn from_u64s(slice: &[u64]) -> &Chunk<D> {
         assert_eq!(slice.len(), std::mem::size_of::<Self>() / std::mem::size_of::<u64>());
 
         unsafe {
             std::mem::transmute(slice.as_ptr())
         }
+    }
+
+    /// Reintepret a slice of `Chunk<D>`s to a slice of `u64`. This is efficient, but relies
+    /// on unsafe code.
+    pub fn slice_as_u64s(chunks: &[Chunk<D>]) -> &[u64] {
+        let ptr = chunks.as_ptr() as *const Chunk<D>;
+        let slice: &[u64] = unsafe {
+            let ptr = std::mem::transmute(ptr);
+            std::slice::from_raw_parts(ptr, chunks.len() * std::mem::size_of::<Self>() / std::mem::size_of::<u64>())
+        };
+
+        assert_eq!(slice.len(), chunks.len() * std::mem::size_of::<Self>() / std::mem::size_of::<u64>());
+
+        slice
+    }
+
+    /// Reintepret a slice of `u64`s to a slice of `Chunk<D>`. This is efficient, but relies
+    /// on unsafe code.
+    pub fn slice_from_u64s(slice: &[u64]) -> &[Chunk<D>] {
+        assert_eq!(slice.len() % (std::mem::size_of::<Self>() / std::mem::size_of::<u64>()), 0);
+        let n = slice.len() / (std::mem::size_of::<Self>() / std::mem::size_of::<u64>());
+
+        let ptr = slice.as_ptr() as *const _;
+        let chunks: &[Chunk<D>] = unsafe {
+            let ptr = std::mem::transmute(ptr);
+            std::slice::from_raw_parts(ptr, n)
+        };
+
+        assert_eq!(slice.len(), chunks.len() * std::mem::size_of::<Self>() / std::mem::size_of::<u64>());
+
+        chunks
     }
 }
 
@@ -192,16 +227,17 @@ mod tests {
 
     mod serde {
         use super::*;
+        use test::Bencher;
 
         #[test]
-        fn as_slice() {
+        fn as_u64s() {
             let c = Chunk {
                 addr: 2,
                 size: 7,
                 offset: [10, 10],
             };
 
-            let s = c.as_slice();
+            let s = c.as_u64s();
             println!("{:?} -> {:?}", c, s);
             assert_eq!(s, [2, 7, 10, 10]);
 
@@ -212,7 +248,7 @@ mod tests {
                 offset: [10, 5, 10],
             };
 
-            let s = c.as_slice();
+            let s = c.as_u64s();
             println!("{:?} -> {:?}", c, s);
             assert_eq!(s, [2, 7, 10, 5, 10]);
 
@@ -222,15 +258,15 @@ mod tests {
                 offset: [10, 5, 3, 10],
             };
 
-            let s = c.as_slice();
+            let s = c.as_u64s();
             println!("{:?} -> {:?}", c, s);
             assert_eq!(s, [2, 7, 10, 5, 3, 10]);
         }
 
         #[test]
-        fn from_slice() {
+        fn from_u64s() {
             let s = [2, 7, 10, 10];
-            let c = Chunk::<2>::from_slice(&s);
+            let c = Chunk::<2>::from_u64s(&s);
             println!("{:?} -> {:?}", s, c);
             assert_eq!(c, &Chunk {
                 addr: 2,
@@ -240,7 +276,7 @@ mod tests {
 
             // odd number of dims
             let s = [2, 7, 10, 5, 10];
-            let c = Chunk::<3>::from_slice(&s);
+            let c = Chunk::<3>::from_u64s(&s);
             println!("{:?} -> {:?}", s, c);
             assert_eq!(c, &Chunk {
                 addr: 2,
@@ -249,7 +285,7 @@ mod tests {
             });
 
             let s = [2, 7, 10, 5, 3, 10];
-            let c = Chunk::<4>::from_slice(&s);
+            let c = Chunk::<4>::from_u64s(&s);
             println!("{:?} -> {:?}", s, c);
             assert_eq!(c, &Chunk {
                 addr: 2,
@@ -266,12 +302,115 @@ mod tests {
                 offset: [10, 5, 10],
             };
 
-            let s = c.as_slice();
+            let s = c.as_u64s();
             assert_eq!(s, [2, 7, 10, 5, 10]);
 
-            let c2 = Chunk::<3>::from_slice(s);
+            let c2 = Chunk::<3>::from_u64s(s);
 
             assert_eq!(&c, c2);
+        }
+
+        #[test]
+        fn slice_as_u64s() {
+            let cs = [
+                Chunk {
+                    addr: 2,
+                    size: 7,
+                    offset: [10, 10],
+                },
+                Chunk {
+                    addr: 3,
+                    size: 17,
+                    offset: [20, 20],
+                },
+            ];
+
+
+            let s = Chunk::<2>::slice_as_u64s(&cs);
+            println!("{:?} -> {:?}", cs, s);
+            assert_eq!(s, [2, 7, 10, 10, 3, 17, 20, 20]);
+
+            let cs = [
+                Chunk {
+                    addr: 2,
+                    size: 7,
+                    offset: [10, 10, 15],
+                },
+                Chunk {
+                    addr: 3,
+                    size: 17,
+                    offset: [20, 20, 30],
+                },
+            ];
+
+
+            let s = Chunk::<3>::slice_as_u64s(&cs);
+            println!("{:?} -> {:?}", cs, s);
+            assert_eq!(s, [2, 7, 10, 10, 15, 3, 17, 20, 20, 30]);
+        }
+
+        #[test]
+        fn slice_from_u64s() {
+            let s = [2, 7, 10, 10, 3, 17, 20, 20];
+            let cs = [
+                Chunk {
+                    addr: 2,
+                    size: 7,
+                    offset: [10, 10],
+                },
+                Chunk {
+                    addr: 3,
+                    size: 17,
+                    offset: [20, 20],
+                },
+            ];
+
+
+            let dcs = Chunk::<2>::slice_from_u64s(&s);
+            println!("{:?} -> {:?}", s, dcs);
+            assert_eq!(dcs, cs);
+
+            let s = [2, 7, 10, 10, 15, 3, 17, 20, 20, 30];
+            let cs = [
+                Chunk {
+                    addr: 2,
+                    size: 7,
+                    offset: [10, 10, 15],
+                },
+                Chunk {
+                    addr: 3,
+                    size: 17,
+                    offset: [20, 20, 30],
+                },
+            ];
+
+
+            let dcs = Chunk::<3>::slice_from_u64s(&s);
+            println!("{:?} -> {:?}", s, dcs);
+            assert_eq!(dcs, cs);
+        }
+
+        #[bench]
+        fn slice_from_u64s_10k_3d(b: &mut Bencher) {
+            let chunks: Vec<Chunk<3>> = (0..10000).map(|i|
+                Chunk {
+                    addr: i * 10,
+                    size: 300,
+                    offset: [i * 10, i * 100, i * 10000]
+                }).collect();
+
+            assert_eq!(chunks.len(), 10000);
+
+            let slice = Chunk::<3>::slice_as_u64s(chunks.as_slice());
+            assert_eq!(slice.len(), 10000 * std::mem::size_of::<Chunk<3>>() / std::mem::size_of::<u64>());
+
+            let dechunks = Chunk::<3>::slice_from_u64s(&slice);
+            assert_eq!(dechunks.len(), chunks.len());
+            assert_eq!(dechunks, chunks.as_slice());
+
+            b.iter(|| {
+                test::black_box(Chunk::<3>::slice_from_u64s(&slice));
+            });
         }
     }
 }
