@@ -16,15 +16,19 @@ use std::hash::{Hash, Hasher};
 ///
 /// Reference: [HDF5 chunking](https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html).
 #[derive(Debug, Eq, Clone)]
+#[repr(C)]
 pub struct Chunk<const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
 {
+    /// Address or offset (bytes) in file where chunk starts.
     pub addr: u64,
-    pub offset: [u64; D],
 
-    /// Chunk size in bytes (storage size)
+    /// Chunk size in bytes (storage size).
     pub size: u64,
+
+    /// Coordinates of offset in dataspace where the chunk begins.
+    pub offset: [u64; D],
 }
 
 impl<const D: usize> Chunk<D>
@@ -47,6 +51,30 @@ where
         }
 
         Ordering::Equal
+    }
+
+    /// Reinterpret the Chunk as a slice of `u64`'s. This is ridiculously unsafe and I am not sure
+    /// if I know what I am doing.
+    ///
+    /// Expressions in const-generics are not yet allowed.
+    pub fn as_slice(&self) -> &[u64] {
+        let ptr = self as *const Chunk<D>;
+        let slice: &[u64] = unsafe {
+            let ptr = std::mem::transmute(ptr);
+            std::slice::from_raw_parts(ptr, std::mem::size_of::<Self>() / std::mem::size_of::<u64>())
+        };
+
+        assert_eq!(slice.len(), std::mem::size_of::<Self>() / std::mem::size_of::<u64>());
+
+        slice
+    }
+
+    pub fn from_slice(slice: &[u64]) -> &Chunk<D> {
+        assert_eq!(slice.len(), std::mem::size_of::<Self>() / std::mem::size_of::<u64>());
+
+        unsafe {
+            std::mem::transmute(slice.as_ptr())
+        }
     }
 }
 
@@ -160,5 +188,90 @@ mod tests {
         assert_eq!(c.contains(&[10, 25], &shape), Ordering::Greater);
         assert_eq!(c.contains(&[5, 25], &shape), Ordering::Less);
         assert_eq!(c.contains(&[25, 5], &shape), Ordering::Greater);
+    }
+
+    mod serde {
+        use super::*;
+
+        #[test]
+        fn as_slice() {
+            let c = Chunk {
+                addr: 2,
+                size: 7,
+                offset: [10, 10],
+            };
+
+            let s = c.as_slice();
+            println!("{:?} -> {:?}", c, s);
+            assert_eq!(s, [2, 7, 10, 10]);
+
+            // odd number of dims
+            let c = Chunk {
+                addr: 2,
+                size: 7,
+                offset: [10, 5, 10],
+            };
+
+            let s = c.as_slice();
+            println!("{:?} -> {:?}", c, s);
+            assert_eq!(s, [2, 7, 10, 5, 10]);
+
+            let c = Chunk {
+                addr: 2,
+                size: 7,
+                offset: [10, 5, 3, 10],
+            };
+
+            let s = c.as_slice();
+            println!("{:?} -> {:?}", c, s);
+            assert_eq!(s, [2, 7, 10, 5, 3, 10]);
+        }
+
+        #[test]
+        fn from_slice() {
+            let s = [2, 7, 10, 10];
+            let c = Chunk::<2>::from_slice(&s);
+            println!("{:?} -> {:?}", s, c);
+            assert_eq!(c, &Chunk {
+                addr: 2,
+                size: 7,
+                offset: [10, 10],
+            });
+
+            // odd number of dims
+            let s = [2, 7, 10, 5, 10];
+            let c = Chunk::<3>::from_slice(&s);
+            println!("{:?} -> {:?}", s, c);
+            assert_eq!(c, &Chunk {
+                addr: 2,
+                size: 7,
+                offset: [10, 5, 10],
+            });
+
+            let s = [2, 7, 10, 5, 3, 10];
+            let c = Chunk::<4>::from_slice(&s);
+            println!("{:?} -> {:?}", s, c);
+            assert_eq!(c, &Chunk {
+                addr: 2,
+                size: 7,
+                offset: [10, 5, 3, 10],
+            });
+        }
+
+        #[test]
+        fn roundtrip() {
+            let c = Chunk {
+                addr: 2,
+                size: 7,
+                offset: [10, 5, 10],
+            };
+
+            let s = c.as_slice();
+            assert_eq!(s, [2, 7, 10, 5, 10]);
+
+            let c2 = Chunk::<3>::from_slice(s);
+
+            assert_eq!(&c, c2);
+        }
     }
 }
