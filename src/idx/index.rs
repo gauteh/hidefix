@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use hdf5::File;
@@ -9,9 +8,11 @@ use hdf5::File;
 use super::dataset::DatasetD;
 use crate::reader::{Reader, UnifyStreamer};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Index<'a> {
     path: Option<PathBuf>,
+
+    #[serde(borrow)]
     datasets: HashMap<String, DatasetD<'a>>,
 }
 
@@ -142,5 +143,24 @@ mod tests {
         println!("indexing meps");
         let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         println!("{:#?}", i);
+    }
+
+    #[test]
+    fn serialize() {
+        use flexbuffers::FlexbufferSerializer as ser;
+        let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
+        println!("Original index: {:#?}", i);
+
+        println!("serialize");
+        let mut s = ser::new();
+        i.serialize(&mut s).unwrap();
+
+        println!("deserialize");
+        let r = flexbuffers::Reader::get_root(s.view()).unwrap();
+        let mi = Index::deserialize(r).unwrap();
+        println!("Deserialized Index: {:#?}", mi);
+
+        let s = bincode::serialize(&i).unwrap();
+        bincode::deserialize::<Index>(&s).unwrap();
     }
 }

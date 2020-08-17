@@ -1,5 +1,5 @@
 use crate::filters::byteorder::ToNative;
-use byte_slice_cast::{FromByteVec, IntoVecOf};
+use byte_slice_cast::FromByteVec;
 
 pub trait Reader {
     fn read(
@@ -125,11 +125,10 @@ pub enum UnifyStreamer<'a> {
     R9(S9<'a>),
 }
 
-use crate::filters::byteorder::{self, Order};
+use crate::filters::byteorder::Order;
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
 use async_stream::stream;
-use futures::pin_mut;
 
 impl<'a> UnifyStreamer<'a> {
     /// A stream of bytes from the variable. Always in Big Endian.

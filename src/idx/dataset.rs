@@ -1,27 +1,37 @@
 use itertools::izip;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::convert::TryInto;
 use std::path::Path;
 use std::borrow::Cow;
 use strength_reduce::StrengthReducedU64;
 
-use super::chunk::Chunk;
+use super::chunk::{Chunk, ULE};
 use crate::filters::byteorder::Order as ByteOrder;
 use crate::reader::{Reader, UnifyReader, UnifyStreamer};
 
 /// Dataset in possible dimensions.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum DatasetD<'a> {
+    #[serde(borrow)]
     D0(Dataset<'a, 0>),
+    #[serde(borrow)]
     D1(Dataset<'a, 1>),
+    #[serde(borrow)]
     D2(Dataset<'a, 2>),
+    #[serde(borrow)]
     D3(Dataset<'a, 3>),
+    #[serde(borrow)]
     D4(Dataset<'a, 4>),
+    #[serde(borrow)]
     D5(Dataset<'a, 5>),
+    #[serde(borrow)]
     D6(Dataset<'a, 6>),
+    #[serde(borrow)]
     D7(Dataset<'a, 7>),
+    #[serde(borrow)]
     D8(Dataset<'a, 8>),
+    #[serde(borrow)]
     D9(Dataset<'a, 9>),
 }
 
@@ -78,7 +88,6 @@ impl DatasetD<'_> {
 
     pub fn as_streamer(&self, path: &Path) -> Result<UnifyStreamer<'_>, anyhow::Error> {
         use crate::reader::stream::StreamReader;
-        use std::fs;
         use DatasetD::*;
 
         Ok(match self {
@@ -119,51 +128,47 @@ impl From<hdf5::Datatype> for Datatype {
 }
 
 /// A Dataset can have a maximum of _32_ dimensions.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Dataset<'a, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     pub dtype: Datatype,
     pub dsize: usize,
     pub order: ByteOrder,
+
+    #[serde(borrow)]
+    #[serde(with = "super::serde::chunks_u64s")]
     pub chunks: Cow<'a, [Chunk<D>]>,
+
+    #[serde(with = "super::serde::arr_u64")]
     pub shape: [u64; D],
+
+    #[serde(with = "super::serde::arr_u64")]
     pub chunk_shape: [u64; D],
 
-    // #[serde(
-    //     serialize_with = "serialize_sru64",
-    //     deserialize_with = "deserialize_sru64"
-    // )]
+    #[serde(with = "super::serde::sr_u64")]
     chunk_shape_reduced: [StrengthReducedU64; D],
-    scaled_dim_sz: [u64; D],
-    dim_sz: [u64; D],
-    chunk_dim_sz: [u64; D],
+
+    #[serde(with = "super::serde::arr_u64")]
+    pub scaled_dim_sz: [u64; D],
+
+    #[serde(with = "super::serde::arr_u64")]
+    pub dim_sz: [u64; D],
+
+    #[serde(with = "super::serde::arr_u64")]
+    pub chunk_dim_sz: [u64; D],
     pub shuffle: bool,
     pub gzip: Option<u8>,
 }
-
-// fn serialize_sru64<S>(v: &Vec<StrengthReducedU64>, s: S) -> Result<S::Ok, S::Error>
-// where
-//     S: Serializer,
-// {
-//     let b: Vec<u64> = v.iter().map(|s| s.get()).collect();
-//     b.serialize(s)
-// }
-
-// fn deserialize_sru64<'de, D>(d: D) -> Result<Vec<StrengthReducedU64>, D::Error>
-// where
-//     D: Deserializer<'de>,
-// {
-//     let v = Vec::<u64>::deserialize(d)?;
-//     Ok(v.iter().map(|v| StrengthReducedU64::new(*v)).collect())
-// }
 
 impl<const D: usize> Dataset<'_, D>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<'static, D>, anyhow::Error> {
         ensure!(ds.ndim() == D, "Dataset dimensions does not match!");
@@ -181,9 +186,9 @@ where
         let mut chunks: Vec<Chunk<D>> = match (ds.num_chunks().is_some(), ds.offset()) {
             // Continuous
             (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
-                offset: [0; D],
-                size: ds.storage_size(),
-                addr: offset,
+                offset: [ULE::ZERO; D],
+                size: ULE::new(ds.storage_size()),
+                addr: ULE::new(offset),
             }]),
 
             // Chunked
@@ -196,9 +201,9 @@ where
                             .map(|ci| {
                                 assert!(ci.filter_mask == 0);
                                 Chunk {
-                                    offset: ci.offset.as_slice().try_into().unwrap(),
-                                    size: ci.size,
-                                    addr: ci.addr,
+                                    offset: ci.offset.iter().cloned().map(ULE::new).collect::<Vec<_>>().as_slice().try_into().unwrap(),
+                                    size: ULE::new(ci.size),
+                                    addr: ULE::new(ci.addr),
                                 }
                             })
                             .ok_or_else(|| anyhow!("{}: Could not get chunk info", ds.name()))
@@ -391,6 +396,7 @@ pub struct ChunkSlicer<'a, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     dataset: &'a Dataset<'a, D>,
     offset: u64,
@@ -406,6 +412,7 @@ impl<'a, const D: usize> ChunkSlicer<'a, D>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     pub fn new(dataset: &'a Dataset<D>, indices: [u64; D], counts: [u64; D]) -> ChunkSlicer<'a, D> {
         let end = if dataset.is_scalar() {
@@ -435,7 +442,7 @@ where
 
     /// Offset from chunk offset coordinates. `dim_sz` is dimension size of chunk
     /// dimensions.
-    fn chunk_start(coords: &[u64; D], chunk_offset: &[u64; D], dim_sz: &[u64; D]) -> u64 {
+    fn chunk_start(coords: &[u64; D], chunk_offset: &[ULE; D], dim_sz: &[u64; D]) -> u64 {
         debug_assert_eq!(coords.len(), chunk_offset.len());
         debug_assert_eq!(coords.len(), dim_sz.len());
 
@@ -444,7 +451,7 @@ where
             .zip(chunk_offset)
             .zip(dim_sz)
             .fold(0, |start, ((&coord, &offset), &sz)| {
-                start + (coord - offset) * sz
+                start + (coord - offset.get()) * sz
             })
     }
 }
@@ -453,6 +460,7 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     type Item = (&'a Chunk<D>, u64, u64);
 
@@ -520,7 +528,7 @@ where
 
             let last = *offset;
 
-            *offset = min(*count, chunk_offset + chunk_len - idx);
+            *offset = min(*count, chunk_offset.get() + chunk_len - idx);
 
             let diff = (*offset - last) * chunk_dim_sz;
 
@@ -533,8 +541,8 @@ where
             i += 1;
 
             if self.offset >= self.end
-                || start != chunk_offset
-                || (*start + count) != (chunk_offset + chunk_len)
+                || start != &chunk_offset.get()
+                || (*start + count) != (chunk_offset.get() + chunk_len)
                 || diff == 0
             {
                 break;
@@ -593,26 +601,10 @@ mod tests {
             dim_sz: [20, 1],
             chunk_dim_sz: [10, 1],
             chunks: Cow::from(vec![
-                Chunk::<2> {
-                    offset: [0, 0],
-                    size: 400,
-                    addr: 0,
-                },
-                Chunk::<2> {
-                    offset: [0, 10],
-                    size: 400,
-                    addr: 400,
-                },
-                Chunk::<2> {
-                    offset: [10, 0],
-                    size: 400,
-                    addr: 800,
-                },
-                Chunk::<2> {
-                    offset: [10, 10],
-                    size: 400,
-                    addr: 1200,
-                },
+                Chunk::new(0, 400, [0, 0]),
+                Chunk::new(400, 400, [0, 10]),
+                Chunk::new(800, 400, [10, 0]),
+                Chunk::new(1200, 400, [10, 10]),
             ]),
             shuffle: false,
             gzip: None,
@@ -639,14 +631,14 @@ mod tests {
 
         println!("chunks: {:#?}", d.chunks);
 
-        assert_eq!(d.chunk_at_coord(&[0, 0]).offset, [0, 0]);
-        assert_eq!(d.chunk_at_coord(&[0, 5]).offset, [0, 0]);
-        assert_eq!(d.chunk_at_coord(&[5, 5]).offset, [0, 0]);
-        assert_eq!(d.chunk_at_coord(&[0, 10]).offset, [0, 10]);
-        assert_eq!(d.chunk_at_coord(&[0, 15]).offset, [0, 10]);
-        assert_eq!(d.chunk_at_coord(&[10, 0]).offset, [10, 0]);
-        assert_eq!(d.chunk_at_coord(&[10, 1]).offset, [10, 0]);
-        assert_eq!(d.chunk_at_coord(&[15, 1]).offset, [10, 0]);
+        assert_eq!(d.chunk_at_coord(&[0, 0]).offset, [ULE::new(0), ULE::new(0)]);
+        assert_eq!(d.chunk_at_coord(&[0, 5]).offset, [ULE::new(0), ULE::new(0)]);
+        assert_eq!(d.chunk_at_coord(&[5, 5]).offset, [ULE::new(0), ULE::new(0)]);
+        assert_eq!(d.chunk_at_coord(&[0, 10]).offset, [ULE::new(0), ULE::new(10)]);
+        assert_eq!(d.chunk_at_coord(&[0, 15]).offset, [ULE::new(0), ULE::new(10)]);
+        assert_eq!(d.chunk_at_coord(&[10, 0]).offset, [ULE::new(10), ULE::new(0)]);
+        assert_eq!(d.chunk_at_coord(&[10, 1]).offset, [ULE::new(10), ULE::new(0)]);
+        assert_eq!(d.chunk_at_coord(&[15, 1]).offset, [ULE::new(10), ULE::new(0)]);
 
         b.iter(|| test::black_box(d.chunk_at_coord(&[15, 1])))
     }
@@ -655,7 +647,7 @@ mod tests {
     fn chunk_start(b: &mut Bencher) {
         let dim_sz = [10, 1];
         let coords = [20, 10];
-        let ch_offset = [20, 10];
+        let ch_offset = [ULE::new(20), ULE::new(10)];
 
         b.iter(|| test::black_box(ChunkSlicer::chunk_start(&coords, &ch_offset, &dim_sz)))
     }
@@ -761,17 +753,41 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn serialize() {
-    //     let d = test_dataset();
+    #[test]
+    fn serialize_d2() {
+        let d = test_dataset();
 
-    //     let s = serde_json::to_string(&d).unwrap();
-    //     println!("serialized: {}", s);
+        let s = bincode::serialize(&d).unwrap();
 
-    //     let md: Dataset = serde_json::from_str(&s).unwrap();
+        let md: Dataset<2> = bincode::deserialize(&s).unwrap();
 
-    //     for (a, b) in izip!(d.chunk_shape_reduced, md.chunk_shape_reduced) {
-    //         assert_eq!(a.get(), b.get());
-    //     }
-    // }
+        for (a, b) in izip!(d.chunk_shape_reduced.iter(), md.chunk_shape_reduced.iter()) {
+            assert_eq!(a.get(), b.get());
+        }
+    }
+
+    #[test]
+    fn serialize_variant_d2() {
+        use flexbuffers::FlexbufferSerializer as ser;
+        let d = DatasetD::D2(test_dataset());
+
+        println!("serialize");
+        let mut s = ser::new();
+        d.serialize(&mut s).unwrap();
+
+        println!("deserialize");
+        let r = flexbuffers::Reader::get_root(s.view()).unwrap();
+        let md = DatasetD::deserialize(r).unwrap();
+        if let DatasetD::D2(md) = md {
+            if let DatasetD::D2(d) = d {
+                for (a, b) in izip!(d.chunk_shape_reduced.iter(), md.chunk_shape_reduced.iter()) {
+                    assert_eq!(a.get(), b.get());
+                }
+            } else {
+                panic!("wrong variant");
+            }
+        } else {
+            panic!("wrong variant");
+        }
+    }
 }

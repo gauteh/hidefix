@@ -13,7 +13,7 @@ use strength_reduce::StrengthReducedU64;
 
 use crate::filters;
 use crate::filters::byteorder::{self, Order, ToNative};
-use crate::idx::Dataset;
+use crate::idx::{Dataset, ULE};
 
 /// The stream reader is intended to be used in network applications. The cache is currently local
 /// to each `stream` call.
@@ -21,6 +21,7 @@ pub struct StreamReader<'a, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     ds: &'a Dataset<'a, D>,
     p: PathBuf,
@@ -34,6 +35,7 @@ impl<'a, const D: usize> StreamReader<'a, D>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     pub fn with_dataset<P>(ds: &'a Dataset<D>, p: P) -> Result<StreamReader<'a, D>, anyhow::Error>
     where
@@ -68,7 +70,7 @@ where
         let slices = self
             .ds
             .chunk_slices(indices, counts)
-            .map(|(c, a, b)| (c.addr, c.size, a * dsz, b * dsz))
+            .map(|(c, a, b)| (c.addr.get(), c.size.get(), a * dsz, b * dsz))
             .collect::<Vec<_>>();
 
         let p = self.p.clone();

@@ -1,5 +1,5 @@
 use byte_slice_cast::{
-    AsByteSlice, AsMutByteSlice, FromByteVec, IntoByteVec, ToByteSlice, ToMutByteSlice,
+    AsByteSlice, AsMutByteSlice, FromByteVec, ToByteSlice, ToMutByteSlice,
 };
 
 use bytes::{Bytes, BytesMut};
@@ -70,10 +70,8 @@ where
 }
 
 /// Optimized unshuffle.
-pub fn unshuffle_2<const N: usize>(src: &[u8], dest: &mut [u8])
+pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8])
 {
-    use std::convert::TryInto;
-
     assert!(src.len() == dest.len());
     assert!(src.len() % N == 0);
     let n = src.len() / N;
@@ -132,13 +130,13 @@ where
             dest.copy_from_slice(&src);
         }
         2 => {
-            unshuffle_2::<2>(src, &mut dest);
+            unshuffle_structured::<2>(src, &mut dest);
         }
         4 => {
-            unshuffle_2::<4>(src, &mut dest);
+            unshuffle_structured::<4>(src, &mut dest);
         }
         8 => {
-            unshuffle_2::<8>(src, &mut dest);
+            unshuffle_structured::<8>(src, &mut dest);
         }
         _ => unimplemented!(),
     }

@@ -40,9 +40,8 @@ mod serde_bincode {
         bincode::serialize_into(f, &i).unwrap();
 
         b.iter(|| {
-            let f = std::fs::File::open("/tmp/coads.idx.bc").unwrap();
-            let r = std::io::BufReader::new(f);
-            bincode::deserialize_from::<_, Index>(r).unwrap()
+            let b = std::fs::read("/tmp/coads.idx.bc").unwrap();
+            bincode::deserialize::<Index>(&b).unwrap();
         })
     }
 
@@ -83,9 +82,8 @@ mod serde_bincode {
         bincode::serialize_into(f, &i).unwrap();
 
         b.iter(|| {
-            let f = std::fs::File::open("/tmp/meps.idx.bc").unwrap();
-            let r = std::io::BufReader::new(f);
-            bincode::deserialize_from::<_, Index>(r).unwrap()
+            let b = std::fs::read("/tmp/meps.idx.bc").unwrap();
+            bincode::deserialize::<Index>(&b).unwrap();
         })
     }
 }
@@ -112,11 +110,7 @@ mod serde_flexbuffers {
         i.serialize(&mut s).unwrap();
 
         b.iter(|| {
-            // flexbuffers::from_slice::<Index>(s.view()).unwrap();
-            let r = flexbuffers::Reader::get_root(s.view()).unwrap().as_map();
-            r.iter_keys().for_each(drop);
-
-            // Index::deserialize(r).unwrap();
+            flexbuffers::from_slice::<Index>(s.view()).unwrap();
         })
     }
 
@@ -140,8 +134,7 @@ mod serde_flexbuffers {
 
         b.iter(|| {
             let b = std::fs::read("/tmp/coads.idx.fx").unwrap();
-            let r = flexbuffers::Reader::get_root(&b).unwrap().as_map();
-            r.iter_keys().for_each(drop);
+            flexbuffers::from_slice::<Index>(&b).unwrap();
         })
     }
 
@@ -167,8 +160,7 @@ mod serde_flexbuffers {
 
         b.iter(|| {
             let b = std::fs::read("/tmp/meps.idx.fx").unwrap();
-            let r = flexbuffers::Reader::get_root(&b).unwrap().as_map();
-            r.iter_keys().for_each(drop);
+            flexbuffers::from_slice::<Index>(&b).unwrap();
         })
     }
 

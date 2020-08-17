@@ -8,12 +8,13 @@ use strength_reduce::StrengthReducedU64;
 use super::dataset::Reader;
 use crate::filters;
 use crate::filters::byteorder::ToNative;
-use crate::idx::Dataset;
+use crate::idx::{Dataset, ULE};
 
 pub struct CacheReader<'a, R: Read + Seek, const D: usize>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     ds: &'a Dataset<'a, D>,
     fd: R,
@@ -25,6 +26,7 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     pub fn with_dataset(ds: &'a Dataset<D>, fd: R) -> Result<CacheReader<'a, R, D>, anyhow::Error> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
@@ -44,6 +46,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D>
 where
     [u64; D]: std::array::LengthAtMost32,
     [StrengthReducedU64; D]: std::array::LengthAtMost32,
+    [ULE; D]: std::array::LengthAtMost32,
 {
     fn read(
         &mut self,
@@ -74,15 +77,15 @@ where
             let end = (end * dsz) as usize;
             let slice_sz = end - start;
 
-            if let Some(cache) = self.cache.get(&c.addr) {
+            if let Some(cache) = self.cache.get(&c.addr.get()) {
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
-                let mut cache: Vec<u8> = Vec::with_capacity(c.size as usize);
+                let mut cache: Vec<u8> = Vec::with_capacity(c.size.get() as usize);
                 unsafe {
-                    cache.set_len(c.size as usize);
+                    cache.set_len(c.size.get() as usize);
                 }
 
-                self.fd.seek(SeekFrom::Start(c.addr))?;
+                self.fd.seek(SeekFrom::Start(c.addr.get()))?;
                 self.fd.read_exact(&mut cache)?;
 
                 // Decompression comes before unshuffling
@@ -108,7 +111,7 @@ where
                 };
 
                 buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
-                self.cache.put(c.addr, cache);
+                self.cache.put(c.addr.get(), cache);
             }
 
             buf_slice = &mut buf_slice[slice_sz..];

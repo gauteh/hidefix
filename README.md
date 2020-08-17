@@ -38,7 +38,7 @@ concurrently using the `cached` reader from `hidefix` and the native reader
 from HDF5. The dataset is chunked, shuffled and compressed (using gzip):
 
 ```sh
-$ cargo bench --bench concurrency
+$ cargo bench --bench concurrency -- --ignored
 
 test shuffled_compressed::cache_concurrent_reads  ... bench:  15,903,406 ns/iter (+/- 220,824)
 test shuffled_compressed::cache_sequential        ... bench:  59,778,761 ns/iter (+/- 602,316)
