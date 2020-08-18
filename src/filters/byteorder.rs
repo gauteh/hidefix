@@ -17,9 +17,9 @@ impl Order {
     }
 }
 
-impl From<hdf5::ByteOrder> for Order {
-    fn from(byo: hdf5::ByteOrder) -> Self {
-        use hdf5::ByteOrder;
+impl From<hdf5::datatype::ByteOrder> for Order {
+    fn from(byo: hdf5::datatype::ByteOrder) -> Self {
+        use hdf5::datatype::ByteOrder;
 
         match byo {
             ByteOrder::BigEndian => Order::BE,

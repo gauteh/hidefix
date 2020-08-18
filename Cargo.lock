@@ -473,8 +473,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "707bff1556f6ce372bdfff4cd76d6b5ff9e6097805c166564b6889d892d95f1f"
 dependencies = [
  "bitflags",
  "hdf5-derive",
@@ -490,8 +491,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-derive"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e60b5aa060b51b3e84be396b9965ad6be83e587271ba3d80cbc6036bde56ff52"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -500,22 +502,22 @@ dependencies = [
 
 [[package]]
 name = "hdf5-src"
-version = "0.1.0"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0004b23bb114cd7f1d3291164f37f03464ae310d56b32e93d25296e9992b6ae3"
 dependencies = [
  "cmake",
- "libz-sys",
 ]
 
 [[package]]
 name = "hdf5-sys"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee8056be2cf83d93ede864b37d8be8578481a9c29763aa5e044693104ef98034"
 dependencies = [
  "hdf5-src",
  "libc",
  "libloading",
- "libz-sys",
  "pkg-config",
  "regex",
  "serde",
@@ -525,8 +527,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-types"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a19c336e587d8994d8c9b726ea19403d003c4b5b0e661ea69abf3bb0bfcc59e"
 dependencies = [
  "ascii",
  "libc",
@@ -635,18 +638,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2cadb8e769f070c45df05c78c7520eb4cd17061d4ab262e43cfc68b4d00ac71c"
 dependencies = [
  "winapi",
-]
-
-[[package]]
-name = "libz-sys"
-version = "1.0.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ca8894883d250240341478bf987467332fbdd5da5c42426c69a8f93dbc302f2"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
- "vcpkg",
 ]
 
 [[package]]
@@ -1152,12 +1143,6 @@ name = "unicode-xid"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
-
-[[package]]
-name = "vcpkg"
-version = "0.2.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6454029bf181f092ad1b853286f23e2c507d8e8194d01d92da4a55c274a5508c"
 
 [[package]]
 name = "vec-arena"
