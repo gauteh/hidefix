@@ -1,11 +1,13 @@
 [package]
 authors = ["Gaute Hope <eg@gaute.vetsj.com>"]
 edition = "2018"
-keywords = ["hdf"]
-license = "LGPL"
+keywords = ["hdf", "async", "concurrency"]
+license = "LGPL-3.0-or-later"
 name = "hidefix"
 repository = "https://github.com/gauteh/hidefix"
-version = "0.0.0"
+description = "Concurrent HDF5 and NetCDF4 reader (experimental)"
+version = "0.1.0"
+
 [dependencies]
 anyhow = "*"
 async-stream = "*"
@@ -24,15 +26,6 @@ serde_bytes = "*"
 strength_reduce = "*"
 zerocopy = "*"
 
-[dependencies.hdf5]
-branch = "hidefix"
-git = "https://github.com/gauteh/hdf5-rust"
-
-[dependencies.hdf5-sys]
-branch = "hidefix"
-features = ["static", "zlib"]
-git = "https://github.com/gauteh/hdf5-rust"
-
 [dependencies.serde]
 features = ["derive"]
 version = "*"
@@ -41,9 +34,19 @@ version = "*"
 features = ["sync"]
 version = "*"
 
+[dependencies.hdf5]
+version = "0.7.0"
+
+[dependencies.hdf5-sys]
+version = "0.7.0"
+
 [dev-dependencies]
 async-std = "*"
 byteorder = "*"
 ndarray = "*"
 rand = "*"
 rayon = "*"
+
+[features]
+default = ["static"]
+static = ["hdf5-sys/static", "hdf5-sys/zlib"]

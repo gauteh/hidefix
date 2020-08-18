@@ -473,8 +473,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "707bff1556f6ce372bdfff4cd76d6b5ff9e6097805c166564b6889d892d95f1f"
 dependencies = [
  "bitflags",
  "hdf5-derive",
@@ -490,8 +491,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-derive"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e60b5aa060b51b3e84be396b9965ad6be83e587271ba3d80cbc6036bde56ff52"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -500,8 +502,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-src"
-version = "0.1.0"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0004b23bb114cd7f1d3291164f37f03464ae310d56b32e93d25296e9992b6ae3"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -509,8 +512,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-sys"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee8056be2cf83d93ede864b37d8be8578481a9c29763aa5e044693104ef98034"
 dependencies = [
  "hdf5-src",
  "libc",
@@ -525,8 +529,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-types"
-version = "0.6.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#70f4a94b638093ba36c119220ec41f59975d3d14"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a19c336e587d8994d8c9b726ea19403d003c4b5b0e661ea69abf3bb0bfcc59e"
 dependencies = [
  "ascii",
  "libc",
@@ -543,7 +548,7 @@ dependencies = [
 
 [[package]]
 name = "hidefix"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-std",
@@ -639,9 +644,9 @@ dependencies = [
 
 [[package]]
 name = "libz-sys"
-version = "1.0.27"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ca8894883d250240341478bf987467332fbdd5da5c42426c69a8f93dbc302f2"
+checksum = "af67924b8dd885cccea261866c8ce5b74d239d272e154053ff927dae839f5ae9"
 dependencies = [
  "cc",
  "libc",
@@ -793,9 +798,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b631f7e854af39a1739f401cf34a8a013dfe09eac4fa4dba91e9768bd28168d"
+checksum = "260e51e7efe62b592207e9e13a68e43692a7a279171d6ba57abd208bf23645ad"
 
 [[package]]
 name = "parking"
