@@ -9,30 +9,30 @@ description = "Concurrent HDF5 and NetCDF4 reader (experimental)"
 version = "0.1.0"
 
 [dependencies]
-anyhow = "*"
-async-stream = "*"
-bincode = "*"
-byte-slice-cast = "*"
-byteorder = "*"
-bytes = "*"
-flexbuffers = "*"
-futures = "*"
-futures-core = "*"
-futures-util = "*"
-itertools = "*"
-libdeflater = "*"
-lru = "*"
-serde_bytes = "*"
-strength_reduce = "*"
-zerocopy = "*"
+anyhow = "1"
+async-stream = "0.3"
+bincode = "1.3"
+byte-slice-cast = "0.3"
+byteorder = "1.3"
+bytes = "0.5"
+flexbuffers = "0.1"
+futures = "0.3"
+futures-core = "0.3"
+futures-util = "0.3"
+itertools = "0.9"
+libdeflater = "0.5"
+lru = "0.6"
+serde_bytes = "0.11"
+strength_reduce = "0.2"
+zerocopy = "0.3"
 
 [dependencies.serde]
 features = ["derive"]
-version = "*"
+version = "1"
 
 [dependencies.tokio]
 features = ["sync"]
-version = "*"
+version = "0.2"
 
 [dependencies.hdf5]
 version = "0.7.0"
@@ -41,11 +41,9 @@ version = "0.7.0"
 version = "0.7.0"
 
 [dev-dependencies]
-async-std = "*"
-byteorder = "*"
-ndarray = "*"
-rand = "*"
-rayon = "*"
+ndarray = "0.13"
+rand = "0.7"
+rayon = "1.3"
 
 [features]
 default = ["static"]

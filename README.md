@@ -1,3 +1,5 @@
+[![Crates.io](https://img.shields.io/crates/v/hidefix.svg)](https://crates.io/crates/hidefix)
+[![Documentation](https://docs.rs/hidefix/badge.svg)](https://docs.rs/hidefix/)
 [![Build Status](https://travis-ci.org/gauteh/hidefix.svg?branch=master)](https://travis-ci.org/gauteh/hidefix)
 
 <img src="https://raw.githubusercontent.com/gauteh/hidefix/master/idefix.png">
@@ -12,6 +14,8 @@ building an index of the chunks, allowing a thread to use many file handles to
 read the file. The original (native) HDF5 library is used to build the index,
 but once it has been created it is no longer needed. The index can be
 serialized to disk so that performing the indexing is not necessary.
+
+> HIDEFIX currently requires the [nightly version](https://rust-lang.github.io/rustup/installation/other.html) of the rust compiler.
 
 ## Motivation
 
