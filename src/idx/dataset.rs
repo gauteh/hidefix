@@ -103,6 +103,22 @@ impl DatasetD<'_> {
             D9(ds) => UnifyStreamer::R9(StreamReader::with_dataset(&ds, path)?),
         })
     }
+
+    pub fn dsize(&self) -> usize {
+        use DatasetD::*;
+        match self {
+            D0(ds) => ds.dsize,
+            D1(ds) => ds.dsize,
+            D2(ds) => ds.dsize,
+            D3(ds) => ds.dsize,
+            D4(ds) => ds.dsize,
+            D5(ds) => ds.dsize,
+            D6(ds) => ds.dsize,
+            D7(ds) => ds.dsize,
+            D8(ds) => ds.dsize,
+            D9(ds) => ds.dsize,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
