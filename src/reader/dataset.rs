@@ -43,7 +43,8 @@ where
     R9(T9),
 }
 
-impl<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> Reader for UnifyReader<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>
+impl<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> Reader
+    for UnifyReader<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>
 where
     T0: Reader,
     T1: Reader,
@@ -126,9 +127,9 @@ pub enum UnifyStreamer<'a> {
 }
 
 use crate::filters::byteorder::Order;
+use async_stream::stream;
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
-use async_stream::stream;
 
 impl<'a> UnifyStreamer<'a> {
     /// A stream of bytes from the variable. Always in Big Endian.
@@ -136,7 +137,7 @@ impl<'a> UnifyStreamer<'a> {
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
-        ) -> impl Stream<Item = Result<Bytes, anyhow::Error>> {
+    ) -> impl Stream<Item = Result<Bytes, anyhow::Error>> {
         let mut boxed = match self {
             Self::R0(st) => st.stream(indices, counts).boxed(),
             Self::R1(st) => st.stream(indices, counts).boxed(),

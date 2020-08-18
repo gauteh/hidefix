@@ -1,6 +1,4 @@
-use byte_slice_cast::{
-    AsByteSlice, AsMutByteSlice, FromByteVec, ToByteSlice, ToMutByteSlice,
-};
+use byte_slice_cast::{AsByteSlice, AsMutByteSlice, FromByteVec, ToByteSlice, ToMutByteSlice};
 
 use bytes::{Bytes, BytesMut};
 
@@ -70,16 +68,14 @@ where
 }
 
 /// Optimized unshuffle.
-pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8])
-{
+pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8]) {
     assert!(src.len() == dest.len());
     assert!(src.len() % N == 0);
     let n = src.len() / N;
 
     let dest_ptr = dest.as_mut_ptr() as *mut _;
-    let dest_structured: &mut [[u8; N]] = unsafe {
-        std::slice::from_raw_parts_mut(dest_ptr, src.len() / N)
-    };
+    let dest_structured: &mut [[u8; N]] =
+        unsafe { std::slice::from_raw_parts_mut(dest_ptr, src.len() / N) };
 
     assert!(dest_structured.len() == dest.len() / N);
 

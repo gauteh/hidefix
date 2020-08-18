@@ -3,31 +3,20 @@ use std::io::{Read, Seek, SeekFrom};
 
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
-use strength_reduce::StrengthReducedU64;
 
 use super::dataset::Reader;
 use crate::filters;
 use crate::filters::byteorder::ToNative;
-use crate::idx::{Dataset, ULE};
+use crate::idx::Dataset;
 
-pub struct CacheReader<'a, R: Read + Seek, const D: usize>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+pub struct CacheReader<'a, R: Read + Seek, const D: usize> {
     ds: &'a Dataset<'a, D>,
     fd: R,
     cache: LruCache<u64, Vec<u8>>,
     chunk_sz: u64,
 }
 
-impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> {
     pub fn with_dataset(ds: &'a Dataset<D>, fd: R) -> Result<CacheReader<'a, R, D>, anyhow::Error> {
         const CACHE_SZ: u64 = 32 * 1024 * 1024;
         let chunk_sz = ds.chunk_shape.iter().product::<u64>() * ds.dsize as u64;
@@ -42,12 +31,7 @@ where
     }
 }
 
-impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
     fn read(
         &mut self,
         indices: Option<&[u64]>,
@@ -89,7 +73,7 @@ where
                 self.fd.read_exact(&mut cache)?;
 
                 // Decompression comes before unshuffling
-                let cache = if let Some(_) = self.ds.gzip {
+                let cache = if self.ds.gzip.is_some() {
                     let mut decache: Vec<u8> = Vec::with_capacity(self.chunk_sz as usize);
                     unsafe {
                         decache.set_len(self.chunk_sz as usize);

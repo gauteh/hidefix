@@ -1,9 +1,9 @@
 use itertools::izip;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::cmp::min;
 use std::convert::TryInto;
 use std::path::Path;
-use std::borrow::Cow;
 use strength_reduce::StrengthReducedU64;
 
 use super::chunk::{Chunk, ULE};
@@ -129,12 +129,7 @@ impl From<hdf5::Datatype> for Datatype {
 
 /// A Dataset can have a maximum of _32_ dimensions.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Dataset<'a, const D: usize>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+pub struct Dataset<'a, const D: usize> {
     pub dtype: Datatype,
     pub dsize: usize,
     pub order: ByteOrder,
@@ -164,12 +159,7 @@ where
     pub gzip: Option<u8>,
 }
 
-impl<const D: usize> Dataset<'_, D>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+impl<const D: usize> Dataset<'_, D> {
     pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<'static, D>, anyhow::Error> {
         ensure!(ds.ndim() == D, "Dataset dimensions does not match!");
 
@@ -201,7 +191,15 @@ where
                             .map(|ci| {
                                 assert!(ci.filter_mask == 0);
                                 Chunk {
-                                    offset: ci.offset.iter().cloned().map(ULE::new).collect::<Vec<_>>().as_slice().try_into().unwrap(),
+                                    offset: ci
+                                        .offset
+                                        .iter()
+                                        .cloned()
+                                        .map(ULE::new)
+                                        .collect::<Vec<_>>()
+                                        .as_slice()
+                                        .try_into()
+                                        .unwrap(),
                                     size: ULE::new(ci.size),
                                     addr: ULE::new(ci.addr),
                                 }
@@ -234,7 +232,7 @@ where
             .try_into()?;
 
         let chunk_shape = ds.chunks().map_or_else(
-            || shape.clone(),
+            || shape,
             |cs| {
                 cs.into_iter()
                     .map(|u| u as u64)
@@ -392,12 +390,7 @@ where
     }
 }
 
-pub struct ChunkSlicer<'a, const D: usize>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+pub struct ChunkSlicer<'a, const D: usize> {
     dataset: &'a Dataset<'a, D>,
     offset: u64,
     offset_coords: [u64; D],
@@ -408,12 +401,7 @@ where
     end: u64,
 }
 
-impl<'a, const D: usize> ChunkSlicer<'a, D>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+impl<'a, const D: usize> ChunkSlicer<'a, D> {
     pub fn new(dataset: &'a Dataset<D>, indices: [u64; D], counts: [u64; D]) -> ChunkSlicer<'a, D> {
         let end = if dataset.is_scalar() {
             // scalar
@@ -432,10 +420,16 @@ where
             dataset,
             offset: 0,
             offset_coords: [0; D],
-            start_coords: indices.clone(),
-            indices: indices,
-            counts_reduced: counts.iter().map(|c| StrengthReducedU64::new(*c)).collect::<Vec<_>>().as_slice().try_into().unwrap(),
-            counts: counts,
+            start_coords: indices,
+            indices,
+            counts_reduced: counts
+                .iter()
+                .map(|c| StrengthReducedU64::new(*c))
+                .collect::<Vec<_>>()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+            counts,
             end,
         }
     }
@@ -456,12 +450,7 @@ where
     }
 }
 
-impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
     type Item = (&'a Chunk<D>, u64, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -501,25 +490,18 @@ where
         let mut carry = 0;
         let mut i = 0;
 
-        for (
-            idx,
-            start,
-            offset,
-            count, count_reduced,
-            chunk_offset,
-            chunk_len,
-            chunk_dim_sz,
-        ) in izip!(
-            &self.indices,
-            &mut self.start_coords,
-            &mut self.offset_coords,
-            &self.counts,
-            &self.counts_reduced,
-            &chunk.offset,
-            &self.dataset.chunk_shape,
-            &self.dataset.chunk_dim_sz
-        )
-        .rev()
+        for (idx, start, offset, count, count_reduced, chunk_offset, chunk_len, chunk_dim_sz) in
+            izip!(
+                &self.indices,
+                &mut self.start_coords,
+                &mut self.offset_coords,
+                &self.counts,
+                &self.counts_reduced,
+                &chunk.offset,
+                &self.dataset.chunk_shape,
+                &self.dataset.chunk_dim_sz
+            )
+            .rev()
         {
             *offset += carry;
             carry = *offset / *count_reduced;
@@ -596,7 +578,8 @@ mod tests {
                 .map(|i| StrengthReducedU64::new(*i))
                 .collect::<Vec<_>>()
                 .as_slice()
-                .try_into().unwrap(),
+                .try_into()
+                .unwrap(),
             scaled_dim_sz: [2, 1],
             dim_sz: [20, 1],
             chunk_dim_sz: [10, 1],
@@ -634,11 +617,26 @@ mod tests {
         assert_eq!(d.chunk_at_coord(&[0, 0]).offset, [ULE::new(0), ULE::new(0)]);
         assert_eq!(d.chunk_at_coord(&[0, 5]).offset, [ULE::new(0), ULE::new(0)]);
         assert_eq!(d.chunk_at_coord(&[5, 5]).offset, [ULE::new(0), ULE::new(0)]);
-        assert_eq!(d.chunk_at_coord(&[0, 10]).offset, [ULE::new(0), ULE::new(10)]);
-        assert_eq!(d.chunk_at_coord(&[0, 15]).offset, [ULE::new(0), ULE::new(10)]);
-        assert_eq!(d.chunk_at_coord(&[10, 0]).offset, [ULE::new(10), ULE::new(0)]);
-        assert_eq!(d.chunk_at_coord(&[10, 1]).offset, [ULE::new(10), ULE::new(0)]);
-        assert_eq!(d.chunk_at_coord(&[15, 1]).offset, [ULE::new(10), ULE::new(0)]);
+        assert_eq!(
+            d.chunk_at_coord(&[0, 10]).offset,
+            [ULE::new(0), ULE::new(10)]
+        );
+        assert_eq!(
+            d.chunk_at_coord(&[0, 15]).offset,
+            [ULE::new(0), ULE::new(10)]
+        );
+        assert_eq!(
+            d.chunk_at_coord(&[10, 0]).offset,
+            [ULE::new(10), ULE::new(0)]
+        );
+        assert_eq!(
+            d.chunk_at_coord(&[10, 1]).offset,
+            [ULE::new(10), ULE::new(0)]
+        );
+        assert_eq!(
+            d.chunk_at_coord(&[15, 1]).offset,
+            [ULE::new(10), ULE::new(0)]
+        );
 
         b.iter(|| test::black_box(d.chunk_at_coord(&[15, 1])))
     }

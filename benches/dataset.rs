@@ -2,8 +2,8 @@
 extern crate test;
 use test::Bencher;
 
-use hidefix::idx::Index;
 use hidefix::idx::DatasetD;
+use hidefix::idx::Index;
 
 #[bench]
 fn slicer(b: &mut Bencher) {

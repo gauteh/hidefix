@@ -9,20 +9,14 @@ use std::path::{Path, PathBuf};
 use byte_slice_cast::{FromByteVec, IntoVecOf};
 use bytes::Bytes;
 use lru::LruCache;
-use strength_reduce::StrengthReducedU64;
 
 use crate::filters;
 use crate::filters::byteorder::{self, Order, ToNative};
-use crate::idx::{Dataset, ULE};
+use crate::idx::Dataset;
 
 /// The stream reader is intended to be used in network applications. The cache is currently local
 /// to each `stream` call.
-pub struct StreamReader<'a, const D: usize>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+pub struct StreamReader<'a, const D: usize> {
     ds: &'a Dataset<'a, D>,
     p: PathBuf,
     chunk_sz: u64,
@@ -31,12 +25,7 @@ where
 /// The maximum cache size in bytes. Will not be lower than the size of one chunk.
 const CACHE_SZ: u64 = 32 * 1024 * 1024;
 
-impl<'a, const D: usize> StreamReader<'a, D>
-where
-    [u64; D]: std::array::LengthAtMost32,
-    [StrengthReducedU64; D]: std::array::LengthAtMost32,
-    [ULE; D]: std::array::LengthAtMost32,
-{
+impl<'a, const D: usize> StreamReader<'a, D> {
     pub fn with_dataset<P>(ds: &'a Dataset<D>, p: P) -> Result<StreamReader<'a, D>, anyhow::Error>
     where
         P: AsRef<Path>,
