@@ -127,18 +127,16 @@ pub enum UnifyStreamer<'a> {
 }
 
 use crate::filters::byteorder::Order;
-use async_stream::stream;
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
 
 impl<'a> UnifyStreamer<'a> {
-    /// A stream of bytes from the variable. Always in Big Endian.
     pub fn stream(
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
     ) -> impl Stream<Item = Result<Bytes, anyhow::Error>> {
-        let mut boxed = match self {
+        match self {
             Self::R0(st) => st.stream(indices, counts).boxed(),
             Self::R1(st) => st.stream(indices, counts).boxed(),
             Self::R2(st) => st.stream(indices, counts).boxed(),
@@ -149,12 +147,6 @@ impl<'a> UnifyStreamer<'a> {
             Self::R7(st) => st.stream(indices, counts).boxed(),
             Self::R8(st) => st.stream(indices, counts).boxed(),
             Self::R9(st) => st.stream(indices, counts).boxed(),
-        };
-
-        stream! {
-            while let Some(v) = boxed.next().await {
-                yield v;
-            }
         }
     }
 
@@ -182,7 +174,7 @@ impl<'a> UnifyStreamer<'a> {
         T: FromByteVec + Unpin + Send + 'static,
         [T]: ToNative,
     {
-        let mut boxed = match self {
+        match self {
             Self::R0(st) => st.stream_values(indices, counts).boxed(),
             Self::R1(st) => st.stream_values(indices, counts).boxed(),
             Self::R2(st) => st.stream_values(indices, counts).boxed(),
@@ -193,12 +185,7 @@ impl<'a> UnifyStreamer<'a> {
             Self::R7(st) => st.stream_values(indices, counts).boxed(),
             Self::R8(st) => st.stream_values(indices, counts).boxed(),
             Self::R9(st) => st.stream_values(indices, counts).boxed(),
-        };
-
-        stream! {
-            while let Some(v) = boxed.next().await {
-                yield v;
-            }
         }
     }
 }
+

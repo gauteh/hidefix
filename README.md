@@ -1,6 +1,7 @@
 [![Crates.io](https://img.shields.io/crates/v/hidefix.svg)](https://crates.io/crates/hidefix)
 [![Documentation](https://docs.rs/hidefix/badge.svg)](https://docs.rs/hidefix/)
 [![Build Status](https://travis-ci.org/gauteh/hidefix.svg?branch=master)](https://travis-ci.org/gauteh/hidefix)
+[![codecov](https://codecov.io/gh/gauteh/hidefix/branch/master/graph/badge.svg)](https://codecov.io/gh/gauteh/hidefix)
 
 <img src="https://raw.githubusercontent.com/gauteh/hidefix/master/idefix.png">
 
