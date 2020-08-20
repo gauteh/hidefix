@@ -97,7 +97,8 @@ mod serde_bincode {
         let db = sled::Config::default()
             .temporary(true)
             .print_profile_on_drop(true)
-            .open().unwrap();
+            .open()
+            .unwrap();
 
         db.insert("meps", bts).unwrap();
 
@@ -117,7 +118,8 @@ mod serde_bincode {
         let db = sled::Config::default()
             .temporary(true)
             .print_profile_on_drop(true)
-            .open().unwrap();
+            .open()
+            .unwrap();
 
         db.insert("meps", bts).unwrap();
 

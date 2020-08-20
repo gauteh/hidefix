@@ -143,7 +143,7 @@ impl From<hdf5::Datatype> for Datatype {
     }
 }
 
-/// A Dataset can have a maximum of _32_ dimensions.
+/// A HDF5 dataset (a single variable).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Dataset<'a, const D: usize> {
     pub dtype: Datatype,
@@ -177,7 +177,7 @@ pub struct Dataset<'a, const D: usize> {
 
 impl<const D: usize> Dataset<'_, D> {
     pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<'static, D>, anyhow::Error> {
-        ensure!(ds.ndim() == D, "Dataset dimensions does not match!");
+        ensure!(ds.ndim() == D, "Dataset rank does not match.");
 
         let shuffle = ds.filters().get_shuffle();
         let gzip = ds.filters().get_gzip();
@@ -189,6 +189,7 @@ impl<const D: usize> Dataset<'_, D> {
             return Err(anyhow!("{}: Unsupported filter", ds.name()));
         }
 
+        // TODO: See note in chunks.rs about making this faster.
         let mut chunks: Vec<Chunk<D>> = match (ds.num_chunks().is_some(), ds.offset()) {
             // Continuous
             (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
@@ -266,7 +267,7 @@ impl<const D: usize> Dataset<'_, D> {
                 .map(|(s, c)| (s + (c - 1)) / c)
                 .product::<u64>() as usize;
 
-            anyhow::ensure!(
+            ensure!(
                 chunks.len() == expected_chunks,
                 "{}: unexpected number of chunks given dataset size (is_chunked: {}, chunks: {} != {} (expected), shape: {:?}, chunk shape: {:?})",
                 ds.name(),
