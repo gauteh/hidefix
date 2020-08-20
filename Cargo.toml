@@ -44,6 +44,7 @@ version = "0.7.0"
 ndarray = "0.13"
 rand = "0.7"
 rayon = "1.3"
+sled = "*"
 
 [features]
 default = ["static"]
