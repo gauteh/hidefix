@@ -1,27 +1,31 @@
+//! # Shuffle filter
+//!
+//! Bytes are shuffled to make an array of numbers easier to compress. This filter
+//! shuffles bytes according to HDF5 spec:
+//!
+//! https://support.hdfgroup.org/ftp/HDF5//documentation/doc1.6/TechNotes/shuffling-algorithm-report.pdf
+//!
+//! The shuffling algorithm re-arranges `bytes` with the following steps:
+//!
+//! 1. put the first byte of each number in the first chunk
+//! 2. put the second byte of each number in the second chunk
+//! 3. repeat for size of number (e.g. 4 for i32).
+//!
+//! Quoting the above:
+//!
+//! For 5 32-bit integers: 1, 23, 43, 56, 35
+//!
+//! they are laid out as following on a big-endian machine:
+//!
+//! Original: 0x00 0x00 0x00 0x01 0x00 0x00 0x00 0x17 0x00 0x00 0x00 0x2B 0x00 0x00 0x00 0x38 0x00 0x00 0x00 0x23
+//! Shuffled: 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x01 0x17 0x2B 0x38 0x23
+//!
+//! Size of type `T` is used as word size.
+
 use byte_slice_cast::{AsByteSlice, AsMutByteSlice, FromByteVec, ToByteSlice, ToMutByteSlice};
 
-use bytes::{Bytes, BytesMut};
-
-/// Shuffle bytes according to HDF5 spec:
-///
-/// https://support.hdfgroup.org/ftp/HDF5//documentation/doc1.6/TechNotes/shuffling-algorithm-report.pdf
-///
-/// The shuffling algorithm re-arranges `bytes` with the following steps:
-///
-/// 1. put the first byte of each number in the first chunk
-/// 2. put the second byte of each number in the second chunk
-/// 3. repeat for size of number (e.g. 4 for i32).
-///
-/// Quoting the above:
-///
-/// For 5 32-bit integers: 1, 23, 43, 56, 35
-///
-/// they are laid out as following on a big-endian machine:
-///
-/// original: 0x00 0x00 0x00 0x01 0x00 0x00 0x00 0x17 0x00 0x00 0x00 0x2B 0x00 0x00 0x00 0x38 0x00 0x00 0x00 0x23
-/// shuffled: 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x01 0x17 0x2B 0x38 0x23
-///
-/// Size of type `T` is used as word size.
+/// Shuffle bytes
+#[allow(dead_code)]
 pub fn shuffle<T, D>(src: &[T], dest: &mut [D])
 where
     T: ToByteSlice,
@@ -45,6 +49,7 @@ where
 }
 
 /// Inverse of `shuffle`. Size of type `D` is used as word size.
+#[allow(dead_code)]
 pub fn unshuffle<T, D>(src: &[T], dest: &mut [D])
 where
     T: ToByteSlice,
@@ -67,7 +72,11 @@ where
     }
 }
 
-/// Optimized unshuffle.
+/// Inverse of `shuffle`. Size of type `D` is used as word size. Uses structured target for faster
+/// processing.
+///
+/// Other implementations have often used Duff's device. Newer compilers, using structured data
+/// types when possible, seems to result in similarily fast processing.
 pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8]) {
     assert!(src.len() == dest.len());
     assert!(src.len() % N == 0);
@@ -88,30 +97,8 @@ pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8]) {
     })
 }
 
-/// Unshuffle bytes representing array with word size `wsz` (e.g. `4` for `int32`).
-pub fn unshuffle_bytes(src: &Bytes, wsz: usize) -> BytesMut {
-    debug_assert!(wsz > 1);
-    assert_eq!(src.len() % wsz, 0);
-    let sz = src.len() / wsz;
-
-    let mut dest = BytesMut::with_capacity(src.len());
-    unsafe {
-        dest.set_len(src.len() as usize);
-    }
-
-    debug_assert_eq!(src.len(), dest.len());
-
-    for i in 0..wsz {
-        for j in 0..sz {
-            unsafe {
-                *dest.get_unchecked_mut(j * wsz + i) = *src.get_unchecked(i * sz + j);
-            }
-        }
-    }
-
-    dest
-}
-
+/// Helper to unshuffle bytes representing array with word size `wsz` (e.g. `4` for `int32`). Uses
+/// [unshuffle_structured].
 pub fn unshuffle_sized<T>(src: &[T], sz: usize) -> Vec<u8>
 where
     T: ToByteSlice + FromByteVec + Copy,
@@ -233,20 +220,6 @@ mod tests {
             .collect();
 
         b.iter(|| unshuffle_sized(&v, 4))
-    }
-
-    #[bench]
-    fn unshuffle_bytes_4mb(b: &mut Bencher) {
-        use rand::distributions::Standard;
-        use rand::{thread_rng, Rng};
-
-        let v: Vec<u8> = thread_rng()
-            .sample_iter(Standard)
-            .take(4 * 1024 * 1024)
-            .collect();
-        let vb: Bytes = Bytes::from(v);
-
-        b.iter(|| unshuffle_bytes(&vb, 4))
     }
 
     #[test]
