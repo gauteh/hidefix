@@ -189,91 +189,6 @@ impl<const D: usize> Dataset<'_, D> {
             return Err(anyhow!("{}: Unsupported filter", ds.name()));
         }
 
-        let mut chunks: Vec<Chunk<D>> = match (ds.num_chunks().is_some(), ds.offset()) {
-            // Continuous
-            (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
-                offset: [ULE::ZERO; D],
-                size: ULE::new(ds.storage_size()),
-                addr: ULE::new(offset),
-            }]),
-
-            // Chunked
-            (true, None) => {
-                // TODO: See note in chunks.rs about making this faster.
-                //
-                // HDF5 internally uses chunk_by_coord on read, so it should be faster in most
-                // cases. E.g. the btree version of chunk store is hashed on offset.
-                //
-                let n = ds.num_chunks().expect("weird..");
-
-                // Avoiding Dataset::chunk_info() because of hdf5-rs Register accumulating
-                // Handle's and growing out of hand.
-                //
-                // See: https://github.com/aldanor/hdf5-rust/issues/76
-                use hdf5_sys::h5d::{H5Dget_chunk_info, H5Dget_space};
-                use hdf5_sys::h5s::H5Sclose;
-
-                let dsid = ds.id();
-                let space = unsafe { H5Dget_space(dsid) };
-
-                let mut offset = [0u64; D];
-                let mut filter_mask: u32 = 0;
-                let mut addr: u64 = 0;
-                let mut size: u64 = 0;
-
-                let chunks = hdf5::sync::sync(|| {
-                    (0..n)
-                        .map(|i| {
-                            let e = unsafe {
-                                H5Dget_chunk_info(
-                                    dsid,
-                                    space,
-                                    i as _,
-                                    offset.as_mut_ptr(),
-                                    &mut filter_mask,
-                                    &mut addr,
-                                    &mut size,
-                                )
-                            };
-
-                            ensure!(e == 0, "Failed to get chunk: {} in {}", i, ds.name()); // TODO: Maybe ds.name() deadlocks?
-                            ensure!(
-                                filter_mask == 0,
-                                "mismatching filter mask with dataset filter mask"
-                            );
-
-                            Ok(Chunk {
-                                offset: offset
-                                    .iter()
-                                    .cloned()
-                                    .map(ULE::new)
-                                    .collect::<Vec<_>>()
-                                    .as_slice()
-                                    .try_into()
-                                    .unwrap(),
-                                size: ULE::new(size),
-                                addr: ULE::new(addr),
-                            })
-                        })
-                        .collect()
-                });
-
-                unsafe { H5Sclose(space) };
-
-                chunks
-            }
-
-            _ => Err(anyhow!(
-                "{}: Unsupported data layout (chunked: {}, offset: {:?})",
-                ds.name(),
-                ds.is_chunked(),
-                ds.offset()
-            )),
-        }?;
-
-        chunks.sort();
-        let chunks = Cow::from(chunks);
-
         let dtype = ds.dtype()?;
         let dsize = ds.dtype()?.size();
         let order = dtype.byte_order();
@@ -296,24 +211,6 @@ impl<const D: usize> Dataset<'_, D> {
                     .unwrap()
             },
         );
-
-        {
-            let expected_chunks = shape
-                .iter()
-                .zip(&chunk_shape)
-                .map(|(s, c)| (s + (c - 1)) / c)
-                .product::<u64>() as usize;
-
-            ensure!(
-                chunks.len() == expected_chunks,
-                "{}: unexpected number of chunks given dataset size (is_chunked: {}, chunks: {} != {} (expected), shape: {:?}, chunk shape: {:?})",
-                ds.name(),
-                ds.is_chunked(),
-                chunks.len(),
-                expected_chunks,
-                shape,
-                chunk_shape);
-        }
 
         // optimized divisor for chunk shape
         let chunk_shape_reduced = chunk_shape
@@ -378,6 +275,108 @@ impl<const D: usize> Dataset<'_, D> {
         .as_slice()
         .try_into()?;
 
+        let mut chunks: Vec<Chunk<D>> = match (ds.num_chunks().is_some(), ds.offset()) {
+            // Continuous
+            (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
+                offset: [ULE::ZERO; D],
+                size: ULE::new(ds.storage_size()),
+                addr: ULE::new(offset),
+            }]),
+
+            // Chunked
+            (true, None) => {
+                // TODO: See note in chunks.rs about making this faster.
+                //
+                // HDF5 internally uses chunk_by_coord on read, so it should be faster in most
+                // cases. E.g. the btree version of chunk store is hashed on offset.
+                //
+                let n = ds.num_chunks().expect("weird..");
+
+                // Avoiding Dataset::chunk_info() because of hdf5-rs Register accumulating
+                // Handle's and growing out of hand.
+                //
+                // See: https://github.com/aldanor/hdf5-rust/issues/76
+                use hdf5_sys::h5d::{H5Dget_chunk_info_by_coord, H5Dget_space};
+                use hdf5_sys::h5s::H5Sclose;
+
+                let dsid = ds.id();
+                let space = unsafe { H5Dget_space(dsid) };
+
+                let mut filter_mask: u32 = 0;
+                let mut addr: u64 = 0;
+                let mut size: u64 = 0;
+
+                let chunks = hdf5::sync::sync(|| {
+                    (0..n)
+                        .map(|i| {
+                            let offset = Self::chunk_coord_at_index(&chunk_shape, &scaled_dim_sz, i as u64);
+
+                            let e = unsafe {
+                                H5Dget_chunk_info_by_coord(
+                                    dsid,
+                                    offset.as_ptr(),
+                                    &mut filter_mask,
+                                    &mut addr,
+                                    &mut size,
+                                )
+                            };
+
+                            ensure!(e == 0, "Failed to get chunk: {} in {}", i, ds.name()); // TODO: Maybe ds.name() deadlocks?
+                            ensure!(
+                                filter_mask == 0,
+                                "mismatching filter mask with dataset filter mask"
+                            );
+
+                            Ok(Chunk {
+                                offset: offset
+                                    .iter()
+                                    .cloned()
+                                    .map(ULE::new)
+                                    .collect::<Vec<_>>()
+                                    .as_slice()
+                                    .try_into()
+                                    .unwrap(),
+                                size: ULE::new(size),
+                                addr: ULE::new(addr),
+                            })
+                        })
+                        .collect()
+                });
+
+                unsafe { H5Sclose(space) };
+
+                chunks
+            }
+
+            _ => Err(anyhow!(
+                "{}: Unsupported data layout (chunked: {}, offset: {:?})",
+                ds.name(),
+                ds.is_chunked(),
+                ds.offset()
+            )),
+        }?;
+
+        chunks.sort();
+        let chunks = Cow::from(chunks);
+
+        {
+            let expected_chunks = shape
+                .iter()
+                .zip(&chunk_shape)
+                .map(|(s, c)| (s + (c - 1)) / c)
+                .product::<u64>() as usize;
+
+            ensure!(
+                chunks.len() == expected_chunks,
+                "{}: unexpected number of chunks given dataset size (is_chunked: {}, chunks: {} != {} (expected), shape: {:?}, chunk shape: {:?})",
+                ds.name(),
+                ds.is_chunked(),
+                chunks.len(),
+                expected_chunks,
+                shape,
+                chunk_shape);
+        }
+
         Ok(Dataset {
             dtype: dtype.into(),
             dsize,
@@ -429,7 +428,7 @@ impl<const D: usize> Dataset<'_, D> {
     }
 
     /// Calculate starting coordinates for chunk at given chunk index.
-    pub fn chunk_coord_at_index(&self, mut idx: u64) -> [u64; D]
+    pub fn chunk_coord_at_index(chunk_shape: &[u64; D], scaled_dim_sz: &[u64; D], mut idx: u64) -> [u64; D]
     {
         use std::array::FixedSizeArray;
 
@@ -437,8 +436,8 @@ impl<const D: usize> Dataset<'_, D> {
 
         for (c, scaled, chunksz) in izip!(
                 coords.as_mut_slice().iter_mut(),
-                self.scaled_dim_sz.as_slice(),
-                self.chunk_shape.as_slice())
+                scaled_dim_sz.as_slice(),
+                chunk_shape.as_slice())
         {
             *c = idx / *scaled;
             idx %= *scaled;
@@ -674,12 +673,12 @@ mod tests {
     fn chunk_coord_at_index(b: &mut Bencher) {
         let d = test_dataset();
 
-        assert_eq!(d.chunk_coord_at_index(0), [0, 0]);
-        assert_eq!(d.chunk_coord_at_index(1), [0, 10]);
-        assert_eq!(d.chunk_coord_at_index(2), [10, 0]);
-        assert_eq!(d.chunk_coord_at_index(3), [10, 10]);
+        assert_eq!(Dataset::<2>::chunk_coord_at_index(&d.chunk_shape, &d.scaled_dim_sz, 0), [0, 0]);
+        assert_eq!(Dataset::<2>::chunk_coord_at_index(&d.chunk_shape, &d.scaled_dim_sz, 1), [0, 10]);
+        assert_eq!(Dataset::<2>::chunk_coord_at_index(&d.chunk_shape, &d.scaled_dim_sz, 2), [10, 0]);
+        assert_eq!(Dataset::<2>::chunk_coord_at_index(&d.chunk_shape, &d.scaled_dim_sz, 3), [10, 10]);
 
-        b.iter(|| d.chunk_coord_at_index(3));
+        b.iter(|| Dataset::<2>::chunk_coord_at_index(&d.chunk_shape, &d.scaled_dim_sz, 3));
     }
 
     #[bench]
