@@ -189,7 +189,6 @@ impl<const D: usize> Dataset<'_, D> {
             return Err(anyhow!("{}: Unsupported filter", ds.name()));
         }
 
-        // TODO: See note in chunks.rs about making this faster.
         let mut chunks: Vec<Chunk<D>> = match (ds.num_chunks().is_some(), ds.offset()) {
             // Continuous
             (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
@@ -200,6 +199,11 @@ impl<const D: usize> Dataset<'_, D> {
 
             // Chunked
             (true, None) => {
+                // TODO: See note in chunks.rs about making this faster.
+                //
+                // HDF5 internally uses chunk_by_coord on read, so it should be faster in most
+                // cases. E.g. the btree version of chunk store is hashed on offset.
+                //
                 let n = ds.num_chunks().expect("weird..");
 
                 // Avoiding Dataset::chunk_info() because of hdf5-rs Register accumulating
@@ -424,6 +428,28 @@ impl<const D: usize> Dataset<'_, D> {
         ChunkSlicer::new(self, indices, counts)
     }
 
+    /// Calculate starting coordinates for chunk at given chunk index.
+    pub fn chunk_coord_at_index(&self, mut idx: u64) -> [u64; D]
+    {
+        use std::array::FixedSizeArray;
+
+        let mut coords = [0u64; D];
+
+        for (c, scaled, chunksz) in izip!(
+                coords.as_mut_slice().iter_mut(),
+                self.scaled_dim_sz.as_slice(),
+                self.chunk_shape.as_slice())
+        {
+            *c = idx / *scaled;
+            idx %= *scaled;
+            *c *= chunksz;
+        }
+
+        assert_eq!(idx, 0);
+
+        coords
+    }
+
     pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk<D> {
         debug_assert_eq!(indices.len(), self.chunk_shape.len());
         debug_assert_eq!(indices.len(), self.scaled_dim_sz.len());
@@ -642,6 +668,18 @@ mod tests {
             shuffle: false,
             gzip: None,
         }
+    }
+
+    #[bench]
+    fn chunk_coord_at_index(b: &mut Bencher) {
+        let d = test_dataset();
+
+        assert_eq!(d.chunk_coord_at_index(0), [0, 0]);
+        assert_eq!(d.chunk_coord_at_index(1), [0, 10]);
+        assert_eq!(d.chunk_coord_at_index(2), [10, 0]);
+        assert_eq!(d.chunk_coord_at_index(3), [10, 10]);
+
+        b.iter(|| d.chunk_coord_at_index(3));
     }
 
     #[bench]
