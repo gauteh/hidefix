@@ -101,6 +101,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
+name = "chunks-iter"
+version = "0.1.0"
+dependencies = [
+ "hdf5",
+ "hdf5-sys",
+ "libc",
+]
+
+[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -358,8 +367,6 @@ dependencies = [
 [[package]]
 name = "hdf5"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "707bff1556f6ce372bdfff4cd76d6b5ff9e6097805c166564b6889d892d95f1f"
 dependencies = [
  "bitflags",
  "hdf5-derive",
@@ -376,8 +383,6 @@ dependencies = [
 [[package]]
 name = "hdf5-derive"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e60b5aa060b51b3e84be396b9965ad6be83e587271ba3d80cbc6036bde56ff52"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -387,8 +392,6 @@ dependencies = [
 [[package]]
 name = "hdf5-src"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0004b23bb114cd7f1d3291164f37f03464ae310d56b32e93d25296e9992b6ae3"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -397,8 +400,6 @@ dependencies = [
 [[package]]
 name = "hdf5-sys"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee8056be2cf83d93ede864b37d8be8578481a9c29763aa5e044693104ef98034"
 dependencies = [
  "hdf5-src",
  "libc",
@@ -414,8 +415,6 @@ dependencies = [
 [[package]]
 name = "hdf5-types"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a19c336e587d8994d8c9b726ea19403d003c4b5b0e661ea69abf3bb0bfcc59e"
 dependencies = [
  "ascii",
  "libc",

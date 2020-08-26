@@ -1,0 +1,13 @@
+[package]
+name = "chunks-iter"
+version = "0.1.0"
+authors = ["Gaute Hope <eg@gaute.vetsj.com>"]
+edition = "2018"
+
+[dependencies]
+libc = "*"
+hdf5 = "0.7.0"
+
+[dependencies.hdf5-sys]
+version = "0.7.0"
+features = ["static", "zlib"]
