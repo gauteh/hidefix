@@ -141,8 +141,7 @@ mod tests {
     #[test]
     fn index_meps() {
         println!("indexing meps");
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        println!("{:#?}", i);
+        Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
     }
 
     #[test]
