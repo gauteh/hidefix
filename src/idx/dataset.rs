@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use std::cmp::min;
 use std::convert::TryInto;
 use std::path::Path;
-use std::array::FixedSizeArray;
 use strength_reduce::StrengthReducedU64;
 
 use super::chunk::{Chunk, ULE};
@@ -223,27 +222,94 @@ impl<const D: usize> Dataset<'_, D> {
 
             // Chunked
             (true, None) => {
-                let mut v = Vec::new();
+                let n = ds.num_chunks().expect("weird..");
 
-                chunks_iter::chunks_foreach(ds.id(), |offset, _filter_mask, addr, nbytes| {
-                    v.push(Chunk {
-                        offset: offset.iter()
-                            .zip(chunk_shape.as_slice())
-                            .map(|(o, s)| {
-                                ULE::new(*o * *s)
-                            })
-                            .collect::<Vec<_>>()
-                            .as_slice()
-                            .try_into()
-                            .unwrap(),
-                            size: ULE::new(nbytes as u64),
-                            addr: ULE::new(addr),
+                #[cfg(feature = "fast-index")]
+                {
+                    use std::array::FixedSizeArray;
+                    let mut v = Vec::with_capacity(n);
+
+                    hdf5::sync::sync(|| {
+                        chunks_iter::chunks_foreach(ds.id(), |offset, _filter_mask, addr, nbytes| {
+                            v.push(Chunk {
+                                offset: offset.iter()
+                                    .zip(chunk_shape.as_slice())
+                                    .map(|(o, s)| {
+                                        ULE::new(*o * *s)
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .as_slice()
+                                    .try_into()
+                                    .unwrap(),
+                                    size: ULE::new(nbytes as u64),
+                                    addr: ULE::new(addr),
+                            });
+
+                            0
+                        });
                     });
 
-                    0
-                });
+                    Ok(v)
+                }
 
-                Ok(v)
+                #[cfg(not(feature = "fast-index"))]
+                {
+                    // Avoiding Dataset::chunk_info() because of hdf5-rs Register accumulating
+                    // Handle's and growing out of hand.
+                    //
+                    // See: https://github.com/aldanor/hdf5-rust/issues/76
+                    use hdf5_sys::h5d::{H5Dget_chunk_info, H5Dget_space};
+                    use hdf5_sys::h5s::H5Sclose;
+
+                    let dsid = ds.id();
+                    let space = unsafe { H5Dget_space(dsid) };
+
+                    let mut offset = [0u64; D];
+                    let mut filter_mask: u32 = 0;
+                    let mut addr: u64 = 0;
+                    let mut size: u64 = 0;
+
+                    let chunks = hdf5::sync::sync(|| {
+                        (0..n)
+                            .map(|i| {
+                                let e = unsafe {
+                                    H5Dget_chunk_info(
+                                        dsid,
+                                        space,
+                                        i as _,
+                                        offset.as_mut_ptr(),
+                                        &mut filter_mask,
+                                        &mut addr,
+                                        &mut size,
+                                    )
+                                };
+
+                                ensure!(e == 0, "Failed to get chunk: {} in {}", i, ds.name()); // TODO: Maybe ds.name() deadlocks?
+                                ensure!(
+                                    filter_mask == 0,
+                                    "mismatching filter mask with dataset filter mask"
+                                );
+
+                                Ok(Chunk {
+                                    offset: offset
+                                        .iter()
+                                        .cloned()
+                                        .map(ULE::new)
+                                        .collect::<Vec<_>>()
+                                        .as_slice()
+                                        .try_into()
+                                        .unwrap(),
+                                    size: ULE::new(size),
+                                    addr: ULE::new(addr),
+                                })
+                            })
+                            .collect()
+                    });
+
+                    unsafe { H5Sclose(space) };
+
+                    chunks
+                }
             }
 
             _ => Err(anyhow!(
