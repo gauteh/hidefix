@@ -46,3 +46,5 @@ extern crate anyhow;
 pub mod filters;
 pub mod idx;
 pub mod reader;
+
+pub use idx::IntoIndex;

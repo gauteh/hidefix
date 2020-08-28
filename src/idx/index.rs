@@ -28,6 +28,7 @@ impl TryFrom<&hdf5::File> for Index<'_> {
     type Error = anyhow::Error;
 
     fn try_from(f: &hdf5::File) -> Result<Index<'static>, anyhow::Error> {
+        // TODO: use H5get_name to get file name
         Index::index_file::<&str>(f, None)
     }
 }
