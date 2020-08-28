@@ -110,14 +110,6 @@ mod tests {
     }
 
     #[test]
-    fn version_check() {
-        hdf5::sync::sync(|| {
-            let e = unsafe { H5check_version(1, 13, 0) };
-            assert_eq!(e, 0);
-        });
-    }
-
-    #[test]
     fn coads_sst() {
         let dset = hdf5::sync::sync(|| unsafe {
             H5open();
