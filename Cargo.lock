@@ -101,15 +101,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
-name = "chunks-iter"
-version = "0.1.0"
-dependencies = [
- "hdf5",
- "hdf5-sys",
- "libc",
-]
-
-[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -366,6 +357,7 @@ dependencies = [
 [[package]]
 name = "hdf5"
 version = "0.7.0"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#39f5028d7e5541b64af2c9c9c0daaa7cceb94a5a"
 dependencies = [
  "bitflags",
  "hdf5-derive",
@@ -382,6 +374,7 @@ dependencies = [
 [[package]]
 name = "hdf5-derive"
 version = "0.7.0"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#39f5028d7e5541b64af2c9c9c0daaa7cceb94a5a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -391,6 +384,7 @@ dependencies = [
 [[package]]
 name = "hdf5-src"
 version = "0.7.0"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#39f5028d7e5541b64af2c9c9c0daaa7cceb94a5a"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -399,6 +393,7 @@ dependencies = [
 [[package]]
 name = "hdf5-sys"
 version = "0.7.0"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#39f5028d7e5541b64af2c9c9c0daaa7cceb94a5a"
 dependencies = [
  "hdf5-src",
  "libc",
@@ -414,6 +409,7 @@ dependencies = [
 [[package]]
 name = "hdf5-types"
 version = "0.7.0"
+source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#39f5028d7e5541b64af2c9c9c0daaa7cceb94a5a"
 dependencies = [
  "ascii",
  "libc",
@@ -438,7 +434,6 @@ dependencies = [
  "byte-slice-cast",
  "byteorder",
  "bytes",
- "chunks-iter",
  "flexbuffers",
  "futures",
  "futures-core",
@@ -446,6 +441,7 @@ dependencies = [
  "hdf5",
  "hdf5-sys",
  "itertools",
+ "libc",
  "libdeflater",
  "lru",
  "ndarray",

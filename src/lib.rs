@@ -33,6 +33,15 @@
 //!
 //! It is also possible to [stream](reader::stream::StreamReader) the values. The streamer is
 //! currently optimized for streaming bytes.
+//!
+//! ## Fast indexing
+//!
+//! The indexing can be sped up considerably (_about 200x_) by adding a new interface to iterating
+//! over chunks in HDF5. The `fast-index` feature flag currently requires a patched version of
+//! [hdf5-rust](https://github.com/gauteh/hdf5-rust/tree/hidefix) and
+//! [hdf5](https://github.com/gauteh/hdf5/tree/chunk-iter-1-12). See this upstream
+//! [pull-request](https://github.com/HDFGroup/hdf5/pull/6). You therefore have to use `patch` to
+//! point the `hdf5` and `hdf5-sys` dependencies to the patched versions for now.
 
 #![allow(incomplete_features)]
 #![recursion_limit = "1024"]
