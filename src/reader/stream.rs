@@ -113,8 +113,8 @@ impl<'a, const D: usize> StreamReader<'a, D> {
                     };
 
                     byteorder::to_big_e_sized(&mut cache, order, dsz as usize)?;
-                    let cache = Bytes::from(cache);
 
+                    let cache = Bytes::from(cache);
                     ds_cache.put(addr, cache.clone());
 
                     debug_assert!(start <= cache.len());

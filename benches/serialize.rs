@@ -199,7 +199,7 @@ mod serde_flexbuffers {
         std::fs::write("/tmp/coads.idx.fx", s.view()).unwrap();
 
         b.iter(|| {
-            let b = test::black_box(std::fs::read("/tmp/coads.idx.fx").unwrap());
+            test::black_box(std::fs::read("/tmp/coads.idx.fx").unwrap());
         })
     }
 
@@ -226,7 +226,7 @@ mod serde_flexbuffers {
         std::fs::write("/tmp/meps.idx.fx", s.view()).unwrap();
 
         b.iter(|| {
-            let b = test::black_box(std::fs::read("/tmp/meps.idx.fx").unwrap());
+            test::black_box(std::fs::read("/tmp/meps.idx.fx").unwrap());
         })
     }
 }
