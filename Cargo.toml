@@ -6,7 +6,7 @@ license = "LGPL-3.0-or-later"
 name = "hidefix"
 repository = "https://github.com/gauteh/hidefix"
 description = "Concurrent HDF5 and NetCDF4 reader (experimental)"
-version = "0.1.1"
+version = "0.2.0"
 
 [dependencies]
 anyhow = "1"
@@ -25,7 +25,7 @@ lru = "0.6"
 serde_bytes = "0.11"
 strength_reduce = "0.2"
 zerocopy = "0.3"
-libc = "*"
+libc = { version = "0.2", optional = true }
 
 [dependencies.serde]
 features = ["derive"]
@@ -54,5 +54,5 @@ hdf5-sys = { git = "https://github.com/gauteh/hdf5-rust", branch = "hidefix" }
 [features]
 default = ["static"]
 static = ["hdf5-sys/static", "hdf5-sys/zlib"]
-fast-index = ["static"]
+fast-index = ["static", "libc"]
 
