@@ -210,7 +210,20 @@ mod tests {
     }
 
     #[bench]
-    fn unshuffle_sized_4mb(b: &mut Bencher) {
+    fn unshuffle_structured_4kb(b: &mut Bencher) {
+        use rand::distributions::Standard;
+        use rand::{thread_rng, Rng};
+
+        let v: Vec<u8> = thread_rng()
+            .sample_iter(Standard)
+            .take(4 * 1024)
+            .collect();
+
+        b.iter(|| unshuffle_sized(&v, 4))
+    }
+
+    #[bench]
+    fn unshuffle_structured_4mb(b: &mut Bencher) {
         use rand::distributions::Standard;
         use rand::{thread_rng, Rng};
 
