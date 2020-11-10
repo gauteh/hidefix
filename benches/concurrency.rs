@@ -3,8 +3,7 @@ extern crate test;
 use std::sync::Arc;
 use test::Bencher;
 
-use hidefix::idx::Index;
-use hidefix::reader::Reader;
+use hidefix::prelude::*;
 
 // const OVERSUBSCRIBE_THREADS: usize = 50;
 const ITERATIONS: usize = 100;

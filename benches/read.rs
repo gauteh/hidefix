@@ -1,8 +1,7 @@
 #![feature(test)]
 extern crate test;
-use hidefix::idx::Index;
-use hidefix::reader::Reader;
 use test::Bencher;
+use hidefix::prelude::*;
 
 #[bench]
 fn read_2d_chunked(b: &mut Bencher) {

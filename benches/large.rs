@@ -2,8 +2,7 @@
 extern crate test;
 use test::Bencher;
 
-use hidefix::idx::Index;
-use hidefix::reader::Reader;
+use hidefix::prelude::*;
 
 mod meps {
     use super::*;

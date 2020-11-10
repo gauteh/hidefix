@@ -22,7 +22,7 @@
 //!
 //! Size of type `T` is used as word size.
 
-use byte_slice_cast::{AsByteSlice, AsMutByteSlice, FromByteVec, ToByteSlice, ToMutByteSlice};
+use byte_slice_cast::{AsByteSlice, AsMutByteSlice, ToByteSlice, ToMutByteSlice};
 
 /// Shuffle bytes
 #[allow(dead_code)]
@@ -101,7 +101,7 @@ pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8]) {
 /// [unshuffle_structured].
 pub fn unshuffle_sized<T>(src: &[T], sz: usize) -> Vec<u8>
 where
-    T: ToByteSlice + FromByteVec + Copy,
+    T: ToByteSlice + Copy,
 {
     let src = src.as_byte_slice();
     let mut dest: Vec<u8> = Vec::with_capacity(src.len());

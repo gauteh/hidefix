@@ -1,7 +1,7 @@
 use serde::ser::{Serialize, Serializer};
+use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 
-use std::array::FixedSizeArray;
 use std::borrow::Cow;
 use strength_reduce::StrengthReducedU64;
 
@@ -29,8 +29,9 @@ pub mod sr_u64 {
 
         let v = Vec::<u64>::deserialize(d)?;
 
-        // TODO:
-        // ensure!(v.len() == sr.len(), "length mismatch");
+        if v.len() != sr.len() {
+            return Err(De::Error::custom("length mismatch"));
+        }
 
         for (e, s) in v.iter().zip(sr.iter_mut()) {
             *s = StrengthReducedU64::new(*e);

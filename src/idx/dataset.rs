@@ -8,7 +8,7 @@ use strength_reduce::StrengthReducedU64;
 
 use super::chunk::{Chunk, ULE};
 use crate::filters::byteorder::Order as ByteOrder;
-use crate::reader::{Reader, UnifyReader, UnifyStreamer};
+use crate::reader::{Reader, Streamer};
 
 #[cfg(feature = "fast-index")]
 use super::chunks_iter;
@@ -57,53 +57,40 @@ impl DatasetD<'_> {
         }
     }
 
-    pub fn as_reader(&self, path: &Path) -> Result<impl Reader + '_, anyhow::Error> {
-        use crate::reader::cache::CacheReader;
+    pub fn as_reader(&self, path: &Path) -> Result<Box<dyn Reader + '_>, anyhow::Error> {
         use std::fs;
+        use crate::reader::cache::CacheReader;
         use DatasetD::*;
 
-        type UReader<'a, R> = UnifyReader<
-            CacheReader<'a, R, 0>,
-            CacheReader<'a, R, 1>,
-            CacheReader<'a, R, 2>,
-            CacheReader<'a, R, 3>,
-            CacheReader<'a, R, 4>,
-            CacheReader<'a, R, 5>,
-            CacheReader<'a, R, 6>,
-            CacheReader<'a, R, 7>,
-            CacheReader<'a, R, 8>,
-            CacheReader<'a, R, 9>,
-        >;
-
         Ok(match self {
-            D0(ds) => UReader::R0(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D1(ds) => UReader::R1(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D2(ds) => UReader::R2(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D3(ds) => UReader::R3(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D4(ds) => UReader::R4(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D5(ds) => UReader::R5(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D6(ds) => UReader::R6(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D7(ds) => UReader::R7(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D8(ds) => UReader::R8(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D9(ds) => UReader::R9(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D0(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D1(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D2(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D3(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D4(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D5(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D6(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D7(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D8(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D9(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
         })
     }
 
-    pub fn as_streamer(&self, path: &Path) -> Result<UnifyStreamer<'_>, anyhow::Error> {
+    pub fn as_streamer(&self, path: &Path) -> Result<Box<dyn Streamer + '_>, anyhow::Error> {
         use crate::reader::stream::StreamReader;
         use DatasetD::*;
 
         Ok(match self {
-            D0(ds) => UnifyStreamer::R0(StreamReader::with_dataset(&ds, path)?),
-            D1(ds) => UnifyStreamer::R1(StreamReader::with_dataset(&ds, path)?),
-            D2(ds) => UnifyStreamer::R2(StreamReader::with_dataset(&ds, path)?),
-            D3(ds) => UnifyStreamer::R3(StreamReader::with_dataset(&ds, path)?),
-            D4(ds) => UnifyStreamer::R4(StreamReader::with_dataset(&ds, path)?),
-            D5(ds) => UnifyStreamer::R5(StreamReader::with_dataset(&ds, path)?),
-            D6(ds) => UnifyStreamer::R6(StreamReader::with_dataset(&ds, path)?),
-            D7(ds) => UnifyStreamer::R7(StreamReader::with_dataset(&ds, path)?),
-            D8(ds) => UnifyStreamer::R8(StreamReader::with_dataset(&ds, path)?),
-            D9(ds) => UnifyStreamer::R9(StreamReader::with_dataset(&ds, path)?),
+            D0(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D1(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D2(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D3(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D4(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D5(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D6(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D7(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D8(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D9(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
         })
     }
 
@@ -229,7 +216,6 @@ impl<const D: usize> Dataset<'_, D> {
 
                 #[cfg(feature = "fast-index")]
                 {
-                    use std::array::FixedSizeArray;
                     let mut v = Vec::with_capacity(n);
 
                     hdf5::sync::sync(|| {

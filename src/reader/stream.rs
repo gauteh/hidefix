@@ -1,18 +1,18 @@
 use async_stream::stream;
 use futures::{Stream, StreamExt};
-use futures_util::pin_mut;
+use std::pin::Pin;
 use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
-use byte_slice_cast::{FromByteVec, IntoVecOf};
 use bytes::Bytes;
 use lru::LruCache;
 
 use crate::filters;
-use crate::filters::byteorder::{self, Order, ToNative};
+use crate::filters::byteorder::{self, Order};
 use crate::idx::Dataset;
+use super::Streamer;
 
 /// The stream reader is intended to be used in network applications. The cache is currently local
 /// to each `stream` call.
@@ -38,13 +38,19 @@ impl<'a, const D: usize> StreamReader<'a, D> {
             chunk_sz,
         })
     }
+}
+
+impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
+    fn dsize(&self) -> usize {
+        self.ds.dsize
+    }
 
     /// A stream of bytes from the variable. Always in Big Endian.
-    pub fn stream(
+    fn stream(
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
-    ) -> impl Stream<Item = Result<Bytes, anyhow::Error>> {
+    ) -> Pin<Box<dyn Stream<Item = Result<Bytes, anyhow::Error>> + Send + 'static>> {
         let dsz = self.ds.dsize as u64;
 
         let indices: Option<&[u64; D]> = indices
@@ -69,7 +75,7 @@ impl<'a, const D: usize> StreamReader<'a, D> {
         let order = self.order();
         let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
 
-        stream! {
+        (stream! {
             let mut fd = File::open(p)?;
             let mut ds_cache = LruCache::<u64, Bytes>::new(cache_sz as usize);
 
@@ -112,6 +118,9 @@ impl<'a, const D: usize> StreamReader<'a, D> {
                         cache
                     };
 
+                    // Always output big endian. This code was written for network code that need
+                    // to transmit the data network-endian/big-endian in XDR format. However, this
+                    // makes the stream inefficient for code that need to stream the values on LE-machines.
                     byteorder::to_big_e_sized(&mut cache, order, dsz as usize)?;
 
                     let cache = Bytes::from(cache);
@@ -122,47 +131,17 @@ impl<'a, const D: usize> StreamReader<'a, D> {
                     yield Ok(cache.slice(start..end));
                 }
             }
-        }
+        }).boxed()
     }
 
-    pub fn order(&self) -> Order {
+    fn order(&self) -> Order {
         self.ds.order
-    }
-
-    pub fn stream_values<T>(
-        &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-    ) -> impl Stream<Item = Result<Vec<T>, anyhow::Error>>
-    where
-        T: FromByteVec + Unpin,
-        [T]: ToNative,
-    {
-        // TODO: use as_slice_of() to avoid copy, or possible values_to(&mut buf) so that
-        //       caller keeps ownership of slice too.
-        let reader = self.stream(indices, counts);
-        let order = Order::BE;
-
-        // XXX: This got a lot slower after always outputing big endian from stream(). Can probably
-        // fix that or make customizable. But need Big E for dars.
-
-        stream! {
-            pin_mut!(reader);
-            while let Some(Ok(b)) = reader.next().await {
-                let mut values = b.to_vec().into_vec_of::<T>()
-                    .map_err(|_| anyhow!("could not cast to value"))?;
-
-                values.to_native(order);
-                yield Ok(values);
-            }
-        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::idx::Index;
+    use crate::prelude::*;
     use futures::executor::block_on_stream;
 
     #[test]
@@ -171,7 +150,6 @@ mod tests {
         let r = i.streamer("d32_1").unwrap();
 
         let v = r.stream_values::<f32>(None, None);
-        pin_mut!(v);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
@@ -186,7 +164,6 @@ mod tests {
         let r = i.streamer("d_4_chunks").unwrap();
 
         let v = r.stream_values::<f32>(None, None);
-        pin_mut!(v);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
@@ -201,7 +178,6 @@ mod tests {
         let r = i.streamer("d_4_chunks").unwrap();
 
         let v = r.stream_values::<f32>(None, None);
-        pin_mut!(v);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();

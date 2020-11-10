@@ -15,8 +15,7 @@ pub use index::Index;
 ///
 /// ```
 /// use std::path::Path;
-/// use hidefix::IntoIndex;
-/// use hidefix::reader::Reader;
+/// use hidefix::prelude::*;
 ///
 /// let hf = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
 /// let ds = hf.dataset("SST").unwrap();

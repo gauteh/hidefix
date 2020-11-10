@@ -125,16 +125,15 @@ mod tests {
     fn coads_sst() {
         let dset = hdf5::sync::sync(|| unsafe {
             H5open();
-            let hf = H5Fopen(
-                CString::new("tests/data/coads_climatology.nc4")
-                    .unwrap()
-                    .as_ptr(),
+            let p = CString::new("tests/data/coads_climatology.nc4").unwrap();
+            let hf = H5Fopen(p.as_ptr(),
                 H5F_ACC_RDONLY,
                 H5P_DEFAULT,
             );
             assert!(hf > 0);
 
-            let dset = H5Dopen2(hf, CString::new("SST").unwrap().as_ptr(), H5P_DEFAULT);
+            let p = CString::new("SST").unwrap();
+            let dset = H5Dopen2(hf, p.as_ptr(), H5P_DEFAULT);
             assert!(dset > 0);
 
             dset

@@ -1,8 +1,7 @@
 #![feature(test)]
 extern crate test;
 
-use hidefix::idx::Index;
-use hidefix::reader::Reader;
+use hidefix::prelude::*;
 
 #[test]
 fn chunked_string_array() {

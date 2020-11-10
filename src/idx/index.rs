@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use hdf5::File;
 
 use super::dataset::DatasetD;
-use crate::reader::{Reader, UnifyStreamer};
+use crate::reader::{Reader, Streamer};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Index<'a> {
@@ -87,7 +87,7 @@ impl Index<'_> {
     ///
     /// This method assumes the HDF5 file has the same location as at the time of
     /// indexing.
-    pub fn reader(&self, ds: &str) -> Result<impl Reader + '_, anyhow::Error> {
+    pub fn reader(&self, ds: &str) -> Result<Box<dyn Reader + '_>, anyhow::Error> {
         let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
         match self.dataset(ds) {
@@ -103,7 +103,7 @@ impl Index<'_> {
     ///
     /// This method assumes the HDF5 file has the same location as at the time of
     /// indexing.
-    pub fn streamer(&self, ds: &str) -> Result<UnifyStreamer<'_>, anyhow::Error> {
+    pub fn streamer(&self, ds: &str) -> Result<Box<dyn Streamer + '_>, anyhow::Error> {
         let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
         match self.dataset(ds) {

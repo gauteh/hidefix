@@ -1,10 +1,9 @@
 use futures::executor::block_on_stream;
 use futures::pin_mut;
 
-use byte_slice_cast::IntoVecOf;
+use hidefix::prelude::*;
 use hidefix::filters::byteorder::{Order, ToNative};
-use hidefix::idx::Index;
-use hidefix::reader::Reader;
+use byte_slice_cast::AsMutSliceOf;
 
 #[test]
 fn feb_nc4_double() {
@@ -33,10 +32,9 @@ fn feb_nc4_double() {
 
     let sb = r.stream(None, None);
     pin_mut!(sb);
-    let vb: Vec<u8> = block_on_stream(sb).flatten().flatten().collect();
+    let mut vb: Vec<u8> = block_on_stream(sb).flatten().flatten().collect();
 
-    let mut vvb = vb.to_vec().into_vec_of::<f64>().unwrap();
-
+    let vvb = vb.as_mut_slice_of::<f64>().unwrap();
     vvb.to_native(Order::BE);
     assert_eq!(hv, vvb);
 }

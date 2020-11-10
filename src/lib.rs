@@ -21,8 +21,7 @@
 //! Create an [index](idx::Index), then read the values:
 //!
 //! ```
-//! use hidefix::idx::Index;
-//! use hidefix::reader::Reader;
+//! use hidefix::prelude::*;
 //!
 //! let indx = Index::index("tests/data/coads_climatology.nc4").unwrap();
 //! let mut r = indx.reader("SST").unwrap();
@@ -46,14 +45,21 @@
 #![allow(incomplete_features)]
 #![recursion_limit = "1024"]
 #![feature(test)]
-#![feature(const_generics, fixed_size_array, cow_is_borrowed)]
+#![feature(const_generics, fixed_size_array, cow_is_borrowed, array_methods)]
 extern crate test;
 
 #[macro_use]
 extern crate anyhow;
 
+#[macro_use]
+extern crate log;
+
 pub mod filters;
 pub mod idx;
 pub mod reader;
 
-pub use idx::IntoIndex;
+pub mod prelude {
+    pub use super::idx::{Index, IntoIndex};
+    pub use super::reader::{Reader, ReaderExt, Streamer, StreamerExt};
+}
+

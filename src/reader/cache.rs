@@ -1,12 +1,11 @@
 use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 
-use byte_slice_cast::{FromByteVec, IntoVecOf};
 use lru::LruCache;
 
 use super::dataset::Reader;
 use crate::filters;
-use crate::filters::byteorder::ToNative;
+use crate::filters::byteorder::Order;
 use crate::idx::Dataset;
 
 pub struct CacheReader<'a, R: Read + Seek, const D: usize> {
@@ -32,11 +31,24 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> {
 }
 
 impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
-    fn read(
+    fn order(&self) -> Order {
+        self.ds.order
+    }
+
+    fn dsize(&self) -> usize {
+        self.ds.dsize
+    }
+
+    fn shape(&self) -> &[u64] {
+        &self.ds.shape
+    }
+
+    fn read_to(
         &mut self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
-    ) -> Result<Vec<u8>, anyhow::Error> {
+        mut dst: &mut [u8],
+    ) -> Result<usize, anyhow::Error> {
         let indices: Option<&[u64; D]> = indices
             .map(|i| i.try_into())
             .map_or(Ok(None), |v| v.map(Some))
@@ -50,11 +62,8 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
 
         let dsz = self.ds.dsize as u64;
         let vsz = counts.iter().product::<u64>() * dsz;
-        let mut buf = Vec::with_capacity(vsz as usize);
-        unsafe {
-            buf.set_len(vsz as usize);
-        }
-        let mut buf_slice = &mut buf[..];
+
+        ensure!(dst.len() >= vsz as usize, "destination buffer has insufficient capacity");
 
         for (c, start, end) in self.ds.chunk_slices(indices, Some(&counts)) {
             let start = (start * dsz) as usize;
@@ -62,7 +71,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
             let slice_sz = end - start;
 
             if let Some(cache) = self.cache.get(&c.addr.get()) {
-                buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
+                dst[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
                 let mut cache: Vec<u8> = Vec::with_capacity(c.size.get() as usize);
                 unsafe {
@@ -94,39 +103,20 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
                     cache
                 };
 
-                buf_slice[..slice_sz].copy_from_slice(&cache[start..end]);
+                dst[..slice_sz].copy_from_slice(&cache[start..end]);
                 self.cache.put(c.addr.get(), cache);
             }
 
-            buf_slice = &mut buf_slice[slice_sz..];
+            dst = &mut dst[slice_sz..];
         }
 
-        Ok(buf)
-    }
-
-    fn values<T>(
-        &mut self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-    ) -> Result<Vec<T>, anyhow::Error>
-    where
-        T: FromByteVec,
-        [T]: ToNative,
-    {
-        // TODO: use as_slice_of() to avoid copy, or possible values_to(&mut buf) so that
-        //       caller keeps ownership of slice too.
-
-        let mut values = self.read(indices, counts)?.into_vec_of::<T>()?;
-        values.to_native(self.ds.order);
-
-        Ok(values)
+        Ok(vsz as usize)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::idx::Index;
-    use crate::reader::Reader;
+    use crate::prelude::*;
 
     #[test]
     fn read_coads_sst() {
