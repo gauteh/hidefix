@@ -6,7 +6,7 @@ license = "LGPL-3.0-or-later"
 name = "hidefix"
 repository = "https://github.com/gauteh/hidefix"
 description = "Concurrent HDF5 and NetCDF4 reader (experimental)"
-version = "0.2.0"
+version = "0.3.0"
 
 [dependencies]
 anyhow = "1.0.33"
