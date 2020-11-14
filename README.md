@@ -2,6 +2,7 @@
 [![Documentation](https://docs.rs/hidefix/badge.svg)](https://docs.rs/hidefix/)
 [![Build Status](https://travis-ci.org/gauteh/hidefix.svg?branch=master)](https://travis-ci.org/gauteh/hidefix)
 [![codecov](https://codecov.io/gh/gauteh/hidefix/branch/master/graph/badge.svg)](https://codecov.io/gh/gauteh/hidefix)
+[![Rust nightly](https://img.shields.io/badge/rustc-nightly-orange)](https://rust-lang.github.io/rustup/installation/other.html)
 
 <img src="https://raw.githubusercontent.com/gauteh/hidefix/master/idefix.png">
 
@@ -16,7 +17,16 @@ read the file. The original (native) HDF5 library is used to build the index,
 but once it has been created it is no longer needed. The index can be
 serialized to disk so that performing the indexing is not necessary.
 
-> HIDEFIX currently requires the [nightly version](https://rust-lang.github.io/rustup/installation/other.html) of the rust compiler.
+```rust
+use hidefix::prelude::*;
+
+let idx = Index::index("tests/data/coads_climatology.nc4").unwrap();
+let mut r = idx.reader("SST").unwrap();
+
+let values = r.values::<f32>(None, None).unwrap();
+
+println!("SST: {:?}", values);
+```
 
 ## Motivation
 

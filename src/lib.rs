@@ -23,10 +23,11 @@
 //! ```
 //! use hidefix::prelude::*;
 //!
-//! let indx = Index::index("tests/data/coads_climatology.nc4").unwrap();
-//! let mut r = indx.reader("SST").unwrap();
+//! let idx = Index::index("tests/data/coads_climatology.nc4").unwrap();
+//! let mut r = idx.reader("SST").unwrap();
 //!
 //! let values = r.values::<f32>(None, None).unwrap();
+//!
 //! println!("SST: {:?}", values);
 //! ```
 //!
