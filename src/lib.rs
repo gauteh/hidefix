@@ -2,8 +2,6 @@
 //!
 //! A fast and concurrent reader for HDF5 and NetCDF (v4) files.
 //!
-//! > Currently requires Rust nightly.
-//!
 //! This library allows a HDF5 file to be read in a multi-threaded and concurrent way. The chunks
 //! of a dataset need to be indexed in advance, this can be time-consuming, but efficient
 //! serialization and partially zero-copy deserialization through [serde](https://serde.rs/) is
