@@ -63,7 +63,10 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
         let dsz = self.ds.dsize as u64;
         let vsz = counts.iter().product::<u64>() * dsz;
 
-        ensure!(dst.len() >= vsz as usize, "destination buffer has insufficient capacity");
+        ensure!(
+            dst.len() >= vsz as usize,
+            "destination buffer has insufficient capacity"
+        );
 
         for (c, start, end) in self.ds.chunk_slices(indices, Some(&counts)) {
             let start = (start * dsz) as usize;

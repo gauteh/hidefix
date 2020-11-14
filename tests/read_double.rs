@@ -1,9 +1,9 @@
 use futures::executor::block_on_stream;
 use futures::pin_mut;
 
-use hidefix::prelude::*;
-use hidefix::filters::byteorder::{Order, ToNative};
 use byte_slice_cast::AsMutSliceOf;
+use hidefix::filters::byteorder::{Order, ToNative};
+use hidefix::prelude::*;
 
 #[test]
 fn feb_nc4_double() {

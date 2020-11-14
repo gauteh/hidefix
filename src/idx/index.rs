@@ -28,8 +28,33 @@ impl TryFrom<&hdf5::File> for Index<'_> {
     type Error = anyhow::Error;
 
     fn try_from(f: &hdf5::File) -> Result<Index<'static>, anyhow::Error> {
-        // TODO: use H5get_name to get file name
-        Index::index_file::<&str>(f, None)
+        // Get file path
+        //
+        // XXX: Maybe this should be moved into Index::index, users would still be free to provide
+        // a path to the readers.
+        use hdf5_sys::h5f::H5Fget_name;
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let path = hdf5::sync::sync(|| {
+            let sz: usize = unsafe { H5Fget_name(f.id(), std::ptr::null_mut(), 0) } as usize; // size without trailing 0
+
+            ensure!(sz > 0, "No path available");
+
+            let mut name = vec![0u8; sz + 1];
+            ensure!(
+                unsafe { H5Fget_name(f.id(), name.as_mut_ptr() as *mut _, sz + 1) } as usize == sz,
+                "Mismatching length of path"
+            );
+
+            name.pop(); // remove trailing 0
+
+            let name = OsString::from_vec(name);
+
+            Ok(PathBuf::from(&name))
+        })?;
+
+        Index::index_file(f, Some(path))
     }
 }
 
@@ -115,6 +140,7 @@ impl Index<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::prelude::*;
     use super::*;
 
     #[test]
@@ -122,6 +148,26 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
 
         println!("index: {:#?}", i);
+    }
+
+    #[test]
+    fn index_from_hdf5_file() {
+        use std::convert::TryInto;
+
+        let hf = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
+        let i: Index = (&hf).try_into().unwrap();
+        let mut r = i.reader("SST").unwrap();
+        r.values::<f32>(None, None).unwrap();
+    }
+
+    #[test]
+    fn index_from_path() {
+        use std::convert::TryInto;
+
+        let p = PathBuf::from("tests/data/coads_climatology.nc4");
+        let i: Index = p.as_path().try_into().unwrap();
+        let mut r = i.reader("SST").unwrap();
+        r.values::<f32>(None, None).unwrap();
     }
 
     #[test]

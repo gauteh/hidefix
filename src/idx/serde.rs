@@ -1,5 +1,5 @@
-use serde::ser::{Serialize, Serializer};
 use serde::de::Error;
+use serde::ser::{Serialize, Serializer};
 use serde::{Deserialize, Deserializer};
 
 use std::borrow::Cow;

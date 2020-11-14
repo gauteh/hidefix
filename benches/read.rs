@@ -1,7 +1,7 @@
 #![feature(test)]
 extern crate test;
-use test::Bencher;
 use hidefix::prelude::*;
+use test::Bencher;
 
 #[bench]
 fn read_2d_chunked(b: &mut Bencher) {

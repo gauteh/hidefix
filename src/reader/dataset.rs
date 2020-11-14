@@ -1,6 +1,6 @@
-use futures::{Stream, StreamExt};
+use byte_slice_cast::{AsMutByteSlice, AsSliceOf, FromByteSlice, ToMutByteSlice};
 use bytes::Bytes;
-use byte_slice_cast::{ToMutByteSlice, AsMutByteSlice, AsSliceOf, FromByteSlice};
+use futures::{Stream, StreamExt};
 use std::pin::Pin;
 
 use crate::filters::byteorder::{Order, ToNative};
@@ -53,13 +53,23 @@ pub trait ReaderExt: Reader {
         [T]: ToNative,
     {
         let dsz = self.dsize();
-        ensure!(dsz % std::mem::size_of::<T>() == 0, "size of datatype ({}) not multiple of target {}", dsz, std::mem::size_of::<T>());
+        ensure!(
+            dsz % std::mem::size_of::<T>() == 0,
+            "size of datatype ({}) not multiple of target {}",
+            dsz,
+            std::mem::size_of::<T>()
+        );
 
         if dsz != std::mem::size_of::<T>() {
             error!("size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
         }
 
-        let vsz = counts.unwrap_or_else(|| self.shape()).iter().product::<u64>() as usize * dsz / std::mem::size_of::<T>();
+        let vsz = counts
+            .unwrap_or_else(|| self.shape())
+            .iter()
+            .product::<u64>() as usize
+            * dsz
+            / std::mem::size_of::<T>();
         let mut values = Vec::with_capacity(vsz);
         unsafe {
             values.set_len(vsz);
@@ -116,4 +126,3 @@ pub trait StreamerExt: Streamer {
 }
 
 impl<T: ?Sized + Streamer> StreamerExt for T {}
-

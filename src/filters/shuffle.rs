@@ -3,7 +3,7 @@
 //! Bytes are shuffled to make an array of numbers easier to compress. This filter
 //! shuffles bytes according to HDF5 spec:
 //!
-//! https://support.hdfgroup.org/ftp/HDF5//documentation/doc1.6/TechNotes/shuffling-algorithm-report.pdf
+//! <https://support.hdfgroup.org/ftp/HDF5//documentation/doc1.6/TechNotes/shuffling-algorithm-report.pdf>
 //!
 //! The shuffling algorithm re-arranges `bytes` with the following steps:
 //!
@@ -214,10 +214,7 @@ mod tests {
         use rand::distributions::Standard;
         use rand::{thread_rng, Rng};
 
-        let v: Vec<u8> = thread_rng()
-            .sample_iter(Standard)
-            .take(4 * 1024)
-            .collect();
+        let v: Vec<u8> = thread_rng().sample_iter(Standard).take(4 * 1024).collect();
 
         b.iter(|| unshuffle_sized(&v, 4))
     }

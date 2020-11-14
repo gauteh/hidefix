@@ -58,8 +58,8 @@ impl DatasetD<'_> {
     }
 
     pub fn as_reader(&self, path: &Path) -> Result<Box<dyn Reader + '_>, anyhow::Error> {
-        use std::fs;
         use crate::reader::cache::CacheReader;
+        use std::fs;
         use DatasetD::*;
 
         Ok(match self {

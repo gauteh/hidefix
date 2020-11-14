@@ -30,6 +30,10 @@
 //! println!("SST: {:?}", values);
 //! ```
 //!
+//! or convert a [hdf5::File] or [hdf5::Dataset] into an index by using
+//! [`try_from`](std::convert::TryFrom) or the [`index`](idx::IntoIndex) method.
+//!
+//!
 //! It is also possible to [stream](reader::stream::StreamReader) the values. The streamer is
 //! currently optimized for streaming bytes.
 //!
@@ -62,4 +66,3 @@ pub mod prelude {
     pub use super::idx::{Index, IntoIndex};
     pub use super::reader::{Reader, ReaderExt, Streamer, StreamerExt};
 }
-

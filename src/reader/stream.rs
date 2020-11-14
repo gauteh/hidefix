@@ -1,18 +1,18 @@
 use async_stream::stream;
 use futures::{Stream, StreamExt};
-use std::pin::Pin;
 use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 
 use bytes::Bytes;
 use lru::LruCache;
 
+use super::Streamer;
 use crate::filters;
 use crate::filters::byteorder::{self, Order};
 use crate::idx::Dataset;
-use super::Streamer;
 
 /// The stream reader is intended to be used in network applications. The cache is currently local
 /// to each `stream` call.
@@ -131,7 +131,8 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
                     yield Ok(cache.slice(start..end));
                 }
             }
-        }).boxed()
+        })
+        .boxed()
     }
 
     fn order(&self) -> Order {

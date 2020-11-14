@@ -126,10 +126,7 @@ mod tests {
         let dset = hdf5::sync::sync(|| unsafe {
             H5open();
             let p = CString::new("tests/data/coads_climatology.nc4").unwrap();
-            let hf = H5Fopen(p.as_ptr(),
-                H5F_ACC_RDONLY,
-                H5P_DEFAULT,
-            );
+            let hf = H5Fopen(p.as_ptr(), H5F_ACC_RDONLY, H5P_DEFAULT);
             assert!(hf > 0);
 
             let p = CString::new("SST").unwrap();

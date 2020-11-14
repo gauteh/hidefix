@@ -14,14 +14,12 @@ pub use index::Index;
 /// the standard rust HDF5 library.
 ///
 /// ```
-/// use std::path::Path;
 /// use hidefix::prelude::*;
 ///
 /// let hf = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
-/// let ds = hf.dataset("SST").unwrap();
-/// let didx = ds.index().unwrap();
+/// let idx = hf.index().unwrap();
 ///
-/// let mut r = didx.as_reader(Path::new("tests/data/coads_climatology.nc4")).unwrap();
+/// let mut r = idx.reader("SST").unwrap();
 /// let values = r.values::<f32>(None, None).unwrap();
 ///
 /// println!("SST: {:?}", values);
@@ -37,7 +35,7 @@ impl IntoIndex for hdf5::File {
 
     fn index(&self) -> anyhow::Result<Self::Indexed> {
         use std::convert::TryInto;
-        // TODO: use H5get_name to get file name
+
         self.try_into()
     }
 }
