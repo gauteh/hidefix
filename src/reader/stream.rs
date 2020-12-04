@@ -105,7 +105,8 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
                             decache.set_len(chunk_sz as usize);
                         }
 
-                        filters::gzip::decompress(&cache, &mut decache)?;
+                        tokio::task::block_in_place(||
+                            filters::gzip::decompress(&cache, &mut decache))?;
 
                         decache
                     } else {
