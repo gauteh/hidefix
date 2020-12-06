@@ -134,6 +134,9 @@ impl From<hdf5::Datatype> for Datatype {
 }
 
 /// A HDF5 dataset (a single variable).
+///
+/// > Note to reader implementations: The official HDF5 library uses a 1MB dataset cache by default.
+///
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Dataset<'a, const D: usize> {
     pub dtype: Datatype,

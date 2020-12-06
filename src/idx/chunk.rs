@@ -10,14 +10,6 @@ pub type ULE = U64<LE>;
 /// A HDF5 chunk. A chunk is read and written in its entirety by the HDF5 library. This is
 /// usually necessary since the chunk can be compressed and filtered.
 ///
-/// > Note: The official HDF5 library uses a 1MB dataset cache by default.
-///
-/// HDF5 can store chunks in various types of data structures internally (`BTreeMap`, etc.), so
-/// it is not necessarily a simple sorted array (presumably because chunks can be added at a later
-/// time). The `get_chunk_info` methods iterate over this structure internally to get the requested
-/// chunk (based on a predicate function set up internally). It would be far more efficient for us
-/// if we could retrieve all chunks through one iteration, rather than do a full iteration for all
-/// chunks which is obviously extremely inefficient -- and the main reason that indexing is slow.
 ///
 /// Reference: [HDF5 chunking](https://support.hdfgroup.org/HDF5/doc/Advanced/Chunking/index.html).
 #[derive(Debug, Eq, Clone)]

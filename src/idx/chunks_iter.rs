@@ -1,3 +1,12 @@
+//! HDF5 can store chunks in various types of data structures internally (`BTreeMap`, etc.), so
+//! it is not necessarily a simple sorted array (presumably because chunks can be added at a later
+//! time). The `get_chunk_info` methods iterate over this structure internally to get the requested
+//! chunk (based on a predicate function set up internally).
+//!
+//! It would be far more efficient for us if we could retrieve all chunks through one iteration (N),
+//! rather than do a full iteration for all chunks which requires SUM(I) for I in N operations.
+//!
+//! This module provides bindings to a [proposed `chunks_iter`](https://github.com/HDFGroup/hdf5/pull/6).
 #![allow(non_camel_case_types, non_snake_case)]
 use libc::{c_int, c_void};
 
