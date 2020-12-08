@@ -1,33 +1,44 @@
 #![feature(test)]
 extern crate test;
 use futures::executor::block_on_stream;
+use futures::{pin_mut, future, Stream, StreamExt};
 use hidefix::prelude::*;
 use test::Bencher;
 
+fn consume_stream<S: Stream>(rt: &mut tokio::runtime::Runtime, s: S) {
+    rt.block_on(async move {
+        pin_mut!(s);
+        while let Some(_) = s.next().await {}
+    });
+}
+
 #[bench]
 fn chunked_1d_values(b: &mut Bencher) {
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let r = i.streamer("d_4_chunks").unwrap();
 
     b.iter(|| {
         let v = r.stream_values::<f32>(None, None);
-        block_on_stream(v).for_each(drop);
+        consume_stream(&mut rt, v);
     })
 }
 
 #[bench]
 fn gzip_shuffle_2d_bytes(b: &mut Bencher) {
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/gzip_shuffle_2d.h5").unwrap();
     let r = i.streamer("data").unwrap();
 
     b.iter(|| {
         let v = r.stream(None, None);
-        block_on_stream(v).for_each(drop);
+        consume_stream(&mut rt, v);
     })
 }
 
 #[bench]
 fn coads_values(b: &mut Bencher) {
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
     let r = i.streamer("SST").unwrap();
 
@@ -42,18 +53,19 @@ fn coads_values(b: &mut Bencher) {
 
     b.iter(|| {
         let v = r.stream_values::<f32>(None, None);
-        block_on_stream(v).for_each(drop);
+        consume_stream(&mut rt, v);
     })
 }
 
 #[bench]
 fn coads_bytes(b: &mut Bencher) {
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
     let r = i.streamer("SST").unwrap();
 
     b.iter(|| {
         let v = r.stream(None, None);
-        block_on_stream(v).for_each(drop);
+        consume_stream(&mut rt, v);
     })
 }
 
