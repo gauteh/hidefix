@@ -1227,14 +1227,182 @@ mod tests {
 
     #[test]
     fn coads_slice_all() {
+        fn make_u64(u: u64) -> ULE {
+            ULE::new(u)
+        }
+
+        let slices = vec![
+            (
+                Chunk {
+                    addr: make_u64(31749),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(0),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(96549),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(1),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(161349),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(2),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(226149),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(3),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(290949),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(4),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(355749),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(5),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(420549),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(6),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(485349),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(7),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(550149),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(8),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(614949),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(9),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(679749),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(10),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            (
+                Chunk {
+                    addr: make_u64(744549),
+                    size: make_u64(64800),
+                    offset: [
+                        make_u64(11),
+                        make_u64(0),
+                        make_u64(0),
+                    ],
+                },
+                0,
+                16200,
+            ),
+            ];
+        let slicebr = slices.iter().map(|(c, s, e)|
+            (c, *s, *e)).collect::<Vec<_>>();
+
         use crate::idx::Index;
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
         if let DatasetD::D3(d) = d {
+            let sliced = d.chunk_slices(None, None).collect::<Vec<_>>();
             println!(
-                "slices: {}",
-                d.chunk_slices(None, None).collect::<Vec<_>>().len()
+                "slices: {:#?}",
+                sliced
             );
+
+            assert_eq!(sliced, slicebr);
         } else {
             panic!("wrong dims")
         }
