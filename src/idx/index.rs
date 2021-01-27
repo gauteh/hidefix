@@ -140,8 +140,8 @@ impl Index<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::*;
     use super::*;
+    use crate::prelude::*;
 
     #[test]
     fn index_t_float32() {

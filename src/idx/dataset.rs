@@ -119,6 +119,17 @@ pub enum Datatype {
     Unknown,
 }
 
+impl Datatype {
+    pub fn dsize(&self) -> Option<usize> {
+        use Datatype::*;
+
+        match self {
+            UInt(sz) | Int(sz) | Float(sz) => Some(*sz),
+            Datatype::Unknown => None,
+        }
+    }
+}
+
 impl From<hdf5::Datatype> for Datatype {
     fn from(dtype: hdf5::Datatype) -> Self {
         match dtype {
@@ -183,7 +194,6 @@ impl<const D: usize> Dataset<'_, D> {
         }
 
         let dtype = ds.dtype()?;
-        let dsize = ds.dtype()?.size();
         let order = dtype.byte_order();
         let shape: [u64; D] = ds
             .shape()
@@ -335,6 +345,25 @@ impl<const D: usize> Dataset<'_, D> {
                 chunk_shape);
         }
 
+
+        Dataset::new(dtype.into(), order.into(), shape, chunks, chunk_shape, shuffle, gzip)
+    }
+
+    pub fn new<'a, C>(
+        dtype: Datatype,
+        order: ByteOrder,
+        shape: [u64; D],
+        chunks: C,
+        chunk_shape: [u64; D],
+        shuffle: bool,
+        gzip: Option<u8>
+    ) -> Result<Dataset<'a, D>, anyhow::Error>
+    where
+        C: Into<Cow<'a, [Chunk<D>]>>,
+    {
+        let chunks = chunks.into();
+        let dsize = dtype.dsize().ok_or_else(|| anyhow!("Unknown size of data type"))?;
+
         // optimized divisor for chunk shape
         let chunk_shape_reduced = chunk_shape
             .iter()
@@ -399,9 +428,9 @@ impl<const D: usize> Dataset<'_, D> {
         .try_into()?;
 
         Ok(Dataset {
-            dtype: dtype.into(),
+            dtype,
             dsize,
-            order: order.into(),
+            order,
             chunks,
             shape,
             chunk_shape,
@@ -466,12 +495,24 @@ impl<const D: usize> Dataset<'_, D> {
 
 pub struct ChunkSlicer<'a, const D: usize> {
     dataset: &'a Dataset<'a, D>,
+
+    /// The current offset in values from start.
     offset: u64,
+
+    /// The coordinates of the current offset in values from the start.
     offset_coords: [u64; D],
+
+    /// The current start coordinates of the slice, initially equal to indices.
     start_coords: [u64; D],
+
+    /// The slice start indices.
     indices: [u64; D],
+
+    /// The slice counts.
     counts: [u64; D],
     counts_reduced: [StrengthReducedU64; D],
+
+    /// The end of the slice in values from the start of the dataset.
     end: u64,
 }
 
@@ -641,31 +682,218 @@ mod tests {
     use test::Bencher;
 
     fn test_dataset() -> Dataset<'static, 2> {
-        Dataset::<2> {
-            dtype: Datatype::Float(4),
-            dsize: 4,
-            order: ByteOrder::BE,
-            shape: [20, 20],
-            chunk_shape: [10, 10],
-            chunk_shape_reduced: [10u64, 10]
-                .iter()
-                .map(|i| StrengthReducedU64::new(*i))
-                .collect::<Vec<_>>()
-                .as_slice()
-                .try_into()
-                .unwrap(),
-            scaled_dim_sz: [2, 1],
-            dim_sz: [20, 1],
-            chunk_dim_sz: [10, 1],
-            chunks: Cow::from(vec![
+        Dataset::new(
+            Datatype::Float(2),
+            ByteOrder::BE,
+            [20, 20],
+            vec![
                 Chunk::new(0, 400, [0, 0]),
                 Chunk::new(400, 400, [0, 10]),
                 Chunk::new(800, 400, [10, 0]),
                 Chunk::new(1200, 400, [10, 10]),
-            ]),
-            shuffle: false,
-            gzip: None,
+            ],
+            [10, 10],
+            false,
+            None).unwrap()
+    }
+
+    fn chunk_slice_4d() {
+        fn U64(u: u64) -> ULE {
+            ULE::new(u)
         }
+
+        let chunks = vec![
+            Chunk {
+                addr: U64(14475550),
+                size: U64(623019),
+                offset: [U64(0), U64(0), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(15098569),
+                size: U64(621904),
+                offset: [U64(0), U64(1), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(15720473),
+                size: U64(619906),
+                offset: [U64(0), U64(2), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(16340379),
+                size: U64(619975),
+                offset: [U64(0), U64(3), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(16960354),
+                size: U64(620082),
+                offset: [U64(0), U64(4), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(17580436),
+                size: U64(621400),
+                offset: [U64(0), U64(5), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(18201836),
+                size: U64(623531),
+                offset: [U64(0), U64(6), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(18825367),
+                size: U64(624769),
+                offset: [U64(0), U64(7), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(19450136),
+                size: U64(625784),
+                offset: [U64(0), U64(8), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(20075920),
+                size: U64(628218),
+                offset: [U64(0), U64(9), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(20704138),
+                size: U64(630153),
+                offset: [U64(0), U64(10), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(21334291),
+                size: U64(632137),
+                offset: [U64(0), U64(11), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(21966428),
+                size: U64(636257),
+                offset: [U64(0), U64(12), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(22602685),
+                size: U64(640686),
+                offset: [U64(0), U64(13), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(23243371),
+                size: U64(645195),
+                offset: [U64(0), U64(14), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(23888566),
+                size: U64(648080),
+                offset: [U64(0), U64(15), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(24536646),
+                size: U64(648877),
+                offset: [U64(0), U64(16), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(25185523),
+                size: U64(650633),
+                offset: [U64(0), U64(17), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(25836156),
+                size: U64(651287),
+                offset: [U64(0), U64(18), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(26487443),
+                size: U64(651812),
+                offset: [U64(0), U64(19), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(27139255),
+                size: U64(651851),
+                offset: [U64(0), U64(20), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(27791106),
+                size: U64(651251),
+                offset: [U64(0), U64(21), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(28442357),
+                size: U64(650736),
+                offset: [U64(0), U64(22), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(29093093),
+                size: U64(650631),
+                offset: [U64(0), U64(23), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(29743724),
+                size: U64(650372),
+                offset: [U64(0), U64(24), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(30394096),
+                size: U64(650808),
+                offset: [U64(0), U64(25), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(31044904),
+                size: U64(651059),
+                offset: [U64(0), U64(26), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(31695963),
+                size: U64(651286),
+                offset: [U64(0), U64(27), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(32347249),
+                size: U64(653155),
+                offset: [U64(0), U64(28), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(109665432),
+                size: U64(653196),
+                offset: [U64(0), U64(29), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(110318628),
+                size: U64(652437),
+                offset: [U64(0), U64(30), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(110971065),
+                size: U64(635061),
+                offset: [U64(0), U64(31), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(131602553),
+                size: U64(621858),
+                offset: [U64(1), U64(0), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(132224411),
+                size: U64(620906),
+                offset: [U64(1), U64(1), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(132845317),
+                size: U64(618985),
+                offset: [U64(1), U64(2), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(133464302),
+                size: U64(619021),
+                offset: [U64(1), U64(3), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(134083323),
+                size: U64(619270),
+                offset: [U64(1), U64(4), U64(0), U64(0)],
+            },
+            Chunk {
+                addr: U64(134702593),
+                size: U64(620189),
+                offset: [U64(1), U64(5), U64(0), U64(0)],
+            },
+        ];
     }
 
     #[bench]

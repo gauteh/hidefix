@@ -61,7 +61,19 @@ impl Swap for u64 {
     }
 }
 
+impl Swap for i16 {
+    fn swap(&self) -> Self {
+        self.swap_bytes()
+    }
+}
+
 impl Swap for i32 {
+    fn swap(&self) -> Self {
+        self.swap_bytes()
+    }
+}
+
+impl Swap for i64 {
     fn swap(&self) -> Self {
         self.swap_bytes()
     }
