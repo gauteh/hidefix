@@ -344,8 +344,15 @@ impl<const D: usize> Dataset<'_, D> {
                 chunk_shape);
         }
 
-
-        Dataset::new(dtype.into(), order.into(), shape, chunks, chunk_shape, shuffle, gzip)
+        Dataset::new(
+            dtype.into(),
+            order.into(),
+            shape,
+            chunks,
+            chunk_shape,
+            shuffle,
+            gzip,
+        )
     }
 
     pub fn new<'a, C>(
@@ -355,13 +362,15 @@ impl<const D: usize> Dataset<'_, D> {
         chunks: C,
         chunk_shape: [u64; D],
         shuffle: bool,
-        gzip: Option<u8>
+        gzip: Option<u8>,
     ) -> Result<Dataset<'a, D>, anyhow::Error>
     where
         C: Into<Cow<'a, [Chunk<D>]>>,
     {
         let chunks = chunks.into();
-        let dsize = dtype.dsize().ok_or_else(|| anyhow!("Unknown size of data type"))?;
+        let dsize = dtype
+            .dsize()
+            .ok_or_else(|| anyhow!("Unknown size of data type"))?;
 
         // optimized divisor for chunk shape
         let chunk_shape_reduced = chunk_shape
@@ -463,17 +472,19 @@ impl<const D: usize> Dataset<'_, D> {
         let indices: [u64; D] = *indices.unwrap_or(&[0; D]);
         let counts: [u64; D] = *counts.unwrap_or(&self.shape);
 
-        assert!(
-            indices
-                .iter()
-                .zip(counts.iter())
-                .map(|(i, c)| i + c)
-                .zip(self.shape.iter())
-                .all(|(l, &s)| l <= s),
-            "out of bounds"
-        );
-
-        ChunkSlicer::new(self, indices, counts)
+        if indices
+            .iter()
+            .zip(counts.iter())
+            .map(|(i, c)| i + c)
+            .zip(self.shape.iter())
+            .any(|(l, &s)| l > s)
+            || counts.iter().any(|&c| c == 0)
+        {
+            // Out of bounds or counts is zero in any dimension.
+            ChunkSlicer::empty(self)
+        } else {
+            ChunkSlicer::new(self, indices, counts)
+        }
     }
 
     pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk<D> {
@@ -516,6 +527,25 @@ pub struct ChunkSlicer<'a, const D: usize> {
 }
 
 impl<'a, const D: usize> ChunkSlicer<'a, D> {
+    /// Empty slice returned for indices and counts that are out of bounds or of zero size.
+    pub fn empty(dataset: &'a Dataset<D>) -> ChunkSlicer<'a, D> {
+        ChunkSlicer {
+            dataset,
+            offset: 0,
+            offset_coords: [0; D],
+            start_coords: [0; D],
+            indices: [0; D],
+            counts: [0; D],
+            counts_reduced: (0..D)
+                .map(|_| StrengthReducedU64::new(1))
+                .collect::<Vec<_>>()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+            end: 0,
+        }
+    }
+
     pub fn new(dataset: &'a Dataset<D>, indices: [u64; D], counts: [u64; D]) -> ChunkSlicer<'a, D> {
         let end = if dataset.is_scalar() {
             // scalar
@@ -904,7 +934,13 @@ mod tests {
             false,
             None).unwrap();
 
-        ds.chunk_slices(None, None).for_each(drop);
+        ds.chunk_slices(None, Some(&[1, 4, 1, 1])).for_each(drop);
+    }
+
+    #[test]
+    fn chunk_slice_zero_count() {
+        let d = test_dataset();
+        assert_eq!(d.chunk_slices(None, Some(&[1, 0])).next(), None);
     }
 
     #[bench]
