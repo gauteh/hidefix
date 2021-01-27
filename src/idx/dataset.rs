@@ -116,7 +116,7 @@ pub enum Datatype {
     UInt(usize),
     Int(usize),
     Float(usize),
-    Unknown,
+    Custom(usize),
 }
 
 impl Datatype {
@@ -124,8 +124,7 @@ impl Datatype {
         use Datatype::*;
 
         match self {
-            UInt(sz) | Int(sz) | Float(sz) => Some(*sz),
-            Datatype::Unknown => None,
+            UInt(sz) | Int(sz) | Float(sz) | Custom(sz) => Some(*sz),
         }
     }
 }
@@ -139,7 +138,7 @@ impl From<hdf5::Datatype> for Datatype {
             _ if dtype.is::<i64>() => Datatype::Int(dtype.size()),
             _ if dtype.is::<f32>() => Datatype::Float(dtype.size()),
             _ if dtype.is::<f64>() => Datatype::Float(dtype.size()),
-            _ => Datatype::Unknown,
+            _ => Datatype::Custom(dtype.size()),
         }
     }
 }
@@ -697,203 +696,215 @@ mod tests {
             None).unwrap()
     }
 
+    #[test]
     fn chunk_slice_4d() {
-        fn U64(u: u64) -> ULE {
+        fn make_u64(u: u64) -> ULE {
             ULE::new(u)
         }
 
         let chunks = vec![
             Chunk {
-                addr: U64(14475550),
-                size: U64(623019),
-                offset: [U64(0), U64(0), U64(0), U64(0)],
+                addr: make_u64(14475550),
+                size: make_u64(623019),
+                offset: [make_u64(0), make_u64(0), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(15098569),
-                size: U64(621904),
-                offset: [U64(0), U64(1), U64(0), U64(0)],
+                addr: make_u64(15098569),
+                size: make_u64(621904),
+                offset: [make_u64(0), make_u64(1), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(15720473),
-                size: U64(619906),
-                offset: [U64(0), U64(2), U64(0), U64(0)],
+                addr: make_u64(15720473),
+                size: make_u64(619906),
+                offset: [make_u64(0), make_u64(2), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(16340379),
-                size: U64(619975),
-                offset: [U64(0), U64(3), U64(0), U64(0)],
+                addr: make_u64(16340379),
+                size: make_u64(619975),
+                offset: [make_u64(0), make_u64(3), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(16960354),
-                size: U64(620082),
-                offset: [U64(0), U64(4), U64(0), U64(0)],
+                addr: make_u64(16960354),
+                size: make_u64(620082),
+                offset: [make_u64(0), make_u64(4), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(17580436),
-                size: U64(621400),
-                offset: [U64(0), U64(5), U64(0), U64(0)],
+                addr: make_u64(17580436),
+                size: make_u64(621400),
+                offset: [make_u64(0), make_u64(5), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(18201836),
-                size: U64(623531),
-                offset: [U64(0), U64(6), U64(0), U64(0)],
+                addr: make_u64(18201836),
+                size: make_u64(623531),
+                offset: [make_u64(0), make_u64(6), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(18825367),
-                size: U64(624769),
-                offset: [U64(0), U64(7), U64(0), U64(0)],
+                addr: make_u64(18825367),
+                size: make_u64(624769),
+                offset: [make_u64(0), make_u64(7), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(19450136),
-                size: U64(625784),
-                offset: [U64(0), U64(8), U64(0), U64(0)],
+                addr: make_u64(19450136),
+                size: make_u64(625784),
+                offset: [make_u64(0), make_u64(8), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(20075920),
-                size: U64(628218),
-                offset: [U64(0), U64(9), U64(0), U64(0)],
+                addr: make_u64(20075920),
+                size: make_u64(628218),
+                offset: [make_u64(0), make_u64(9), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(20704138),
-                size: U64(630153),
-                offset: [U64(0), U64(10), U64(0), U64(0)],
+                addr: make_u64(20704138),
+                size: make_u64(630153),
+                offset: [make_u64(0), make_u64(10), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(21334291),
-                size: U64(632137),
-                offset: [U64(0), U64(11), U64(0), U64(0)],
+                addr: make_u64(21334291),
+                size: make_u64(632137),
+                offset: [make_u64(0), make_u64(11), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(21966428),
-                size: U64(636257),
-                offset: [U64(0), U64(12), U64(0), U64(0)],
+                addr: make_u64(21966428),
+                size: make_u64(636257),
+                offset: [make_u64(0), make_u64(12), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(22602685),
-                size: U64(640686),
-                offset: [U64(0), U64(13), U64(0), U64(0)],
+                addr: make_u64(22602685),
+                size: make_u64(640686),
+                offset: [make_u64(0), make_u64(13), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(23243371),
-                size: U64(645195),
-                offset: [U64(0), U64(14), U64(0), U64(0)],
+                addr: make_u64(23243371),
+                size: make_u64(645195),
+                offset: [make_u64(0), make_u64(14), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(23888566),
-                size: U64(648080),
-                offset: [U64(0), U64(15), U64(0), U64(0)],
+                addr: make_u64(23888566),
+                size: make_u64(648080),
+                offset: [make_u64(0), make_u64(15), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(24536646),
-                size: U64(648877),
-                offset: [U64(0), U64(16), U64(0), U64(0)],
+                addr: make_u64(24536646),
+                size: make_u64(648877),
+                offset: [make_u64(0), make_u64(16), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(25185523),
-                size: U64(650633),
-                offset: [U64(0), U64(17), U64(0), U64(0)],
+                addr: make_u64(25185523),
+                size: make_u64(650633),
+                offset: [make_u64(0), make_u64(17), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(25836156),
-                size: U64(651287),
-                offset: [U64(0), U64(18), U64(0), U64(0)],
+                addr: make_u64(25836156),
+                size: make_u64(651287),
+                offset: [make_u64(0), make_u64(18), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(26487443),
-                size: U64(651812),
-                offset: [U64(0), U64(19), U64(0), U64(0)],
+                addr: make_u64(26487443),
+                size: make_u64(651812),
+                offset: [make_u64(0), make_u64(19), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(27139255),
-                size: U64(651851),
-                offset: [U64(0), U64(20), U64(0), U64(0)],
+                addr: make_u64(27139255),
+                size: make_u64(651851),
+                offset: [make_u64(0), make_u64(20), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(27791106),
-                size: U64(651251),
-                offset: [U64(0), U64(21), U64(0), U64(0)],
+                addr: make_u64(27791106),
+                size: make_u64(651251),
+                offset: [make_u64(0), make_u64(21), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(28442357),
-                size: U64(650736),
-                offset: [U64(0), U64(22), U64(0), U64(0)],
+                addr: make_u64(28442357),
+                size: make_u64(650736),
+                offset: [make_u64(0), make_u64(22), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(29093093),
-                size: U64(650631),
-                offset: [U64(0), U64(23), U64(0), U64(0)],
+                addr: make_u64(29093093),
+                size: make_u64(650631),
+                offset: [make_u64(0), make_u64(23), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(29743724),
-                size: U64(650372),
-                offset: [U64(0), U64(24), U64(0), U64(0)],
+                addr: make_u64(29743724),
+                size: make_u64(650372),
+                offset: [make_u64(0), make_u64(24), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(30394096),
-                size: U64(650808),
-                offset: [U64(0), U64(25), U64(0), U64(0)],
+                addr: make_u64(30394096),
+                size: make_u64(650808),
+                offset: [make_u64(0), make_u64(25), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(31044904),
-                size: U64(651059),
-                offset: [U64(0), U64(26), U64(0), U64(0)],
+                addr: make_u64(31044904),
+                size: make_u64(651059),
+                offset: [make_u64(0), make_u64(26), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(31695963),
-                size: U64(651286),
-                offset: [U64(0), U64(27), U64(0), U64(0)],
+                addr: make_u64(31695963),
+                size: make_u64(651286),
+                offset: [make_u64(0), make_u64(27), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(32347249),
-                size: U64(653155),
-                offset: [U64(0), U64(28), U64(0), U64(0)],
+                addr: make_u64(32347249),
+                size: make_u64(653155),
+                offset: [make_u64(0), make_u64(28), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(109665432),
-                size: U64(653196),
-                offset: [U64(0), U64(29), U64(0), U64(0)],
+                addr: make_u64(109665432),
+                size: make_u64(653196),
+                offset: [make_u64(0), make_u64(29), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(110318628),
-                size: U64(652437),
-                offset: [U64(0), U64(30), U64(0), U64(0)],
+                addr: make_u64(110318628),
+                size: make_u64(652437),
+                offset: [make_u64(0), make_u64(30), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(110971065),
-                size: U64(635061),
-                offset: [U64(0), U64(31), U64(0), U64(0)],
+                addr: make_u64(110971065),
+                size: make_u64(635061),
+                offset: [make_u64(0), make_u64(31), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(131602553),
-                size: U64(621858),
-                offset: [U64(1), U64(0), U64(0), U64(0)],
+                addr: make_u64(131602553),
+                size: make_u64(621858),
+                offset: [make_u64(1), make_u64(0), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(132224411),
-                size: U64(620906),
-                offset: [U64(1), U64(1), U64(0), U64(0)],
+                addr: make_u64(132224411),
+                size: make_u64(620906),
+                offset: [make_u64(1), make_u64(1), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(132845317),
-                size: U64(618985),
-                offset: [U64(1), U64(2), U64(0), U64(0)],
+                addr: make_u64(132845317),
+                size: make_u64(618985),
+                offset: [make_u64(1), make_u64(2), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(133464302),
-                size: U64(619021),
-                offset: [U64(1), U64(3), U64(0), U64(0)],
+                addr: make_u64(133464302),
+                size: make_u64(619021),
+                offset: [make_u64(1), make_u64(3), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(134083323),
-                size: U64(619270),
-                offset: [U64(1), U64(4), U64(0), U64(0)],
+                addr: make_u64(134083323),
+                size: make_u64(619270),
+                offset: [make_u64(1), make_u64(4), make_u64(0), make_u64(0)],
             },
             Chunk {
-                addr: U64(134702593),
-                size: U64(620189),
-                offset: [U64(1), U64(5), U64(0), U64(0)],
+                addr: make_u64(134702593),
+                size: make_u64(620189),
+                offset: [make_u64(1), make_u64(5), make_u64(0), make_u64(0)],
             },
         ];
+
+        let ds = Dataset::new(
+            Datatype::Int(2),
+            ByteOrder::BE,
+            [31, 32, 580, 1202],
+            chunks,
+            [1, 1, 580, 1202],
+            false,
+            None).unwrap();
+
+        ds.chunk_slices(None, None).for_each(drop);
     }
 
     #[bench]
