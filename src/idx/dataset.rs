@@ -701,6 +701,11 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
         // position in chunk of new offset
         let chunk_end = chunk_start + advanced;
 
+        debug_assert!(
+            chunk_end as usize
+                <= self.dataset.chunk_shape.iter().product::<u64>() as usize * self.dataset.dsize
+        );
+
         Some((chunk, chunk_start, chunk_end))
     }
 }
@@ -723,7 +728,9 @@ mod tests {
             ],
             [10, 10],
             false,
-            None).unwrap()
+            None,
+        )
+        .unwrap()
     }
 
     #[test]
@@ -923,18 +930,151 @@ mod tests {
                 size: make_u64(620189),
                 offset: [make_u64(1), make_u64(5), make_u64(0), make_u64(0)],
             },
+            Chunk {
+                addr: make_u64(18201836),
+                size: make_u64(623531),
+                offset: [make_u64(1), make_u64(6), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(18825367),
+                size: make_u64(624769),
+                offset: [make_u64(1), make_u64(7), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(19450136),
+                size: make_u64(625784),
+                offset: [make_u64(1), make_u64(8), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(20075920),
+                size: make_u64(628218),
+                offset: [make_u64(1), make_u64(9), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(20704138),
+                size: make_u64(630153),
+                offset: [make_u64(1), make_u64(10), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(21334291),
+                size: make_u64(632137),
+                offset: [make_u64(1), make_u64(11), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(21966428),
+                size: make_u64(636257),
+                offset: [make_u64(1), make_u64(12), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(22602685),
+                size: make_u64(640686),
+                offset: [make_u64(1), make_u64(13), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(23243371),
+                size: make_u64(645195),
+                offset: [make_u64(1), make_u64(14), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(23888566),
+                size: make_u64(648080),
+                offset: [make_u64(1), make_u64(15), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(24536646),
+                size: make_u64(648877),
+                offset: [make_u64(1), make_u64(16), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(25185523),
+                size: make_u64(650633),
+                offset: [make_u64(1), make_u64(17), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(25836156),
+                size: make_u64(651287),
+                offset: [make_u64(1), make_u64(18), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(26487443),
+                size: make_u64(651812),
+                offset: [make_u64(1), make_u64(19), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(27139255),
+                size: make_u64(651851),
+                offset: [make_u64(1), make_u64(20), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(27791106),
+                size: make_u64(651251),
+                offset: [make_u64(1), make_u64(21), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(28442357),
+                size: make_u64(650736),
+                offset: [make_u64(1), make_u64(22), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(29093093),
+                size: make_u64(650631),
+                offset: [make_u64(1), make_u64(23), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(29743724),
+                size: make_u64(650372),
+                offset: [make_u64(1), make_u64(24), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(30394096),
+                size: make_u64(650808),
+                offset: [make_u64(1), make_u64(25), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(31044904),
+                size: make_u64(651059),
+                offset: [make_u64(1), make_u64(26), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(31695963),
+                size: make_u64(651286),
+                offset: [make_u64(1), make_u64(27), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(32347249),
+                size: make_u64(653155),
+                offset: [make_u64(1), make_u64(28), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(109665432),
+                size: make_u64(653196),
+                offset: [make_u64(1), make_u64(29), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(110318628),
+                size: make_u64(652437),
+                offset: [make_u64(1), make_u64(30), make_u64(0), make_u64(0)],
+            },
+            Chunk {
+                addr: make_u64(110971065),
+                size: make_u64(635061),
+                offset: [make_u64(1), make_u64(31), make_u64(0), make_u64(0)],
+            },
         ];
 
         let ds = Dataset::new(
             Datatype::Int(2),
             ByteOrder::BE,
-            [31, 32, 580, 1202],
+            [2, 32, 580, 1202],
             chunks,
             [1, 1, 580, 1202],
             false,
-            None).unwrap();
+            None,
+        )
+        .unwrap();
 
-        ds.chunk_slices(None, Some(&[1, 4, 1, 1])).for_each(drop);
+        ds.chunk_slices(None, Some(&[2, 4, 580, 1202])).for_each(drop);
+        ds.chunk_slices(None, Some(&[2, 32, 580, 1202])).for_each(drop);
     }
 
     #[test]
