@@ -69,11 +69,17 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
         );
 
         for (c, start, end) in self.ds.chunk_slices(indices, Some(&counts)) {
+            println!("c: {:?}, s: {}, e: {}", c, start, end);
             let start = (start * dsz) as usize;
             let end = (end * dsz) as usize;
+
+            debug_assert!(start <= end);
+
             let slice_sz = end - start;
 
             if let Some(cache) = self.cache.get(&c.addr.get()) {
+                debug_assert!(start <= cache.len());
+                debug_assert!(end <= cache.len());
                 dst[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
                 let mut cache: Vec<u8> = Vec::with_capacity(c.size.get() as usize);
@@ -93,6 +99,8 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
 
                     filters::gzip::decompress(&cache, &mut decache)?;
 
+                    debug_assert_eq!(decache.len(), self.chunk_sz as usize);
+
                     decache
                 } else {
                     cache
@@ -106,6 +114,8 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
                     cache
                 };
 
+                debug_assert!(start <= cache.len());
+                debug_assert!(end <= cache.len());
                 dst[..slice_sz].copy_from_slice(&cache[start..end]);
                 self.cache.put(c.addr.get(), cache);
             }
