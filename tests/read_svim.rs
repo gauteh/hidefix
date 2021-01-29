@@ -7,6 +7,7 @@ use hidefix::prelude::*;
 
 const SVIM: &'static str = "/home/gauteh/dev/dars/data/met/ocean_avg_19600101.nc4";
 
+#[ignore]
 #[test]
 fn ocean_time() {
     use hidefix::idx::*;
@@ -36,6 +37,7 @@ fn ocean_time() {
     assert_eq!(hv, vs);
 }
 
+#[ignore]
 #[test]
 fn temp() {
     use hidefix::idx::*;
