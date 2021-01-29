@@ -69,7 +69,6 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
         );
 
         for (c, start, end) in self.ds.chunk_slices(indices, Some(&counts)) {
-            println!("c: {:?}, s: {}, e: {}", c, start, end);
             let start = (start * dsz) as usize;
             let end = (end * dsz) as usize;
 
