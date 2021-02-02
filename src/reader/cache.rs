@@ -1,10 +1,9 @@
 use std::convert::TryInto;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek};
 
 use lru::LruCache;
 
-use super::dataset::Reader;
-use crate::filters;
+use super::{dataset::Reader, chunk::read_chunk};
 use crate::filters::byteorder::Order;
 use crate::idx::Dataset;
 
@@ -81,37 +80,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
                 debug_assert!(end <= cache.len());
                 dst[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
-                let mut cache: Vec<u8> = Vec::with_capacity(c.size.get() as usize);
-                unsafe {
-                    cache.set_len(c.size.get() as usize);
-                }
-
-                self.fd.seek(SeekFrom::Start(c.addr.get()))?;
-                self.fd.read_exact(&mut cache)?;
-
-                // Decompression comes before unshuffling
-                let cache = if self.ds.gzip.is_some() {
-                    let mut decache: Vec<u8> = Vec::with_capacity(self.chunk_sz as usize);
-                    unsafe {
-                        decache.set_len(self.chunk_sz as usize);
-                    }
-
-                    filters::gzip::decompress(&cache, &mut decache)?;
-
-                    debug_assert_eq!(decache.len(), self.chunk_sz as usize);
-
-                    decache
-                } else {
-                    cache
-                };
-
-                // TODO: Keep buffers around to avoid allocations.
-                // TODO: Write directly to buf_slice when on last filter.
-                let cache = if self.ds.shuffle {
-                    filters::shuffle::unshuffle_sized(&cache, dsz as usize)
-                } else {
-                    cache
-                };
+                let cache = read_chunk(&mut self.fd, c.addr.get(), c.size.get(), self.chunk_sz, dsz, self.ds.gzip.is_some(), self.ds.shuffle, false)?;
 
                 debug_assert!(start <= cache.len());
                 debug_assert!(end <= cache.len());

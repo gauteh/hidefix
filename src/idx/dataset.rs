@@ -670,7 +670,8 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
 
                 if *idx == chunk_offset.get() && // slice starts at at chunk start (in this dimension)
                         *count == count_chunk_end && // slice ends at chunk end.
-                            self.offset < self.end // Reached end of dataset
+                            self.offset < self.end
+                // Reached end of dataset
                 {
                     continue;
                 } else {

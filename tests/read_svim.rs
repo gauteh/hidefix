@@ -63,7 +63,8 @@ fn temp() {
     let v = d.values::<i16>(None, None).unwrap();
     assert_eq!(hv, v);
 
-    d.values::<i16>(Some(&[0, 0, 0, 0]), Some(&[1, 32, 580, 1202])).unwrap();
+    d.values::<i16>(Some(&[0, 0, 0, 0]), Some(&[1, 32, 580, 1202]))
+        .unwrap();
 
     let s = i.streamer("temp").unwrap();
     let s = s.stream_values::<i16>(None, None);

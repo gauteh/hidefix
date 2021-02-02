@@ -2,15 +2,13 @@ use async_stream::stream;
 use futures::{Stream, StreamExt};
 use std::convert::TryInto;
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use bytes::Bytes;
 use lru::LruCache;
 
-use super::Streamer;
-use crate::filters;
+use super::{Streamer, chunk::read_chunk};
 use crate::filters::byteorder::{self, Order};
 use crate::idx::Dataset;
 
@@ -89,35 +87,7 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
                     debug_assert!(end <= cache.len());
                     yield Ok((cache.slice(start..end)));
                 } else {
-                    let mut cache: Vec<u8> = Vec::with_capacity(sz as usize);
-                    unsafe {
-                        cache.set_len(sz as usize);
-                    }
-
-                    fd.seek(SeekFrom::Start(addr))?;
-                    fd.read_exact(&mut cache)?;
-
-                    // TODO: Keep buffers around to avoid allocations.
-
-                    let cache = if let Some(_) = gzip {
-                        let mut decache: Vec<u8> = Vec::with_capacity(chunk_sz as usize);
-                        unsafe {
-                            decache.set_len(chunk_sz as usize);
-                        }
-
-                        tokio::task::block_in_place(||
-                            filters::gzip::decompress(&cache, &mut decache))?;
-
-                        decache
-                    } else {
-                        cache
-                    };
-
-                    let mut cache = if shuffle && dsz > 1 {
-                        filters::shuffle::unshuffle_sized(&cache, dsz as usize)
-                    } else {
-                        cache
-                    };
+                    let mut cache = read_chunk(&mut fd, addr, sz, chunk_sz, dsz, gzip.is_some(), shuffle, true)?;
 
                     // Always output big endian. This code was written for network code that need
                     // to transmit the data network-endian/big-endian in XDR format. However, this
