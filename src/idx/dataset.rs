@@ -111,7 +111,7 @@ impl DatasetD<'_> {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub enum Datatype {
     UInt(usize),
     Int(usize),
@@ -120,11 +120,11 @@ pub enum Datatype {
 }
 
 impl Datatype {
-    pub fn dsize(&self) -> Option<usize> {
+    pub fn dsize(&self) -> usize {
         use Datatype::*;
 
         match self {
-            UInt(sz) | Int(sz) | Float(sz) | Custom(sz) => Some(*sz),
+            UInt(sz) | Int(sz) | Float(sz) | Custom(sz) => *sz,
         }
     }
 }
@@ -368,9 +368,7 @@ impl<const D: usize> Dataset<'_, D> {
         C: Into<Cow<'a, [Chunk<D>]>>,
     {
         let chunks = chunks.into();
-        let dsize = dtype
-            .dsize()
-            .ok_or_else(|| anyhow!("Unknown size of data type"))?;
+        let dsize = dtype.dsize();
 
         // optimized divisor for chunk shape
         let chunk_shape_reduced = chunk_shape

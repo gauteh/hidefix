@@ -9,7 +9,8 @@ use bytes::Bytes;
 use lru::LruCache;
 
 use super::{Streamer, chunk::read_chunk};
-use crate::filters::byteorder::{self, Order};
+use crate::filters::byteorder::Order;
+use crate::filters::xdr;
 use crate::idx::Dataset;
 
 /// The stream reader is intended to be used in network applications. The cache is currently local
@@ -70,7 +71,6 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
         let shuffle = self.ds.shuffle;
         let gzip = self.ds.gzip;
         let chunk_sz = self.chunk_sz;
-        let order = self.order();
         let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
 
         (stream! {
@@ -87,12 +87,72 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
                     debug_assert!(end <= cache.len());
                     yield Ok((cache.slice(start..end)));
                 } else {
-                    let mut cache = read_chunk(&mut fd, addr, sz, chunk_sz, dsz, gzip.is_some(), shuffle, true)?;
+                    let cache = read_chunk(&mut fd, addr, sz, chunk_sz, dsz, gzip.is_some(), shuffle, true)?;
+                    let cache = Bytes::from(cache);
 
-                    // Always output big endian. This code was written for network code that need
-                    // to transmit the data network-endian/big-endian in XDR format. However, this
-                    // makes the stream inefficient for code that need to stream the values on LE-machines.
-                    byteorder::to_big_e_sized(&mut cache, order, dsz as usize)?;
+                    ds_cache.put(addr, cache.clone());
+
+                    debug_assert!(start <= cache.len());
+                    debug_assert!(end <= cache.len());
+                    yield Ok(cache.slice(start..end));
+                }
+            }
+        })
+        .boxed()
+    }
+
+    /// A stream of bytes serialized as XDR/DAP2-DODS from the variable.
+    fn stream_xdr(
+        &self,
+        indices: Option<&[u64]>,
+        counts: Option<&[u64]>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Bytes, anyhow::Error>> + Send + 'static>> {
+        let dsz = self.ds.dsize as u64;
+
+        let indices: Option<&[u64; D]> = indices
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
+        let counts: Option<&[u64; D]> = counts
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
+
+        let slices = self
+            .ds
+            .chunk_slices(indices, counts)
+            .map(|(c, a, b)| (c.addr.get(), c.size.get(), a * dsz, b * dsz))
+            .collect::<Vec<_>>();
+
+        let p = self.p.clone();
+        let shuffle = self.ds.shuffle;
+        let gzip = self.ds.gzip;
+        let chunk_sz = self.chunk_sz;
+        let order = self.order();
+        let dtype = self.ds.dtype;
+        let cache_sz = std::cmp::max(CACHE_SZ / chunk_sz, 1);
+
+        (stream! {
+            let mut fd = File::open(p)?;
+            let mut ds_cache = LruCache::<u64, Bytes>::new(cache_sz as usize);
+
+            for (addr, sz, start, end) in slices {
+                let x = xdr::xdr_factor(dtype);
+
+                let start = start as usize * x;
+                let end = end as usize * x;
+                debug_assert!(start <= end);
+
+                if let Some(cache) = ds_cache.get(&addr) {
+                    debug_assert!(start <= cache.len());
+                    debug_assert!(end <= cache.len());
+                    yield Ok((cache.slice(start..end)));
+                } else {
+                    let cache = read_chunk(&mut fd, addr, sz, chunk_sz, dsz, gzip.is_some(), shuffle, true)?;
+
+                    // Upcast 16-bit datatypes to 32-bit datatypes and swap to big-endian if
+                    // necessary.
+                    let cache = xdr::xdr(cache, dtype, order)?;
 
                     let cache = Bytes::from(cache);
                     ds_cache.put(addr, cache.clone());

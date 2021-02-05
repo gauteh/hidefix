@@ -83,8 +83,15 @@ pub trait ReaderExt: Reader {
 impl<T: ?Sized + Reader> ReaderExt for T {}
 
 pub trait Streamer {
-    /// Stream slice of dataset as chunks of `Bytes` in big endian order.
+    /// Stream slice of dataset as chunks of `Bytes`.
     fn stream(
+        &self,
+        indices: Option<&[u64]>,
+        counts: Option<&[u64]>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Bytes, anyhow::Error>> + Send + 'static>>;
+
+    /// Stream slice of dataset as chunks of `Bytes` serialized as XDR/DAP2-DODS.
+    fn stream_xdr(
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
@@ -108,6 +115,8 @@ pub trait StreamerExt: Streamer {
         T: Unpin + Send + FromByteSlice + Clone,
         [T]: ToNative,
     {
+        let order = self.order();
+
         Box::pin(self.stream(indices, counts).map(move |b| {
             let b = b?;
             let values = b.as_slice_of::<T>()?;
@@ -116,9 +125,7 @@ pub trait StreamerExt: Streamer {
             // un-aligned to the slice of values.
             let mut values = values.to_vec();
 
-            // XXX: This got a lot slower after always outputing big endian from stream(). Can probably
-            // fix that or make customizable. But need Big E for dars.
-            values.to_native(Order::BE);
+            values.to_native(order);
 
             Ok(values)
         }))

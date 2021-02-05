@@ -35,6 +35,6 @@ fn feb_nc4_double() {
     let mut vb: Vec<u8> = block_on_stream(sb).flatten().flatten().collect();
 
     let vvb = vb.as_mut_slice_of::<f64>().unwrap();
-    vvb.to_native(Order::BE);
+    // vvb.to_native(Order::BE);
     assert_eq!(hv, vvb);
 }

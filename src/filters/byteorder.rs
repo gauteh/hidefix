@@ -43,6 +43,12 @@ pub trait Swap {
     fn swap(&self) -> Self;
 }
 
+impl Swap for u8 {
+    fn swap(&self) -> Self {
+        *self
+    }
+}
+
 impl Swap for u16 {
     fn swap(&self) -> Self {
         self.swap_bytes()
@@ -58,6 +64,12 @@ impl Swap for u32 {
 impl Swap for u64 {
     fn swap(&self) -> Self {
         self.swap_bytes()
+    }
+}
+
+impl Swap for i8 {
+    fn swap(&self) -> Self {
+        *self
     }
 }
 
@@ -97,14 +109,28 @@ impl Swap for f64 {
     }
 }
 
-impl ToNative for [u8] {
-    // no-op
-    fn to_native(&mut self, _order: Order) {}
-}
-
-impl ToBigEndian for [u8] {
-    // no-op
-    fn to_big_e(&mut self, _order: Order) {}
+impl<T> ToNative for T
+    where T: Swap
+{
+    fn to_native(&mut self, order: Order) {
+        if cfg!(target_endian = "big") {
+            match order {
+                Order::BE => (),
+                Order::LE => {
+                    *self = self.swap()
+                }
+                _ => unimplemented!(),
+            }
+        } else {
+            match order {
+                Order::BE => {
+                    *self = self.swap()
+                }
+                Order::LE => (),
+                _ => unimplemented!(),
+            }
+        }
+    }
 }
 
 impl<T> ToNative for [T]
@@ -120,7 +146,7 @@ where
                         *n = n.swap()
                     }
                 }
-                _ => unimplemented!(),
+                _ => (),
             }
         } else {
             match order {
@@ -130,8 +156,23 @@ where
                     }
                 }
                 Order::LE => (),
-                _ => unimplemented!(),
+                _ => (),
             }
+        }
+    }
+}
+
+impl<T> ToBigEndian for T
+where
+    T: Swap
+{
+    fn to_big_e(&mut self, order: Order) {
+        match order {
+            Order::BE => (),
+            Order::LE => {
+                *self = self.swap();
+            }
+            _ => (),
         }
     }
 }
@@ -148,7 +189,7 @@ where
                     *n = n.swap()
                 }
             }
-            _ => unimplemented!(),
+            _ => (),
         }
     }
 }
