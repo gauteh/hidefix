@@ -109,6 +109,22 @@ impl DatasetD<'_> {
             D9(ds) => ds.dsize,
         }
     }
+
+    pub fn dtype(&self) -> Datatype {
+        use DatasetD::*;
+        match self {
+            D0(ds) => ds.dtype,
+            D1(ds) => ds.dtype,
+            D2(ds) => ds.dtype,
+            D3(ds) => ds.dtype,
+            D4(ds) => ds.dtype,
+            D5(ds) => ds.dtype,
+            D6(ds) => ds.dtype,
+            D7(ds) => ds.dtype,
+            D8(ds) => ds.dtype,
+            D9(ds) => ds.dtype,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
@@ -133,7 +149,11 @@ impl From<hdf5::Datatype> for Datatype {
     fn from(dtype: hdf5::Datatype) -> Self {
         match dtype {
             _ if dtype.is::<u8>() => Datatype::UInt(dtype.size()),
+            _ if dtype.is::<u16>() => Datatype::UInt(dtype.size()),
             _ if dtype.is::<u32>() => Datatype::UInt(dtype.size()),
+            _ if dtype.is::<u64>() => Datatype::UInt(dtype.size()),
+            _ if dtype.is::<i8>() => Datatype::Int(dtype.size()),
+            _ if dtype.is::<i16>() => Datatype::Int(dtype.size()),
             _ if dtype.is::<i32>() => Datatype::Int(dtype.size()),
             _ if dtype.is::<i64>() => Datatype::Int(dtype.size()),
             _ if dtype.is::<f32>() => Datatype::Float(dtype.size()),

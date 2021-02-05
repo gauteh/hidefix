@@ -119,4 +119,18 @@ mod tests {
             assert_eq!(s, d);
         }
     }
+
+    #[test]
+    fn test_i16() {
+        let src0 = vec![1i16, 128i16];
+        let src1 = src0.as_byte_slice().to_vec();
+        println!("{:?}", src1);
+        let x = xdr(src1, Datatype::Int(2), Order::native()).unwrap();
+        println!("{:?}", x);
+        let x = x.as_slice_of::<i32>().unwrap();
+
+        for (s, d) in izip!(src0, x) {
+            assert_eq!(s as i32, d.swap_bytes());
+        }
+    }
 }
