@@ -48,7 +48,7 @@
 #![allow(incomplete_features)]
 #![recursion_limit = "1024"]
 #![feature(test)]
-#![feature(const_generics, fixed_size_array, cow_is_borrowed, array_methods)]
+#![feature(const_generics, cow_is_borrowed, array_methods)]
 extern crate test;
 
 #[macro_use]
