@@ -44,9 +44,9 @@ rand = "0.7.3"
 rayon = "1.5.0"
 sled = "0.34.6"
 
-[patch.crates-io]
-hdf5 = { git = "https://github.com/gauteh/hdf5-rust", branch = "hidefix" }
-hdf5-sys = { git = "https://github.com/gauteh/hdf5-rust", branch = "hidefix" }
+# [patch.crates-io]
+# hdf5 = { git = "https://github.com/gauteh/hdf5-rust", branch = "hidefix" }
+# hdf5-sys = { git = "https://github.com/gauteh/hdf5-rust", branch = "hidefix" }
 
 [features]
 default = ["static"]

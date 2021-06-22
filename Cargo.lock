@@ -329,7 +329,8 @@ dependencies = [
 [[package]]
 name = "hdf5"
 version = "0.7.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#67711ccb86068286a0222e1e5b01714e2b522b8a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a863396b1828dcb188209e0d3e380433415cc4c253f80fa367b5154cc3073db0"
 dependencies = [
  "bitflags",
  "hdf5-derive",
@@ -346,7 +347,8 @@ dependencies = [
 [[package]]
 name = "hdf5-derive"
 version = "0.7.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#67711ccb86068286a0222e1e5b01714e2b522b8a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6eddba76f9d15423c8737a3f376128e3b556f01cd8927e44736ea8cc63bbcc02"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -356,7 +358,8 @@ dependencies = [
 [[package]]
 name = "hdf5-src"
 version = "0.7.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#67711ccb86068286a0222e1e5b01714e2b522b8a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64a324a112cc0e45c565b34f6fbd3fcccc680c0b10d633b27ab2f4015a17599e"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -365,7 +368,8 @@ dependencies = [
 [[package]]
 name = "hdf5-sys"
 version = "0.7.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#67711ccb86068286a0222e1e5b01714e2b522b8a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15fa1f3c5b34a7dd3815fc68aa8d64f0682e500b393b77b88f8dac206d2b16a9"
 dependencies = [
  "hdf5-src",
  "libc",
@@ -381,7 +385,8 @@ dependencies = [
 [[package]]
 name = "hdf5-types"
 version = "0.7.1"
-source = "git+https://github.com/gauteh/hdf5-rust?branch=hidefix#67711ccb86068286a0222e1e5b01714e2b522b8a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4523a5d946b3ef2a0aa1d3643a844c581794dee09934c4a8e1ffb6dbb878872e"
 dependencies = [
  "ascii",
  "libc",
