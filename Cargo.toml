@@ -29,6 +29,7 @@ libc = "0.2"
 hdf5 = "0.7"
 hdf5-sys = "0.7"
 log = "0.4"
+tokio-uring = "0.1.0"
 
 [dependencies.serde]
 features = ["derive"]
