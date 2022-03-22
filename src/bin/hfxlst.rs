@@ -21,7 +21,7 @@ fn main() -> Result<(), anyhow::Error> {
     println!("Loading index from {}..", fin);
 
     let b = std::fs::read(fin)?;
-    let idx = flexbuffers::Reader::get_root(&b)?.as_map();
+    let idx = flexbuffers::Reader::get_root(&*b)?.as_map();
 
     println!("Datasets (source path: {:?}):\n", idx.idx("path").as_str());
     println!("{:4}{:30} shape:", "", "name:");

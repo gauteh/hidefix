@@ -2,7 +2,6 @@ use futures::executor::block_on_stream;
 use futures::pin_mut;
 
 use byte_slice_cast::AsMutSliceOf;
-use hidefix::filters::byteorder::{Order, ToNative};
 use hidefix::prelude::*;
 
 #[test]
