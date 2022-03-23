@@ -26,8 +26,8 @@ serde_bytes = "0.11"
 strength_reduce = "0.2"
 zerocopy = "0.6"
 libc = "0.2"
-hdf5 = "0.7"
-hdf5-sys = "0.7"
+hdf5 = "0.8"
+hdf5-sys = "0.8"
 log = "0.4"
 tokio-uring = "0.3.0"
 
@@ -40,17 +40,17 @@ features = ["sync", "macros", "rt-multi-thread"]
 version = "1"
 
 [dev-dependencies]
-ndarray = "0.14"
+ndarray = "0.15"
 rand = "0.8"
 rayon = "1.5.0"
 sled = "0.34.6"
 
-# [patch.crates-io]
+[patch.crates-io]
 # hdf5 = { git = "https://github.com/gauteh/hdf5-rust", branch = "hidefix" }
 # hdf5-sys = { git = "https://github.com/gauteh/hdf5-rust", branch = "hidefix" }
 
 [features]
 default = ["static"]
 static = ["hdf5-sys/static", "hdf5-sys/zlib"]
-fast-index = ["static"]
+fast-index = []
 

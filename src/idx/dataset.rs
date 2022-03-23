@@ -202,14 +202,18 @@ impl<const D: usize> Dataset<'_, D> {
     pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<'static, D>, anyhow::Error> {
         ensure!(ds.ndim() == D, "Dataset rank does not match.");
 
-        let shuffle = ds.filters().get_shuffle();
-        let gzip = ds.filters().get_gzip();
+        use hdf5::filters::Filter;
+        let filters = ds.filters();
 
-        if ds.filters().get_fletcher32()
-            || ds.filters().get_scale_offset().is_some()
-            || ds.filters().get_szip().is_some()
-        {
-            return Err(anyhow!("{}: Unsupported filter", ds.name()));
+        let mut shuffle = false;
+        let mut gzip = None;
+
+        for f in filters {
+            match f {
+                Filter::Shuffle => shuffle = true,
+                Filter::Deflate(z) => gzip = Some(z),
+                _ => return Err(anyhow!("{}: Unsupported filter", ds.name()))
+            }
         }
 
         let dtype = ds.dtype()?;
@@ -222,7 +226,7 @@ impl<const D: usize> Dataset<'_, D> {
             .as_slice()
             .try_into()?;
 
-        let chunk_shape = ds.chunks().map_or_else(
+        let chunk_shape = ds.chunk().map_or_else(
             || shape,
             |cs| {
                 cs.into_iter()
@@ -234,7 +238,7 @@ impl<const D: usize> Dataset<'_, D> {
             },
         );
 
-        let mut chunks: Vec<Chunk<D>> = match (ds.num_chunks().is_some(), ds.offset()) {
+        let mut chunks: Vec<Chunk<D>> = match (ds.is_chunked(), ds.offset()) {
             // Continuous
             (false, Some(offset)) => Ok::<_, anyhow::Error>(vec![Chunk {
                 offset: [ULE::ZERO; D],

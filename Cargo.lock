@@ -318,27 +318,27 @@ dependencies = [
 
 [[package]]
 name = "hdf5"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a863396b1828dcb188209e0d3e380433415cc4c253f80fa367b5154cc3073db0"
+checksum = "bdcd9b131fd67bb827b386d0dc63d3e74196a14616ef800acf87ca5fef741a10"
 dependencies = [
  "bitflags",
+ "cfg-if",
  "hdf5-derive",
  "hdf5-sys",
  "hdf5-types",
  "lazy_static",
  "libc",
  "ndarray",
- "num-integer",
- "num-traits",
  "parking_lot",
+ "paste",
 ]
 
 [[package]]
 name = "hdf5-derive"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6eddba76f9d15423c8737a3f376128e3b556f01cd8927e44736ea8cc63bbcc02"
+checksum = "a5a77ac6a41e6880594d506118c0b8bc665ec959fe4636e0c84809756d224820"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -347,9 +347,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-src"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64a324a112cc0e45c565b34f6fbd3fcccc680c0b10d633b27ab2f4015a17599e"
+checksum = "e01493db39ddc0519cf2a83d620d2c037fee60f4fed724cb72dc23763f1727a8"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -357,9 +357,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-sys"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15fa1f3c5b34a7dd3815fc68aa8d64f0682e500b393b77b88f8dac206d2b16a9"
+checksum = "4842d5980dc311a7c8933c7b45534fdae84df5ae7939a0ae8e449a56d4beb3d2"
 dependencies = [
  "hdf5-src",
  "libc",
@@ -374,11 +374,13 @@ dependencies = [
 
 [[package]]
 name = "hdf5-types"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4523a5d946b3ef2a0aa1d3643a844c581794dee09934c4a8e1ffb6dbb878872e"
+checksum = "b47268c0dfb499b1ffe5638b6e7694e7a87fe49fb92eca998a4346e5483e428f"
 dependencies = [
  "ascii",
+ "cfg-if",
+ "hdf5-sys",
  "libc",
 ]
 
@@ -484,9 +486,9 @@ dependencies = [
 
 [[package]]
 name = "libloading"
-version = "0.6.7"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "351a32417a12d5f7e82c368a66781e307834dae04c6ce0cd4456d52989229883"
+checksum = "efbc0f03f9a775e9f6aed295c6a1ba2253c5757a9e03d55c6caa46a681abcddd"
 dependencies = [
  "cfg-if",
  "winapi",
@@ -499,7 +501,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f35facd4a5673cb5a48822be2be1d4236c1c99cb4113cab7061ac720d5bf859"
 dependencies = [
  "cc",
- "libc",
  "pkg-config",
  "vcpkg",
 ]
@@ -515,9 +516,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.15"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c4dcd960cc540667f619483fc99102f88d6118b87730e24e8fbe8054b7445e4"
+checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if",
 ]
@@ -533,9 +534,9 @@ dependencies = [
 
 [[package]]
 name = "matrixmultiply"
-version = "0.2.4"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "916806ba0031cd542105d916a97c8572e1fa6dd79c9c51e7eb43a09ec2dd84c1"
+checksum = "add85d4dd35074e6fedc608f8c8f513a3548619a9024b751949ef0e8e45a4d84"
 dependencies = [
  "rawpointer",
 ]
@@ -580,9 +581,9 @@ dependencies = [
 
 [[package]]
 name = "ndarray"
-version = "0.14.0"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c0d5c9540a691d153064dc47a4db2504587a75eae07bf1d73f7a596ebc73c04"
+checksum = "dec23e6762830658d2b3d385a75aa212af2f67a4586d4442907144f3bb6a1ca8"
 dependencies = [
  "matrixmultiply",
  "num-complex",
@@ -602,9 +603,9 @@ dependencies = [
 
 [[package]]
 name = "num-complex"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "747d632c0c558b87dbabbe6a82f3b4ae03720d0646ac5b7b4dae89394be5f2c5"
+checksum = "26873667bbbb7c5182d4a37c1add32cdf09f841af72da53318fdb81543c15085"
 dependencies = [
  "num-traits",
 ]
@@ -689,6 +690,12 @@ dependencies = [
  "smallvec",
  "winapi",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
 
 [[package]]
 name = "pin-project-lite"
@@ -1060,9 +1067,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "winreg"
-version = "0.8.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d107f8c6e916235c4c01cabb3e8acf7bea8ef6a63ca2e7fa0527c049badfc48c"
+checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "serde",
  "winapi",
