@@ -1,25 +1,28 @@
-use itertools::izip;
-use byte_slice_cast::{AsMutSliceOf, FromByteSlice};
+use super::byteorder::{to_big_e_sized, Order, ToBigEndian, ToNative};
 use crate::idx::Datatype;
-use super::byteorder::{Order, ToNative, ToBigEndian, to_big_e_sized};
+use byte_slice_cast::{AsMutSliceOf, FromByteSlice};
+use itertools::izip;
 
 pub fn xdr_factor(dtype: Datatype) -> usize {
     use Datatype::*;
 
     match dtype {
         Custom(_) => 1,
-        _ => if dtype.dsize() < 4 {
-            4 / dtype.dsize()
-        } else {
-           1
+        _ => {
+            if dtype.dsize() < 4 {
+                4 / dtype.dsize()
+            } else {
+                1
+            }
         }
     }
 }
 
 /// Upcast and convert to big-endian.
 fn xdr_cast_slice<S, D>(mut src: Vec<u8>, order: Order) -> Result<Vec<u8>, anyhow::Error>
-    where S: ToNative + FromByteSlice + Copy,
-          D: ToBigEndian + FromByteSlice + From<S> + Copy
+where
+    S: ToNative + FromByteSlice + Copy,
+    D: ToBigEndian + FromByteSlice + From<S> + Copy,
 {
     let u: &mut [S] = src.as_mut_slice_of::<S>()?;
 
@@ -27,7 +30,9 @@ fn xdr_cast_slice<S, D>(mut src: Vec<u8>, order: Order) -> Result<Vec<u8>, anyho
     assert!(scale > 1);
 
     let mut n: Vec<u8> = Vec::with_capacity(u.len() * std::mem::size_of::<D>());
-    unsafe { n.set_len(u.len() * std::mem::size_of::<D>()); }
+    unsafe {
+        n.set_len(u.len() * std::mem::size_of::<D>());
+    }
 
     let nn: &mut [D] = n.as_mut_slice_of::<D>()?;
 
@@ -46,18 +51,10 @@ pub fn xdr(mut src: Vec<u8>, dtype: Datatype, order: Order) -> Result<Vec<u8>, a
     match dtype {
         Custom(_) => Ok(src),
 
-        UInt(sz) if sz == 1 => {
-            xdr_cast_slice::<u8, u32>(src, order)
-        },
-        UInt(sz) if sz == 2 => {
-            xdr_cast_slice::<u16, u32>(src, order)
-        },
-        Int(sz) if sz == 1 => {
-            xdr_cast_slice::<i8, i32>(src, order)
-        },
-        Int(sz) if sz == 2 => {
-            xdr_cast_slice::<i16, i32>(src, order)
-        },
+        UInt(sz) if sz == 1 => xdr_cast_slice::<u8, u32>(src, order),
+        UInt(sz) if sz == 2 => xdr_cast_slice::<u16, u32>(src, order),
+        Int(sz) if sz == 1 => xdr_cast_slice::<i8, i32>(src, order),
+        Int(sz) if sz == 2 => xdr_cast_slice::<i16, i32>(src, order),
 
         _ => {
             to_big_e_sized(&mut src, order, dtype.dsize())?;
@@ -69,8 +66,8 @@ pub fn xdr(mut src: Vec<u8>, dtype: Datatype, order: Order) -> Result<Vec<u8>, a
 #[cfg(test)]
 mod tests {
     use super::*;
-    use byte_slice_cast::{AsByteSlice, AsSliceOf};
     use crate::filters::byteorder::Swap;
+    use byte_slice_cast::{AsByteSlice, AsSliceOf};
 
     #[test]
     fn dsize() {

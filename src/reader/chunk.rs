@@ -1,5 +1,5 @@
-use std::io::{Read, Seek, SeekFrom};
 use crate::filters;
+use std::io::{Read, Seek, SeekFrom};
 
 pub(crate) fn read_chunk<F>(
     fd: &mut F,
@@ -9,7 +9,7 @@ pub(crate) fn read_chunk<F>(
     dsz: u64,
     gzipped: bool,
     shuffled: bool,
-    tokio_block: bool
+    tokio_block: bool,
 ) -> Result<Vec<u8>, anyhow::Error>
 where
     F: Read + Seek,
@@ -33,8 +33,7 @@ where
 
         if tokio_block {
             // TODO: Feature guard to enable single-threaded non-tokio RT's
-            tokio::task::block_in_place(||
-                filters::gzip::decompress(&cache, &mut decache))?;
+            tokio::task::block_in_place(|| filters::gzip::decompress(&cache, &mut decache))?;
         } else {
             filters::gzip::decompress(&cache, &mut decache)?;
         }
@@ -60,4 +59,3 @@ where
 
     Ok(cache)
 }
-

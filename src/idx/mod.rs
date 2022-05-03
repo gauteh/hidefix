@@ -3,9 +3,6 @@ mod dataset;
 mod index;
 pub mod serde;
 
-#[cfg(feature = "fast-index")]
-mod chunks_iter;
-
 pub use chunk::{Chunk, ULE};
 pub use dataset::{Dataset, DatasetD, Datatype};
 pub use index::Index;

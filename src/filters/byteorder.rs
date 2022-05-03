@@ -110,22 +110,19 @@ impl Swap for f64 {
 }
 
 impl<T> ToNative for T
-    where T: Swap
+where
+    T: Swap,
 {
     fn to_native(&mut self, order: Order) {
         if cfg!(target_endian = "big") {
             match order {
                 Order::BE => (),
-                Order::LE => {
-                    *self = self.swap()
-                }
+                Order::LE => *self = self.swap(),
                 _ => unimplemented!(),
             }
         } else {
             match order {
-                Order::BE => {
-                    *self = self.swap()
-                }
+                Order::BE => *self = self.swap(),
                 Order::LE => (),
                 _ => unimplemented!(),
             }
@@ -164,7 +161,7 @@ where
 
 impl<T> ToBigEndian for T
 where
-    T: Swap
+    T: Swap,
 {
     fn to_big_e(&mut self, order: Order) {
         match order {

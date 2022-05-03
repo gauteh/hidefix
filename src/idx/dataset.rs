@@ -10,9 +10,6 @@ use super::chunk::{Chunk, ULE};
 use crate::filters::byteorder::Order as ByteOrder;
 use crate::reader::{Reader, Streamer};
 
-#[cfg(feature = "fast-index")]
-use super::chunks_iter;
-
 /// Dataset in possible dimensions.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum DatasetD<'a> {
@@ -212,7 +209,7 @@ impl<const D: usize> Dataset<'_, D> {
             match f {
                 Filter::Shuffle => shuffle = true,
                 Filter::Deflate(z) => gzip = Some(z),
-                _ => return Err(anyhow!("{}: Unsupported filter", ds.name()))
+                _ => return Err(anyhow!("{}: Unsupported filter", ds.name())),
             }
         }
 
@@ -254,27 +251,23 @@ impl<const D: usize> Dataset<'_, D> {
                 {
                     let mut v = Vec::with_capacity(n);
 
-                    hdf5::sync::sync(|| {
-                        chunks_iter::chunks_foreach(
-                            ds.id(),
-                            |offset, _filter_mask, addr, nbytes| {
-                                v.push(Chunk {
-                                    offset: offset
-                                        .iter()
-                                        .zip(chunk_shape.as_slice())
-                                        .map(|(o, s)| ULE::new(*o * *s))
-                                        .collect::<Vec<_>>()
-                                        .as_slice()
-                                        .try_into()
-                                        .unwrap(),
-                                    size: ULE::new(nbytes as u64),
-                                    addr: ULE::new(addr),
-                                });
+                    ds.chunks_visit(|ci| {
+                        v.push(Chunk {
+                            offset: ci
+                                .offset
+                                .iter()
+                                .zip(chunk_shape.as_slice())
+                                .map(|(o, s)| ULE::new(*o * *s))
+                                .collect::<Vec<_>>()
+                                .as_slice()
+                                .try_into()
+                                .unwrap(),
+                            size: ULE::new(ci.size as u64),
+                            addr: ULE::new(ci.addr),
+                        });
 
-                                0
-                            },
-                        );
-                    });
+                        0
+                    })?;
 
                     Ok(v)
                 }

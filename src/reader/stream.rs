@@ -8,7 +8,7 @@ use std::pin::Pin;
 use bytes::Bytes;
 use lru::LruCache;
 
-use super::{Streamer, chunk::read_chunk};
+use super::{chunk::read_chunk, Streamer};
 use crate::filters::byteorder::Order;
 use crate::filters::xdr;
 use crate::idx::Dataset;

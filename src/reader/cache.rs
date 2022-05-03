@@ -3,7 +3,7 @@ use std::io::{Read, Seek};
 
 use lru::LruCache;
 
-use super::{dataset::Reader, chunk::read_chunk};
+use super::{chunk::read_chunk, dataset::Reader};
 use crate::filters::byteorder::Order;
 use crate::idx::Dataset;
 
@@ -80,7 +80,16 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
                 debug_assert!(end <= cache.len());
                 dst[..slice_sz].copy_from_slice(&cache[start..end]);
             } else {
-                let cache = read_chunk(&mut self.fd, c.addr.get(), c.size.get(), self.chunk_sz, dsz, self.ds.gzip.is_some(), self.ds.shuffle, false)?;
+                let cache = read_chunk(
+                    &mut self.fd,
+                    c.addr.get(),
+                    c.size.get(),
+                    self.chunk_sz,
+                    dsz,
+                    self.ds.gzip.is_some(),
+                    self.ds.shuffle,
+                    false,
+                )?;
 
                 debug_assert!(start <= cache.len());
                 debug_assert!(end <= cache.len());

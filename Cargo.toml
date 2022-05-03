@@ -55,7 +55,7 @@ hdf5-sys = { git = "https://github.com/mulimoen/hdf5-rust", branch = "feature/ch
 hdf5-src = { git = "https://github.com/mulimoen/hdf5-rust", branch = "feature/chunks-iter" }
 
 [features]
-default = ["static"]
+default = ["static", "fast-index"]
 static = ["hdf5-sys/static", "hdf5-sys/zlib"]
 fast-index = ["hdf5-src/1_13"]
 
