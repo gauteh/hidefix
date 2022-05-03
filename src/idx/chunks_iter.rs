@@ -82,6 +82,7 @@ where
     let voidptr: *mut c_void = unsafe { std::mem::transmute(rcptr) };
 
     let e = hdf5::sync::sync(|| unsafe { H5Dchunk_iter(dset, Some(chunks_cb::<F>), voidptr) });
+    dbg!(e);
 
     assert!(e >= 0);
 }
