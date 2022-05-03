@@ -197,9 +197,10 @@ pub struct Dataset<'a, const D: usize> {
 
 impl<const D: usize> Dataset<'_, D> {
     pub fn index(ds: &hdf5::Dataset) -> Result<Dataset<'static, D>, anyhow::Error> {
+        use hdf5::filters::Filter;
+
         ensure!(ds.ndim() == D, "Dataset rank does not match.");
 
-        use hdf5::filters::Filter;
         let filters = ds.filters();
 
         let mut shuffle = false;

@@ -1,7 +1,7 @@
 #![feature(test)]
 extern crate test;
 use futures::executor::block_on_stream;
-use futures::{future, pin_mut, Stream, StreamExt};
+use futures::{pin_mut, Stream, StreamExt};
 use hidefix::prelude::*;
 use test::Bencher;
 

@@ -18,7 +18,7 @@ mod meps {
         let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
         let d = h.dataset("x_wind_ml").unwrap();
         let hv = d
-            .read_slice_1d::<i32, _,>(s![0..2, 0..2, 0..1, 0..5])
+            .read_slice_1d::<i32, _>(s![0..2, 0..2, 0..1, 0..5])
             .unwrap()
             .iter()
             .map(|v| *v)

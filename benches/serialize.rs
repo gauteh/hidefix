@@ -89,7 +89,7 @@ mod serde_bincode {
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_bincode_sled(b: &mut Bencher) {
+    fn deserialize_meps_bincode_db_sled(b: &mut Bencher) {
         let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
 
         let bts = bincode::serialize(&i).unwrap();
@@ -110,7 +110,7 @@ mod serde_bincode {
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_bincode_sled_only_read(b: &mut Bencher) {
+    fn deserialize_meps_bincode_db_sled_only_read(b: &mut Bencher) {
         let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
 
         let bts = bincode::serialize(&i).unwrap();
