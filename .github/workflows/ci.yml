@@ -1,0 +1,134 @@
+---
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: ${{matrix.command}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {command: fmt, rust: nightly}
+          - {command: clippy, rust: nightly}
+          - {command: doc, rust: nightly}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust (${{matrix.rust}})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: '${{matrix.rust}}'
+          override: true
+          components: 'rustfmt, clippy'
+      - name: Run cargo ${{matrix.command}}
+        uses: actions-rs/cargo@v1
+        with:
+          command: ${{matrix.command}}
+          args: "${{matrix.command == 'fmt' && '--all -- --check' || matrix.command == 'doc' && '--workspace' || '--workspace -- -D warnings -D clippy::cargo -D clippy::pedantic'}}"
+
+  test:
+    name: Test
+    runs-on: ubuntu-${{matrix.ubuntu}}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {ubuntu: 20.04, rust: nightly}
+          - {ubuntu: 20.04, rust: nightly}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust (${{matrix.rust}})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: '${{matrix.rust}}'
+          profile: minimal
+          override: true
+      - name: Build and test all crates
+        run: cargo test -vv --workspace
+      - name: Build examples
+        run: cargo b --examples --verbose
+
+  bench:
+    name: Benchmark
+    runs-on: ubuntu-${{matrix.ubuntu}}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {ubuntu: 20.04, rust: nightly}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust (${{matrix.rust}})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: '${{matrix.rust}}'
+          profile: minimal
+          override: true
+      - name: Build and bench
+        run: cargo bench -vv --workspace
+
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+      - name: Install cargo audit
+        run: cargo install cargo-audit
+      - name: Run cargo audit
+        run: cargo audit
+
+  codecov:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+      - name: Run code coverage
+        run: cargo tarpaulin --verbose --out Xml --ignore-tests
+      - name: Upload code coverage
+        run: bash <(curl -s https://codecov.io/bash)
+
+  addr_san:
+    name: Address sanitizer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+      - name: Run test with sanitizer
+        run: env RUSTFLAGS="-Z sanitizer=address" cargo test --target x86_64-unknown-linux-gnu --workspace
