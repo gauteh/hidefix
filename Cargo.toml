@@ -41,6 +41,7 @@ features = ["sync", "macros", "rt-multi-thread"]
 version = "1"
 
 [dev-dependencies]
+heed = "0.11.0"
 ndarray = "0.15"
 rand = "0.8"
 rayon = "1.5.0"
