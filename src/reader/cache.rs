@@ -57,7 +57,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
             .map(|i| i.try_into())
             .map_or(Ok(None), |v| v.map(Some))
             .unwrap();
-        let counts: &[u64; D] = counts.unwrap_or_else(|| &self.ds.shape);
+        let counts: &[u64; D] = counts.unwrap_or(&self.ds.shape);
 
         let dsz = self.ds.dsize as u64;
         let vsz = counts.iter().product::<u64>() * dsz;
@@ -67,7 +67,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
             "destination buffer has insufficient capacity"
         );
 
-        for (c, start, end) in self.ds.chunk_slices(indices, Some(&counts)) {
+        for (c, start, end) in self.ds.chunk_slices(indices, Some(counts)) {
             let start = (start * dsz) as usize;
             let end = (end * dsz) as usize;
 

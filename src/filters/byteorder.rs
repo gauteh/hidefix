@@ -93,19 +93,13 @@ impl Swap for i64 {
 
 impl Swap for f32 {
     fn swap(&self) -> Self {
-        unsafe {
-            let int = *(self as *const f32 as *const u32);
-            *(&int.to_be() as *const u32 as *const f32)
-        }
+        Self::from_bits(self.to_bits().to_be())
     }
 }
 
 impl Swap for f64 {
     fn swap(&self) -> Self {
-        unsafe {
-            let int = *(self as *const f64 as *const u64);
-            *(&int.to_be() as *const u64 as *const f64)
-        }
+        Self::from_bits(self.to_bits().to_be())
     }
 }
 

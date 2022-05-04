@@ -28,31 +28,7 @@ impl TryFrom<&hdf5::File> for Index<'_> {
     type Error = anyhow::Error;
 
     fn try_from(f: &hdf5::File) -> Result<Index<'static>, anyhow::Error> {
-        // Get file path
-        //
-        // XXX: Maybe this should be moved into Index::index, users would still be free to provide
-        // a path to the readers.
-        use hdf5_sys::h5f::H5Fget_name;
-        use std::ffi::OsString;
-        use std::os::unix::ffi::OsStringExt;
-
-        let path = hdf5::sync::sync(|| {
-            let sz: usize = unsafe { H5Fget_name(f.id(), std::ptr::null_mut(), 0) } as usize; // size without trailing 0
-
-            ensure!(sz > 0, "No path available");
-
-            let mut name = vec![0u8; sz + 1];
-            ensure!(
-                unsafe { H5Fget_name(f.id(), name.as_mut_ptr() as *mut _, sz + 1) } as usize == sz,
-                "Mismatching length of path"
-            );
-
-            name.pop(); // remove trailing 0
-
-            let name = OsString::from_vec(name);
-
-            Ok(PathBuf::from(&name))
-        })?;
+        let path = PathBuf::from(&f.filename());
 
         Index::index_file(f, Some(path))
     }
@@ -116,7 +92,7 @@ impl Index<'_> {
         let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
         match self.dataset(ds) {
-            Some(ds) => ds.as_reader(&path),
+            Some(ds) => ds.as_reader(path),
             None => Err(anyhow!("dataset does not exist")),
         }
     }
@@ -132,7 +108,7 @@ impl Index<'_> {
         let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
         match self.dataset(ds) {
-            Some(ds) => ds.as_streamer(&path),
+            Some(ds) => ds.as_streamer(path),
             None => Err(anyhow!("dataset does not exist")),
         }
     }

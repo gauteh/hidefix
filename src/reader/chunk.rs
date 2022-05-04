@@ -16,20 +16,14 @@ where
 {
     debug_assert!(dsz < 16); // unlikely data-size
 
-    let mut cache: Vec<u8> = Vec::with_capacity(size as usize);
-    unsafe {
-        cache.set_len(size as usize);
-    }
+    let mut cache: Vec<u8> = vec![0; size as usize];
 
     fd.seek(SeekFrom::Start(addr))?;
     fd.read_exact(&mut cache)?;
 
     // Decompress
     let cache = if gzipped {
-        let mut decache: Vec<u8> = Vec::with_capacity(chunk_sz as usize);
-        unsafe {
-            decache.set_len(chunk_sz as usize);
-        }
+        let mut decache = vec![0; chunk_sz as usize];
 
         if tokio_block {
             // TODO: Feature guard to enable single-threaded non-tokio RT's
