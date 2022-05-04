@@ -215,3 +215,49 @@ mod serde_db_heed {
         })
     }
 }
+
+mod serde_db_redis {
+    // Requires redis: docker run --rm -p 6379:6379 redis
+
+    use super::*;
+    use redis::Commands;
+
+    #[ignore]
+    #[bench]
+    fn deserialize_meps_bincode(b: &mut Bencher) {
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+
+        let bts = bincode::serialize(&i).unwrap();
+
+        let mut db = redis::Client::open("redis://:@127.1:6379")
+            .unwrap()
+            .get_connection()
+            .unwrap();
+
+        db.set::<_, _, ()>("meps", bts.as_slice()).unwrap();
+
+        b.iter(|| {
+            let nbts: Vec<u8> = db.get("meps").unwrap();
+            test::black_box(bincode::deserialize::<Index>(&nbts).unwrap());
+        })
+    }
+
+    #[ignore]
+    #[bench]
+    fn deserialize_meps_bincode_only_read(b: &mut Bencher) {
+        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+
+        let bts = bincode::serialize(&i).unwrap();
+
+        let mut db = redis::Client::open("redis://:@127.1:6379")
+            .unwrap()
+            .get_connection()
+            .unwrap();
+
+        db.set::<_, _, ()>("meps", bts.as_slice()).unwrap();
+
+        b.iter(|| {
+            let _nbts: Vec<u8> = test::black_box(db.get("meps").unwrap());
+        })
+    }
+}
