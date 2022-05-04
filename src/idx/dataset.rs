@@ -60,16 +60,16 @@ impl DatasetD<'_> {
         use DatasetD::*;
 
         Ok(match self {
-            D0(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D1(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D2(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D3(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D4(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D5(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D6(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D7(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D8(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
-            D9(ds) => Box::new(CacheReader::with_dataset(&ds, fs::File::open(path)?)?),
+            D0(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D1(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D2(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D3(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D4(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D5(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D6(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D7(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D8(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+            D9(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
         })
     }
 
@@ -78,16 +78,16 @@ impl DatasetD<'_> {
         use DatasetD::*;
 
         Ok(match self {
-            D0(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D1(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D2(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D3(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D4(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D5(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D6(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D7(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D8(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
-            D9(ds) => Box::new(StreamReader::with_dataset(&ds, path)?),
+            D0(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D1(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D2(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D3(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D4(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D5(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D6(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D7(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D8(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
+            D9(ds) => Box::new(StreamReader::with_dataset(ds, path)?),
         })
     }
 
@@ -275,59 +275,30 @@ impl<const D: usize> Dataset<'_, D> {
 
                 #[cfg(not(feature = "fast-index"))]
                 {
-                    // Avoiding Dataset::chunk_info() because of hdf5-rs Register accumulating
-                    // Handle's and growing out of hand.
-                    //
-                    // See: https://github.com/aldanor/hdf5-rust/issues/76
-                    use hdf5_sys::h5d::{H5Dget_chunk_info, H5Dget_space};
-                    use hdf5_sys::h5s::H5Sclose;
+                    let chunks = (0..n)
+                        .map(|i| {
+                            let chunk = ds.chunk_info(i).unwrap();
 
-                    let dsid = ds.id();
-                    let space = unsafe { H5Dget_space(dsid) };
+                            ensure!(
+                                chunk.filter_mask == 0,
+                                "mismatching filter mask with dataset filter mask"
+                            );
 
-                    let mut offset = [0u64; D];
-                    let mut filter_mask: u32 = 0;
-                    let mut addr: u64 = 0;
-                    let mut size: u64 = 0;
-
-                    let chunks = hdf5::sync::sync(|| {
-                        (0..n)
-                            .map(|i| {
-                                let e = unsafe {
-                                    H5Dget_chunk_info(
-                                        dsid,
-                                        space,
-                                        i as _,
-                                        offset.as_mut_ptr(),
-                                        &mut filter_mask,
-                                        &mut addr,
-                                        &mut size,
-                                    )
-                                };
-
-                                ensure!(e == 0, "Failed to get chunk: {} in {}", i, ds.name()); // TODO: Maybe ds.name() deadlocks?
-                                ensure!(
-                                    filter_mask == 0,
-                                    "mismatching filter mask with dataset filter mask"
-                                );
-
-                                Ok(Chunk {
-                                    offset: offset
-                                        .iter()
-                                        .cloned()
-                                        .map(ULE::new)
-                                        .collect::<Vec<_>>()
-                                        .as_slice()
-                                        .try_into()
-                                        .unwrap(),
-                                    size: ULE::new(size),
-                                    addr: ULE::new(addr),
-                                })
+                            Ok(Chunk {
+                                offset: chunk
+                                    .offset
+                                    .iter()
+                                    .cloned()
+                                    .map(ULE::new)
+                                    .collect::<Vec<_>>()
+                                    .as_slice()
+                                    .try_into()
+                                    .unwrap(),
+                                size: ULE::new(chunk.size),
+                                addr: ULE::new(chunk.addr),
                             })
-                            .collect()
-                    });
-
-                    unsafe { H5Sclose(space) };
+                        })
+                        .collect();
 
                     chunks
                 }

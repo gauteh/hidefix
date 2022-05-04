@@ -28,7 +28,7 @@ zerocopy = "0.6"
 libc = "0.2"
 hdf5 = "0.8"
 hdf5-sys = "0.8"
-hdf5-src = "*"
+hdf5-src = "0.8"
 log = "0.4"
 tokio-uring = "0.3.0"
 

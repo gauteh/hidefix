@@ -104,13 +104,12 @@ where
     T: ToByteSlice + Copy,
 {
     let src = src.as_byte_slice();
-    let mut dest: Vec<u8> = Vec::with_capacity(src.len());
-    unsafe { dest.set_len(src.len()) };
+    let mut dest: Vec<u8> = vec![0; src.len()];
 
     match sz {
         1 => {
             // noop
-            dest.copy_from_slice(&src);
+            dest.copy_from_slice(src);
         }
         2 => {
             unshuffle_structured::<2>(src, &mut dest);

@@ -29,10 +29,7 @@ where
     let scale: usize = std::mem::size_of::<D>() / std::mem::size_of::<S>();
     assert!(scale > 1);
 
-    let mut n: Vec<u8> = Vec::with_capacity(u.len() * std::mem::size_of::<D>());
-    unsafe {
-        n.set_len(u.len() * std::mem::size_of::<D>());
-    }
+    let mut n: Vec<u8> = vec![0; u.len() * std::mem::size_of::<D>()];
 
     let nn: &mut [D] = n.as_mut_slice_of::<D>()?;
 
