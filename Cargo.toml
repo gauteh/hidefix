@@ -45,6 +45,8 @@ ndarray = "0.15"
 rand = "0.8"
 rayon = "1.5.0"
 sled = "0.34.6"
+sqlx = { version = "0.5", features = [ "macros", "sqlite", "runtime-tokio-rustls" ] }
+tempfile = "3.3.0"
 
 [patch.crates-io]
 hdf5 = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix" }
