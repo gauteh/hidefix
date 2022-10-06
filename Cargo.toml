@@ -8,6 +8,10 @@ repository = "https://github.com/gauteh/hidefix"
 description = "Concurrent HDF5 and NetCDF4 reader (experimental)"
 version = "0.5.2"
 
+[lib]
+name = "hidefix"
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 anyhow = "1"
 async-stream = "0.3"
@@ -31,6 +35,7 @@ hdf5-sys = "0.8"
 hdf5-src = "0.8"
 log = "0.4"
 tokio-uring = "0.3.0"
+pyo3 = { version = "0.17.1", features = ["extension-module"] }
 
 [dependencies.serde]
 features = ["derive"]
