@@ -35,7 +35,7 @@ hdf5-sys = "0.8"
 hdf5-src = "0.8"
 log = "0.4"
 tokio-uring = "0.3.0"
-pyo3 = { version = "0.17.3", features = ["extension-module"] }
+pyo3 = { version = "0.17.3", optional = true, features = ["extension-module"] }
 
 [dependencies.serde]
 features = ["derive"]
@@ -60,4 +60,5 @@ hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix"
 default = ["static", "fast-index"]
 static = ["hdf5-sys/static", "hdf5-sys/zlib"]
 fast-index = ["hdf5-src/1_13"]
+python = [ "pyo3" ]
 

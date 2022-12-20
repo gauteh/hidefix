@@ -14,3 +14,4 @@ classifiers = [
 
 [tool.maturin]
 python-source = "python"
+features = [ "static", "python", "fast-index" ]

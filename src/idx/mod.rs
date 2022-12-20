@@ -31,8 +31,6 @@ impl IntoIndex for hdf5::File {
     type Indexed = Index<'static>;
 
     fn index(&self) -> anyhow::Result<Self::Indexed> {
-        use std::convert::TryInto;
-
         self.try_into()
     }
 }

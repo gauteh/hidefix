@@ -65,3 +65,7 @@ pub mod prelude {
     pub use super::idx::{Index, IntoIndex};
     pub use super::reader::{Reader, ReaderExt, Streamer, StreamerExt};
 }
+
+#[cfg(feature = "python")]
+pub mod python;
+
