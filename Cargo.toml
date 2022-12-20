@@ -1,6 +1,6 @@
 [package]
 authors = ["Gaute Hope <eg@gaute.vetsj.com>"]
-edition = "2018"
+edition = "2021"
 keywords = ["hdf", "async", "concurrency"]
 license = "LGPL-3.0-or-later"
 name = "hidefix"
@@ -35,7 +35,7 @@ hdf5-sys = "0.8"
 hdf5-src = "0.8"
 log = "0.4"
 tokio-uring = "0.3.0"
-pyo3 = { version = "0.17.1", features = ["extension-module"] }
+pyo3 = { version = "0.17.3", features = ["extension-module"] }
 
 [dependencies.serde]
 features = ["derive"]
