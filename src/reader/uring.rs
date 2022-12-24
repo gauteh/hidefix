@@ -3,7 +3,7 @@ use std::path::Path;
 // use super::{chunk::read_chunk, dataset::Reader};
 use super::{chunk::read_chunk, dataset::Reader};
 use crate::filters::byteorder::Order;
-use crate::idx::Dataset;
+use crate::idx::{Chunk, Dataset};
 
 pub struct UringReader<'a, const D: usize> {
     ds: &'a Dataset<'a, D>,
@@ -69,43 +69,51 @@ impl<'a, const D: usize> Reader for UringReader<'a, D> {
                 *offset = *offset + slice_sz;
 
                 Some((current, c, start, end))
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
 
-        // Sort chunks by chunk order, not destination address.
+        // Sort chunk file address, not destination address.
         chunks.sort_unstable_by_key(|(current, c, start, end)| c.addr.get());
 
-        // for (c, start, end) in self.ds.chunk_slices(indices, Some(counts)) {
-        //     let start = (start * dsz) as usize;
-        //     let end = (end * dsz) as usize;
+        // Group by chunk
+        let mut groups = Vec::<(&Chunk<D>, Vec<(u64, u64, u64)>)>::new();
 
-        //     debug_assert!(start <= end);
+        for (current, c, start, end) in chunks.iter() {
+            match groups.last_mut() {
+                Some((group_chunk, segments)) if *group_chunk == *c => {
+                    segments.push((*current, *start, *end));
+                }
+                _ => {
+                    groups.push((c, vec![(*current, *start, *end)]));
+                }
+            }
+        }
 
-        //     let slice_sz = end - start;
+        for (c, segments) in groups {
+            // Read chunk
+            let cache = read_chunk(
+                &mut self.fd,
+                c.addr.get(),
+                c.size.get(),
+                self.chunk_sz,
+                dsz,
+                self.ds.gzip.is_some(),
+                self.ds.shuffle,
+                false,
+            )?;
 
-        //     if let Some(cache) = self.cache.get(&c.addr.get()) {
-        //         debug_assert!(start <= cache.len());
-        //         debug_assert!(end <= cache.len());
-        //         dst[..slice_sz].copy_from_slice(&cache[start..end]);
-        //     } else {
-        //         let cache = read_chunk(
-        //             &mut self.fd,
-        //             c.addr.get(),
-        //             c.size.get(),
-        //             self.chunk_sz,
-        //             dsz,
-        //             self.ds.gzip.is_some(),
-        //             self.ds.shuffle,
-        //             false,
-        //         )?;
+            for (current, start, end) in segments {
+                let start = start as usize;
+                let end = end as usize;
+                let current = current as usize;
 
-        //         debug_assert!(start <= cache.len());
-        //         debug_assert!(end <= cache.len());
-        //         dst[..slice_sz].copy_from_slice(&cache[start..end]);
-        //         self.cache.put(c.addr.get(), cache);
-        //     }
+                debug_assert!(start <= cache.len());
+                debug_assert!(end <= cache.len());
 
-        //     dst = &mut dst[slice_sz..];
-        // }
+                let sz = end - start;
+                dst[current..(current + sz)].copy_from_slice(&cache[start..end]);
+            }
+        }
 
         Ok(vsz as usize)
     }
