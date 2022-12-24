@@ -34,7 +34,7 @@ hdf5 = "0.8"
 hdf5-sys = "0.8"
 hdf5-src = "0.8"
 log = "0.4"
-tokio-uring = "0.3.0"
+tokio-uring = "0.4.0"
 pyo3 = { version = "0.17.3", optional = true, features = ["extension-module"] }
 
 [dependencies.serde]

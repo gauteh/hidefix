@@ -73,7 +73,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for UringReader<'a, R, D> {
             })
             .collect::<Vec<_>>();
 
-        // Sort chunk file address, not destination address.
+        // Sort by chunk file address, not destination address.
         chunks.sort_unstable_by_key(|(_current, c, _start, _end)| c.addr.get());
 
         // Group by chunk
