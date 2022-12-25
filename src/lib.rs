@@ -49,6 +49,7 @@
 #![recursion_limit = "1024"]
 #![feature(test)]
 #![feature(cow_is_borrowed, array_methods)]
+#![feature(assert_matches)]
 extern crate test;
 
 #[macro_use]

@@ -14,7 +14,7 @@ fn coads(b: &mut Bencher) {
     } else {
         panic!()
     };
-    let mut r = UringReader::with_dataset(ds, fs::File::open(i.path().unwrap()).unwrap()).unwrap();
+    let mut r = UringReader::with_dataset(ds, i.path().unwrap()).unwrap();
 
 
     b.iter(|| r.values::<f32>(None, None).unwrap())

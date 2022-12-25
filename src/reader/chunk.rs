@@ -53,3 +53,41 @@ where
 
     Ok(cache)
 }
+
+pub(crate) fn decode_chunk(
+    chunk: Vec<u8>,
+    chunk_sz: u64,
+    dsz: u64,
+    gzipped: bool,
+    shuffled: bool,
+) -> Result<Vec<u8>, anyhow::Error>
+{
+    debug_assert!(dsz < 16); // unlikely data-size
+
+    // Decompress
+    let cache = if gzipped {
+        let mut decache = vec![0; chunk_sz as usize];
+
+        filters::gzip::decompress(&chunk, &mut decache)?;
+
+        debug_assert_eq!(decache.len(), chunk_sz as usize);
+
+        decache
+    } else {
+        chunk
+    };
+
+    // Unshuffle
+    // TODO: Keep buffers around to avoid allocations.
+    // TODO: Write directly to buf_slice when on last filter.
+    let cache = if shuffled && dsz > 1 {
+        filters::shuffle::unshuffle_sized(&cache, dsz as usize)
+    } else {
+        cache
+    };
+
+    // TODO:
+    // * more filters..
+
+    Ok(cache)
+}
