@@ -129,7 +129,7 @@ impl<'a, const D: usize> UringReader<'a, D> {
 
         // Extract segments from chunks to destination vector
         //
-        // TODO:This can also be done in the paralle operation above, when I figure out
+        // TODO:This can also be done in the parallel operation above, when I figure out
         // hwo to split the destination vector.
         for (c, segments, chunk) in chunks {
             for (current, start, end) in segments {
@@ -288,8 +288,8 @@ impl<'a, const D: usize> Reader for UringReader<'a, D> {
         counts: Option<&[u64]>,
         dst: &mut [u8],
     ) -> Result<usize, anyhow::Error> {
-        let sz = self.read_to_par(indices, counts, dst)?;
-        return Ok(sz as usize);
+        // let sz = self.read_to_par(indices, counts, dst)?;
+        // return Ok(sz as usize);
 
         let indices: Option<&[u64; D]> = indices
             .map(|i| i.try_into())
