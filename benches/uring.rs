@@ -30,7 +30,5 @@ fn coads_uring(b: &mut Bencher) {
     let r = UringReader::with_dataset(ds, i.path().unwrap()).unwrap();
 
 
-    tokio_uring::start(async {
-        b.iter(|| futures::executor::block_on(r.values_uring::<f32>(None, None)).unwrap())
-    });
+    b.iter(|| tokio_uring::start(async {r.values_uring::<f32>(None, None).await.unwrap() }));
 }

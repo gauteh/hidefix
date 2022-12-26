@@ -67,6 +67,8 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
             "destination buffer has insufficient capacity"
         );
 
+        self.cache.clear();
+
         for (c, start, end) in self.ds.chunk_slices(indices, Some(counts)) {
             let start = (start * dsz) as usize;
             let end = (end * dsz) as usize;

@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
-use byte_slice_cast::{AsMutByteSlice, ToMutByteSlice};
 use crate::filters::byteorder::{Order, ToNative};
+use byte_slice_cast::{AsMutByteSlice, ToMutByteSlice};
+use std::path::{Path, PathBuf};
 
 use super::{
-    chunk::{decode_chunk, read_chunk},
+    chunk::{decode_chunk, read_chunk, read_chunk_to},
     dataset::Reader,
 };
 use crate::idx::{Chunk, Dataset};
@@ -66,6 +66,88 @@ impl<'a, const D: usize> UringReader<'a, D> {
         groups
     }
 
+    pub fn read_to_par(
+        &self,
+        indices: Option<&[u64]>,
+        counts: Option<&[u64]>,
+        dst: &mut [u8],
+    ) -> Result<u64, anyhow::Error> {
+        use rayon::prelude::*;
+
+        let indices: Option<&[u64; D]> = indices
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
+
+        let counts: Option<&[u64; D]> = counts
+            .map(|i| i.try_into())
+            .map_or(Ok(None), |v| v.map(Some))
+            .unwrap();
+
+        let counts: &[u64; D] = counts.unwrap_or(&self.ds.shape);
+
+        let dsz = self.ds.dsize as u64;
+        let vsz = counts.iter().product::<u64>() * dsz;
+
+        ensure!(
+            dst.len() >= vsz as usize,
+            "destination buffer has insufficient capacity"
+        );
+
+        let groups = self.group_chunks(indices, counts);
+
+        let mut fd = std::fs::File::open(&self.path)?;
+
+        // Read all chunks sequentially: maybe this is too big?
+        let chunks = groups
+            .iter()
+            .map(|(c, segments)| {
+                let mut chunk = vec![0u8; c.size.get() as usize];
+                read_chunk_to(&mut fd, c.addr.get(), &mut chunk)?;
+                Ok(chunk)
+            })
+            .collect::<Result<Vec<Vec<u8>>, anyhow::Error>>()?;
+
+        // Decode chunks in parallel
+        let chunks = groups
+            .into_par_iter()
+            .zip(chunks)
+            .map(|((c, segments), chunk)| {
+                Ok((
+                    c,
+                    segments,
+                    decode_chunk(
+                        chunk,
+                        self.chunk_sz,
+                        dsz,
+                        self.ds.gzip.is_some(),
+                        self.ds.shuffle,
+                    )?,
+                ))
+            })
+            .collect::<Result<Vec<_>, anyhow::Error>>()?;
+
+        // Extract segments from chunks to destination vector
+        //
+        // TODO:This can also be done in the paralle operation above, when I figure out
+        // hwo to split the destination vector.
+        for (c, segments, chunk) in chunks {
+            for (current, start, end) in segments {
+                let start = (start * dsz) as usize;
+                let end = (end * dsz) as usize;
+                let current = (current * dsz) as usize;
+
+                debug_assert!(start <= chunk.len());
+                debug_assert!(end <= chunk.len());
+
+                let sz = end - start;
+                dst[current..(current + sz)].copy_from_slice(&chunk[start..end]);
+            }
+        }
+
+        Ok(vsz)
+    }
+
     /// Must be called from within a `tokio_uring` runtime.
     pub async fn read_to_uring(
         &self,
@@ -73,9 +155,9 @@ impl<'a, const D: usize> UringReader<'a, D> {
         counts: Option<&[u64]>,
         dst: &mut [u8],
     ) -> Result<u64, anyhow::Error> {
-        use std::assert_matches::assert_matches;
         use futures::stream::FuturesOrdered;
         use futures::{FutureExt, StreamExt};
+        use std::assert_matches::assert_matches;
         use tokio_uring::fs::File;
 
         let indices: Option<&[u64; D]> = indices
@@ -206,6 +288,9 @@ impl<'a, const D: usize> Reader for UringReader<'a, D> {
         counts: Option<&[u64]>,
         dst: &mut [u8],
     ) -> Result<usize, anyhow::Error> {
+        let sz = self.read_to_par(indices, counts, dst)?;
+        return Ok(sz as usize);
+
         let indices: Option<&[u64; D]> = indices
             .map(|i| i.try_into())
             .map_or(Ok(None), |v| v.map(Some))
@@ -294,9 +379,7 @@ mod tests {
         };
         let r = UringReader::with_dataset(ds, i.path().unwrap()).unwrap();
 
-        let vs = tokio_uring::start(async {
-            r.values_uring::<f32>(None, None).await.unwrap()
-        });
+        let vs = tokio_uring::start(async { r.values_uring::<f32>(None, None).await.unwrap() });
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("SST").unwrap().read_raw::<f32>().unwrap();

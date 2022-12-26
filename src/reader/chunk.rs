@@ -1,6 +1,19 @@
 use crate::filters;
 use std::io::{Read, Seek, SeekFrom};
 
+pub(crate) fn read_chunk_to<F>(
+    fd: &mut F,
+    addr: u64,
+    dst: &mut [u8],
+) -> Result<(), anyhow::Error>
+where
+    F: Read + Seek,
+{
+    fd.seek(SeekFrom::Start(addr))?;
+    fd.read_exact(dst)?;
+    Ok(())
+}
+
 pub(crate) fn read_chunk<F>(
     fd: &mut F,
     addr: u64,
@@ -60,8 +73,7 @@ pub(crate) fn decode_chunk(
     dsz: u64,
     gzipped: bool,
     shuffled: bool,
-) -> Result<Vec<u8>, anyhow::Error>
-{
+) -> Result<Vec<u8>, anyhow::Error> {
     debug_assert!(dsz < 16); // unlikely data-size
 
     // Decompress

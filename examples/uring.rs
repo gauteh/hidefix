@@ -17,22 +17,24 @@ fn main() -> anyhow::Result<()> {
     let bb = fs::read("example.idx")?;
     let i: Index = bincode::deserialize(&bb)?;
 
-    let ds = if let DatasetD::D4(ds) = i.dataset("temperature").unwrap() {
-        ds
-    } else {
-        panic!()
-    };
-    // println!("datatype: {:?}", ds.dtype);
-    let mut r = UringReader::with_dataset(ds, i.path().unwrap())?;
+    for var in ["temperature", "u", "v"] {
+        let ds = if let DatasetD::D4(ds) = i.dataset(var).unwrap() {
+            ds
+        } else {
+            panic!()
+        };
+        // println!("datatype: {:?}", ds.dtype);
+        let mut r = UringReader::with_dataset(ds, i.path().unwrap())?;
 
-    println!("Reading values..");
-    let values = tokio_uring::start(async {
-        r.values_uring::<f32>(None, None).await
-    })?;
+        println!("Reading values..");
+        // let values = tokio_uring::start(async {
+        //     r.values_uring::<f32>(None, None).await
+        // })?;
 
-    // let values = r.values::<f32>(None, None).unwrap();
+        let values = r.values::<f32>(None, None).unwrap();
 
-    println!("First value: {}", values.first().unwrap());
+        println!("First value: {}", values.first().unwrap());
+    }
 
     Ok(())
 }

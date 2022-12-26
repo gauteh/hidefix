@@ -14,13 +14,16 @@ fn main() -> anyhow::Result<()> {
     println!("Deserializing index..");
     let bb = fs::read("example.idx")?;
     let i: Index = bincode::deserialize(&bb)?;
-    let mut r = i.reader("temperature").unwrap();
+    for var in ["temperature", "u", "v"] {
+        let mut r = i.reader(var).unwrap();
 
-    println!("Reading values..");
-    let values = r.values::<f32>(None, None)?;
+        println!("Reading values..");
+        let values = r.values::<f32>(None, None)?;
 
+        println!("Number of values: {}", values.len());
 
-    println!("First value: {}", values.first().unwrap());
+        println!("First value: {}", values.first().unwrap());
+    }
 
     Ok(())
 }
