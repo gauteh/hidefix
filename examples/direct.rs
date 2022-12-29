@@ -1,12 +1,12 @@
 use hidefix::prelude::*;
-use hidefix::reader::uring::*;
+use hidefix::reader::direct::*;
 use hidefix::idx::DatasetD;
 use std::fs;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
     // Serialize file
-    if !Path::new("example.idx").exists() {
+    if !Path::new("norkyst.idx").exists() {
         println!("Serializing..");
         let i = Index::index("tests/data/Barents-2.5km_ZDEPTHS_his.an.2022112006.nc")?;
         let idx = bincode::serialize(&i)?;
@@ -24,12 +24,10 @@ fn main() -> anyhow::Result<()> {
             panic!()
         };
         // println!("datatype: {:?}", ds.dtype);
-        let r = UringReader::with_dataset(ds, i.path().unwrap())?;
+        let mut r = Direct::with_dataset(ds, i.path().unwrap())?;
 
         println!("Reading values..");
-        let values = tokio_uring::start(async {
-            r.values_uring::<f32>(None, None).await
-        })?;
+        let values = r.values::<f32>(None, None).unwrap();
 
         println!("First value: {}", values.first().unwrap());
     }

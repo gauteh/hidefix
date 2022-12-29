@@ -101,7 +101,7 @@ impl<'a, const D: usize> UringReader<'a, D> {
         // Read all chunks sequentially: maybe this is too big?
         let chunks = groups
             .iter()
-            .map(|(c, segments)| {
+            .map(|(c, _segments)| {
                 let mut chunk = vec![0u8; c.size.get() as usize];
                 read_chunk_to(&mut fd, c.addr.get(), &mut chunk)?;
                 Ok(chunk)
@@ -131,7 +131,7 @@ impl<'a, const D: usize> UringReader<'a, D> {
         //
         // TODO:This can also be done in the parallel operation above, when I figure out
         // hwo to split the destination vector.
-        for (c, segments, chunk) in chunks {
+        for (_c, segments, chunk) in chunks {
             for (current, start, end) in segments {
                 let start = (start * dsz) as usize;
                 let end = (end * dsz) as usize;

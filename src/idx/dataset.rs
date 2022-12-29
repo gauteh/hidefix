@@ -474,6 +474,46 @@ impl<const D: usize> Dataset<'_, D> {
         }
     }
 
+
+    /// Returns an Vec with chunks, offset and size grouped by chunk, with segments and
+    /// destination offset.
+    pub fn group_chunk_slices(
+        &self,
+        indices: Option<&[u64; D]>,
+        counts: Option<&[u64; D]>,
+    ) -> Vec<(&Chunk<D>, Vec<(u64, u64, u64)>)> {
+        // Find chunks and calculate offset in destination vector.
+        let mut chunks = self
+            .chunk_slices(indices, counts)
+            .scan(0u64, |offset, (c, start, end)| {
+                let slice_sz = end - start;
+                let current = *offset;
+                *offset = *offset + slice_sz;
+
+                Some((current, c, start, end))
+            })
+            .collect::<Vec<_>>();
+
+        // Sort by chunk file address, not destination address.
+        chunks.sort_unstable_by_key(|(_current, c, _start, _end)| c.addr.get());
+
+        // Group by chunk
+        let mut groups = Vec::<(&Chunk<D>, Vec<(u64, u64, u64)>)>::new();
+
+        for (current, c, start, end) in chunks.iter() {
+            match groups.last_mut() {
+                Some((group_chunk, segments)) if *group_chunk == *c => {
+                    segments.push((*current, *start, *end));
+                }
+                _ => {
+                    groups.push((c, vec![(*current, *start, *end)]));
+                }
+            }
+        }
+
+        groups
+    }
+
     pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk<D> {
         debug_assert_eq!(indices.len(), self.chunk_shape.len());
         debug_assert_eq!(indices.len(), self.scaled_dim_sz.len());
