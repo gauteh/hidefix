@@ -37,6 +37,7 @@ log = "0.4"
 tokio-uring = "0.4.0"
 rayon = "1.6"
 pyo3 = { version = "0.17.3", optional = true, features = ["extension-module"] }
+schnellru = "0.1.1"
 
 [dependencies.serde]
 features = ["derive"]
