@@ -50,6 +50,8 @@
 #![feature(test)]
 #![feature(cow_is_borrowed, array_methods)]
 #![feature(assert_matches)]
+#![feature(slice_group_by)]
+#![feature(mutex_unlock)]
 extern crate test;
 
 #[macro_use]

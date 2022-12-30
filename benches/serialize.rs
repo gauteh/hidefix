@@ -4,6 +4,9 @@ use test::Bencher;
 
 use hidefix::idx::Index;
 
+const FILE: &'static str = env!("HIDEFIX_LARGE_FILE");
+// const VAR: &'static str = env!("HIDEFIX_LARGE_VAR");
+
 mod serde_bincode {
     use super::*;
 
@@ -47,16 +50,16 @@ mod serde_bincode {
 
     #[ignore]
     #[bench]
-    fn serialize_meps_bincode(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+    fn serialize_large_bincode(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
 
         b.iter(|| bincode::serialize(&i).unwrap())
     }
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_bincode(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+    fn deserialize_large_bincode(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
         let bb = bincode::serialize(&i).unwrap();
 
         b.iter(|| bincode::deserialize::<Index>(&bb).unwrap())
@@ -64,11 +67,11 @@ mod serde_bincode {
 
     #[ignore]
     #[bench]
-    fn serialize_meps_bincode_file(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+    fn serialize_large_bincode_file(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
 
         b.iter(|| {
-            let f = std::fs::File::create("/tmp/meps.idx.bc").unwrap();
+            let f = std::fs::File::create("/tmp/large.idx.bc").unwrap();
             let w = std::io::BufWriter::new(f);
             bincode::serialize_into(w, &i).unwrap()
         })
@@ -76,21 +79,21 @@ mod serde_bincode {
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_bincode_file(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let f = std::fs::File::create("/tmp/meps.idx.bc").unwrap();
+    fn deserialize_large_bincode_file(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
+        let f = std::fs::File::create("/tmp/large.idx.bc").unwrap();
         bincode::serialize_into(f, &i).unwrap();
 
         b.iter(|| {
-            let b = std::fs::read("/tmp/meps.idx.bc").unwrap();
+            let b = std::fs::read("/tmp/large.idx.bc").unwrap();
             bincode::deserialize::<Index>(&b).unwrap();
         })
     }
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_bincode_db_sled(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+    fn deserialize_large_bincode_db_sled(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
 
         let bts = bincode::serialize(&i).unwrap();
 
@@ -100,18 +103,18 @@ mod serde_bincode {
             .open()
             .unwrap();
 
-        db.insert("meps", bts).unwrap();
+        db.insert("large", bts).unwrap();
 
         b.iter(|| {
-            let bts = db.get("meps").unwrap().unwrap();
+            let bts = db.get("large").unwrap().unwrap();
             test::black_box(bincode::deserialize::<Index>(&bts).unwrap());
         })
     }
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_bincode_db_sled_only_read(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+    fn deserialize_large_bincode_db_sled_only_read(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
 
         let bts = bincode::serialize(&i).unwrap();
 
@@ -121,22 +124,22 @@ mod serde_bincode {
             .open()
             .unwrap();
 
-        db.insert("meps", bts).unwrap();
+        db.insert("large", bts).unwrap();
 
         b.iter(|| {
-            test::black_box(db.get("meps").unwrap().unwrap());
+            test::black_box(db.get("large").unwrap().unwrap());
         })
     }
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_file_only_read(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let f = std::fs::File::create("/tmp/meps.idx.bc").unwrap();
+    fn deserialize_large_file_only_read(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
+        let f = std::fs::File::create("/tmp/large.idx.bc").unwrap();
         bincode::serialize_into(f, &i).unwrap();
 
         b.iter(|| {
-            test::black_box(std::fs::read("/tmp/meps.idx.bc").unwrap());
+            test::black_box(std::fs::read("/tmp/large.idx.bc").unwrap());
         })
     }
 }
@@ -205,28 +208,28 @@ mod serde_flexbuffers {
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_file(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+    fn deserialize_large_file(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
         let mut s = ser::new();
         i.serialize(&mut s).unwrap();
-        std::fs::write("/tmp/meps.idx.fx", s.view()).unwrap();
+        std::fs::write("/tmp/large.idx.fx", s.view()).unwrap();
 
         b.iter(|| {
-            let b = std::fs::read("/tmp/meps.idx.fx").unwrap();
+            let b = std::fs::read("/tmp/large.idx.fx").unwrap();
             flexbuffers::from_slice::<Index>(&b).unwrap();
         })
     }
 
     #[ignore]
     #[bench]
-    fn deserialize_meps_file_only_read(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
+    fn deserialize_large_file_only_read(b: &mut Bencher) {
+        let i = Index::index(FILE).unwrap();
         let mut s = ser::new();
         i.serialize(&mut s).unwrap();
-        std::fs::write("/tmp/meps.idx.fx", s.view()).unwrap();
+        std::fs::write("/tmp/large.idx.fx", s.view()).unwrap();
 
         b.iter(|| {
-            test::black_box(std::fs::read("/tmp/meps.idx.fx").unwrap());
+            test::black_box(std::fs::read("/tmp/large.idx.fx").unwrap());
         })
     }
 }

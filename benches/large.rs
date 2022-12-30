@@ -3,140 +3,139 @@ extern crate test;
 use test::Bencher;
 
 use hidefix::prelude::*;
+use ndarray::s;
 
-mod meps {
-    use super::*;
-    use ndarray::s;
+const FILE: &'static str = env!("HIDEFIX_LARGE_FILE");
+const VAR: &'static str = env!("HIDEFIX_LARGE_VAR");
 
-    #[ignore]
-    #[bench]
-    fn idx_small_slice(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let mut r = i.reader("x_wind_ml").unwrap();
+#[ignore]
+#[bench]
+fn idx_small_slice(b: &mut Bencher) {
+    let i = Index::index(FILE).unwrap();
+    let mut r = i.reader(VAR).unwrap();
 
-        // test against native
-        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let d = h.dataset("x_wind_ml").unwrap();
-        let hv = d
-            .read_slice_1d::<i32, _>(s![0..2, 0..2, 0..1, 0..5])
+    // test against native
+    let h = hdf5::File::open(FILE).unwrap();
+    let d = h.dataset(VAR).unwrap();
+    let hv = d
+        .read_slice_1d::<i32, _>(s![0..2, 0..2, 0..1, 0..5])
+        .unwrap()
+        .iter()
+        .map(|v| *v)
+        .collect::<Vec<i32>>();
+
+    assert_eq!(
+        hv,
+        r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
             .unwrap()
-            .iter()
-            .map(|v| *v)
-            .collect::<Vec<i32>>();
+    );
 
-        assert_eq!(
-            hv,
+    b.iter(|| {
+        test::black_box(
             r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
-                .unwrap()
-        );
+                .unwrap(),
+        )
+    });
+}
 
-        b.iter(|| {
-            test::black_box(
-                r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
-                    .unwrap(),
-            )
-        });
-    }
+#[ignore]
+#[bench]
+fn native_small_slice(b: &mut Bencher) {
+    let h = hdf5::File::open(FILE).unwrap();
+    let d = h.dataset(VAR).unwrap();
 
-    #[ignore]
-    #[bench]
-    fn native_small_slice(b: &mut Bencher) {
-        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let d = h.dataset("x_wind_ml").unwrap();
+    b.iter(|| {
+        test::black_box(
+            d.read_slice_1d::<i32, _>(s![0..2, 0..2, 0..1, 0..5])
+                .unwrap(),
+        )
+    })
+}
 
-        b.iter(|| {
-            test::black_box(
-                d.read_slice_1d::<i32, _>(s![0..2, 0..2, 0..1, 0..5])
-                    .unwrap(),
-            )
-        })
-    }
+#[ignore]
+#[bench]
+fn idx_med_slice(b: &mut Bencher) {
+    let i = Index::index(FILE).unwrap();
+    let mut r = i.reader(VAR).unwrap();
 
-    #[ignore]
-    #[bench]
-    fn idx_med_slice(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let mut r = i.reader("x_wind_ml").unwrap();
+    // test against native
+    let h = hdf5::File::open(FILE).unwrap();
+    let d = h.dataset(VAR).unwrap();
+    let hv = d
+        .read_slice_1d::<i32, _>(s![0..10, 0..10, 0..1, 0..700])
+        .unwrap()
+        .iter()
+        .map(|v| *v)
+        .collect::<Vec<i32>>();
 
-        // test against native
-        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let d = h.dataset("x_wind_ml").unwrap();
-        let hv = d
-            .read_slice_1d::<i32, _>(s![0..10, 0..10, 0..1, 0..20000])
+    assert_eq!(
+        hv,
+        r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 700]))
             .unwrap()
-            .iter()
-            .map(|v| *v)
-            .collect::<Vec<i32>>();
+    );
 
-        assert_eq!(
-            hv,
-            r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 20000]))
-                .unwrap()
-        );
+    b.iter(|| {
+        test::black_box(
+            r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 700]))
+                .unwrap(),
+        )
+    });
+}
 
-        b.iter(|| {
-            test::black_box(
-                r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 20000]))
-                    .unwrap(),
-            )
-        });
-    }
+#[ignore]
+#[bench]
+fn native_med_slice(b: &mut Bencher) {
+    let h = hdf5::File::open(FILE).unwrap();
+    let d = h.dataset(VAR).unwrap();
 
-    #[ignore]
-    #[bench]
-    fn native_med_slice(b: &mut Bencher) {
-        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let d = h.dataset("x_wind_ml").unwrap();
+    b.iter(|| {
+        test::black_box(
+            d.read_slice_1d::<i32, _>(s![0..10, 0..10, 0..1, 0..20000])
+                .unwrap(),
+        )
+    })
+}
 
-        b.iter(|| {
-            test::black_box(
-                d.read_slice_1d::<i32, _>(s![0..10, 0..10, 0..1, 0..20000])
-                    .unwrap(),
-            )
-        })
-    }
+#[ignore]
+#[bench]
+fn idx_big_slice(b: &mut Bencher) {
+    let i = Index::index(FILE).unwrap();
+    let mut r = i.reader(VAR).unwrap();
 
-    #[ignore]
-    #[bench]
-    fn idx_big_slice(b: &mut Bencher) {
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let mut r = i.reader("x_wind_ml").unwrap();
+    // test against native
+    let h = hdf5::File::open(FILE).unwrap();
+    let d = h.dataset(VAR).unwrap();
+    let hv = d
+        .read_slice_1d::<i32, _>(s![0..24, 0..16, 0..1, 0..739])
+        .unwrap()
+        .iter()
+        .map(|v| *v)
+        .collect::<Vec<i32>>();
 
-        // test against native
-        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let d = h.dataset("x_wind_ml").unwrap();
-        let hv = d
-            .read_slice_1d::<i32, _>(s![0..65, 0..65, 0..1, 0..20000])
+    assert_eq!(
+        hv,
+        r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 739]))
             .unwrap()
-            .iter()
-            .map(|v| *v)
-            .collect::<Vec<i32>>();
+    );
 
-        assert_eq!(
-            hv,
-            r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[65, 65, 1, 20000]))
-                .unwrap()
-        );
+    b.iter(|| {
+        test::black_box(
+            r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 739]))
+                .unwrap(),
+        )
+    });
+}
 
-        b.iter(|| {
-            test::black_box(
-                r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[65, 65, 1, 20000]))
-                    .unwrap(),
-            )
-        });
-    }
+#[ignore]
+#[bench]
+fn native_big_slice(b: &mut Bencher) {
+    let h = hdf5::File::open(FILE).unwrap();
+    let d = h.dataset(VAR).unwrap();
 
-    #[ignore]
-    #[bench]
-    fn native_big_slice(b: &mut Bencher) {
-        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let d = h.dataset("x_wind_ml").unwrap();
-
-        b.iter(|| {
-            test::black_box(
-                d.read_slice_1d::<i32, _>(s![0..65, 0..65, 0..1, 0..20000])
-                    .unwrap(),
-            )
-        })
-    }
+    b.iter(|| {
+        test::black_box(
+            d.read_slice_1d::<i32, _>(s![0..65, 0..65, 0..1, 0..20000])
+                .unwrap(),
+        )
+    })
 }

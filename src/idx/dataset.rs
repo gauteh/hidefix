@@ -1,4 +1,4 @@
-use itertools::{izip, Itertools};
+use itertools::izip;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::cmp::min;

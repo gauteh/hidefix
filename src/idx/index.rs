@@ -160,13 +160,6 @@ mod tests {
         println!("index: {:#?}", i);
     }
 
-    #[ignore]
-    #[test]
-    fn index_meps() {
-        println!("indexing meps");
-        test::black_box(Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap());
-    }
-
     #[test]
     fn serialize() {
         use flexbuffers::FlexbufferSerializer as ser;

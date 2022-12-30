@@ -27,13 +27,13 @@ impl<'a, const D: usize> Direct<'a, D> {
         })
     }
 
-    #[cfg(off)]
     pub fn read_to_par(
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
         dst: &mut [u8],
     ) -> Result<u64, anyhow::Error> {
+        use itertools::Itertools;
         use rayon::prelude::*;
 
         let indices: Option<&[u64; D]> = indices
@@ -58,43 +58,33 @@ impl<'a, const D: usize> Direct<'a, D> {
 
         let groups = self.ds.group_chunk_slices(indices, Some(counts));
 
-        let mut fd = std::fs::File::open(&self.path)?;
+        use std::sync::{Arc, Mutex};
 
-        // Read all chunks sequentially: maybe this is too big?
-        let chunks = groups
-            .iter()
-            .map(|(c, _segments)| {
-                let mut chunk = vec![0u8; c.size.get() as usize];
-                read_chunk_to(&mut fd, c.addr.get(), &mut chunk)?;
-                Ok(chunk)
-            })
-            .collect::<Result<Vec<Vec<u8>>, anyhow::Error>>()?;
+        let fd = Arc::new(Mutex::new(std::fs::File::open(&self.path)?));
 
-        // Decode chunks in parallel
-        let chunks = groups
-            .into_par_iter()
-            .zip(chunks)
-            .map(|((c, segments), chunk)| {
-                Ok((
-                    c,
-                    segments,
-                    decode_chunk(
-                        chunk,
-                        self.chunk_sz,
-                        dsz,
-                        self.ds.gzip.is_some(),
-                        self.ds.shuffle,
-                    )?,
-                ))
-            })
-            .collect::<Result<Vec<_>, anyhow::Error>>()?;
+        let mut i = 0;
 
-        // Extract segments from chunks to destination vector
-        //
-        // TODO:This can also be done in the parallel operation above, when I figure out
-        // hwo to split the destination vector.
-        for (_c, segments, chunk) in chunks {
-            for (current, start, end) in segments {
+        let groups = groups.group_by(|a, b| a.0.addr == b.0.addr);
+        let groups = groups.collect::<Vec<_>>();
+        groups.par_iter().for_each(|group| {
+            let c = group[0].0;
+            let mut fd = std::fs::File::open(&self.path).unwrap();
+
+            let mut chunk: Vec<u8> = vec![0; c.size.get() as usize];
+            read_chunk_to(&mut fd, c.addr.get(), &mut chunk).unwrap();
+
+            // Heavy part!
+            let chunk = decode_chunk(
+                chunk,
+                self.chunk_sz,
+                dsz,
+                self.ds.gzip.is_some(),
+                self.ds.shuffle,
+            )
+            .unwrap();
+
+            // Let's go!
+            for (_c, current, start, end) in *group {
                 let start = (start * dsz) as usize;
                 let end = (end * dsz) as usize;
                 let current = (current * dsz) as usize;
@@ -103,10 +93,19 @@ impl<'a, const D: usize> Direct<'a, D> {
                 debug_assert!(end <= chunk.len());
 
                 let sz = end - start;
-                dst[current..(current + sz)].copy_from_slice(&chunk[start..end]);
-            }
-        }
 
+                // Make sure `dst` and `cache` are aligned: copying could (maybe) be SIMD-ifyed.
+                let dptr = dst[current..].as_ptr() as *mut [u8; 4];
+                let src = chunk[start..end].as_ptr() as *const [u8; 4];
+
+                unsafe {
+                    core::ptr::copy_nonoverlapping(src, dptr, sz / 4);
+                }
+
+            }
+        });
+
+        println!("chunks read: {}", i);
         Ok(vsz)
     }
 }
@@ -130,8 +129,8 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
         counts: Option<&[u64]>,
         dst: &mut [u8],
     ) -> Result<usize, anyhow::Error> {
-        // let sz = self.read_to_par(indices, counts, dst)?;
-        // return Ok(sz as usize);
+        let sz = self.read_to_par(indices, counts, dst)?;
+        return Ok(sz as usize);
 
         let indices: Option<&[u64; D]> = indices
             .map(|i| i.try_into())
@@ -164,7 +163,7 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
             let cache = match (last_chunk.as_mut(), c) {
                 (Some((last, cache)), c) if c.addr == last.addr => {
                     cache // still on same
-                },
+                }
                 _ => {
                     // Read new chunk
                     let cache = read_chunk(
@@ -221,7 +220,6 @@ mod tests {
         let mut r = Direct::with_dataset(ds, i.path().unwrap()).unwrap();
 
         let vs = r.values::<f32>(None, None).unwrap();
-
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("SST").unwrap().read_raw::<f32>().unwrap();
 

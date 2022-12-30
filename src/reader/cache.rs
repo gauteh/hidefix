@@ -201,36 +201,4 @@ mod tests {
 
         assert_eq!(vs, hvs);
     }
-
-    #[ignore]
-    #[test]
-    fn read_meps() {
-        println!("meps");
-        let i = Index::index("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        println!("idx index: done");
-        let mut r = i.reader("x_wind_ml").unwrap();
-
-        // println!("ds size: {}", r.ds.size());
-        // println!("cshape: {:?}", r.ds.chunk_shape);
-
-        let vs = r
-            .values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
-            .unwrap();
-        println!("idx read: done: {}", vs.len());
-
-        let h = hdf5::File::open("tests/data/meps_det_vc_2_5km_latest.nc").unwrap();
-        let hvs = h.dataset("x_wind_ml").unwrap().read_dyn::<i32>().unwrap();
-        println!("native: {}", hvs.len());
-        println!("native: done");
-
-        use ndarray::s;
-
-        assert_eq!(
-            vs,
-            hvs.slice(s![0..2, 0..2, 0..1, 0..5])
-                .iter()
-                .map(|v| *v)
-                .collect::<Vec<i32>>()
-        );
-    }
 }
