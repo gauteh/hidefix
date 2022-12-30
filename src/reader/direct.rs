@@ -5,7 +5,7 @@ use super::{
     chunk::{decode_chunk, read_chunk, read_chunk_to},
     dataset::Reader,
 };
-use crate::idx::Dataset;
+use crate::idx::{Chunk, Dataset};
 
 pub struct Direct<'a, const D: usize> {
     ds: &'a Dataset<'a, D>,
@@ -27,6 +27,7 @@ impl<'a, const D: usize> Direct<'a, D> {
         })
     }
 
+    #[cfg(off)]
     pub fn read_to_par(
         &self,
         indices: Option<&[u64]>,
@@ -156,31 +157,45 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
 
         let mut fd = std::fs::File::open(&self.path)?;
 
-        for (c, segments) in groups {
-            // Read chunk
-            let cache = read_chunk(
-                &mut fd,
-                c.addr.get(),
-                c.size.get(),
-                self.chunk_sz,
-                dsz,
-                self.ds.gzip.is_some(),
-                self.ds.shuffle,
-                false,
-            )?;
+        let mut i = 0;
+        let mut last_chunk: Option<(&Chunk<D>, Vec<u8>)> = None;
 
-            for (current, start, end) in segments {
-                let start = (start * dsz) as usize;
-                let end = (end * dsz) as usize;
-                let current = (current * dsz) as usize;
+        for (c, current, start, end) in groups {
+            let cache = match (last_chunk.as_mut(), c) {
+                (Some((last, cache)), c) if c.addr == last.addr => {
+                    cache // still on same
+                },
+                _ => {
+                    // Read new chunk
+                    let cache = read_chunk(
+                        &mut fd,
+                        c.addr.get(),
+                        c.size.get(),
+                        self.chunk_sz,
+                        dsz,
+                        self.ds.gzip.is_some(),
+                        self.ds.shuffle,
+                        false,
+                    )?;
+                    i += 1;
 
-                debug_assert!(start <= cache.len());
-                debug_assert!(end <= cache.len());
+                    last_chunk = Some((c, cache));
+                    &last_chunk.as_mut().unwrap().1
+                }
+            };
 
-                let sz = end - start;
-                dst[current..(current + sz)].copy_from_slice(&cache[start..end]);
-            }
+            let start = (start * dsz) as usize;
+            let end = (end * dsz) as usize;
+            let current = (current * dsz) as usize;
+
+            debug_assert!(start <= cache.len());
+            debug_assert!(end <= cache.len());
+
+            let sz = end - start;
+            dst[current..(current + sz)].copy_from_slice(&cache[start..end]);
         }
+
+        println!("chunks read: {}", i);
 
         Ok(vsz as usize)
     }
@@ -210,4 +225,3 @@ mod tests {
         assert_eq!(vs, hvs);
     }
 }
-

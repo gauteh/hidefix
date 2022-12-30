@@ -480,7 +480,7 @@ impl<const D: usize> Dataset<'_, D> {
         &self,
         indices: Option<&[u64; D]>,
         counts: Option<&[u64; D]>,
-    ) -> Vec<(&Chunk<D>, Vec<(u64, u64, u64)>)> {
+    ) -> Vec<(&Chunk<D>, u64, u64, u64)> {
         // Find chunks and calculate offset in destination vector.
         let mut chunks = self
             .chunk_slices(indices, counts)
@@ -489,31 +489,37 @@ impl<const D: usize> Dataset<'_, D> {
                 let current = *offset;
                 *offset = *offset + slice_sz;
 
-                Some((current, c, start, end))
+                Some((c, current, start, end))
             })
             .collect::<Vec<_>>();
 
         // Sort by chunk file address, not destination address.
-        chunks.sort_unstable_by_key(|(_current, c, _start, _end)| c.addr.get());
+        chunks.sort_unstable_by_key(|(c, _, _, _)| c.addr.get());
 
+        chunks
+
+        // XXX: A Vec of Vec's becomes very slow to de-allocate (a couple of seconds
+        // actually on a big file with about 380 chunks). So it is faster to have an
+        // expanded vector.
+        //
         // Group by chunk
-        let mut groups = Vec::<(&Chunk<D>, Vec<(u64, u64, u64)>)>::new();
+        // let mut groups = Vec::<(&Chunk<D>, Vec<(u64, u64, u64)>)>::new();
 
-        for (current, c, start, end) in chunks.iter() {
-            match groups.last_mut() {
-                Some((group_chunk, segments)) if *group_chunk == *c => {
-                    segments.push((*current, *start, *end));
-                }
-                _ => {
-                    groups.push((c, vec![(*current, *start, *end)]));
-                }
-            }
-        }
+        // for (current, c, start, end) in chunks.iter() {
+        //     match groups.last_mut() {
+        //         Some((group_chunk, segments)) if *group_chunk == *c => {
+        //             segments.push((*current, *start, *end));
+        //         }
+        //         _ => {
+        //             groups.push((c, vec![(*current, *start, *end)]));
+        //         }
+        //     }
+        // }
 
-        debug_assert!(groups.iter().map(|(c, _)| c).all_unique());
-        debug_assert!(groups.iter().map(|(_, s)| s.iter().map(|(current, _, _)| current)).flatten().all_unique());
-
-        groups
+        // debug_assert!(groups.iter().map(|(c, _)| c).all_unique());
+        // debug_assert!(groups.iter().map(|(_, s)| s.iter().map(|(current, _, _)| current)).flatten().all_unique());
+        //
+        // groups
     }
 
     pub fn chunk_at_coord(&self, indices: &[u64]) -> &Chunk<D> {

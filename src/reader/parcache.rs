@@ -87,7 +87,7 @@ impl<'a, const D: usize> Reader for ParCache<'a, D> {
             debug_assert!(start <= end);
             let slice_sz = end - start;
 
-            let cache = self.cache.read().unwrap().get(&c.addr.get());
+            // let cache = self.cache.read().unwrap().get(&c.addr.get());
 
 
 

@@ -60,6 +60,7 @@ hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix"
 [profile.release]
 lto = 'thin'
 codegen-units = 1
+debug = true
 
 [features]
 default = ["static", "fast-index"]
