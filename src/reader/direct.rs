@@ -192,6 +192,9 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
             debug_assert!(end <= cache.len());
 
             let sz = end - start;
+
+            // TODO: Make sure `dst` and `cache` are aligned: copying could be SIMD-ifyed.
+
             dst[current..(current + sz)].copy_from_slice(&cache[start..end]);
         }
 
