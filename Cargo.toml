@@ -57,6 +57,10 @@ hdf5 = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix" }
 hdf5-sys = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix" }
 hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix" }
 
+[profile.release]
+lto = 'thin'
+codegen-units = 1
+
 [features]
 default = ["static", "fast-index"]
 static = ["hdf5-sys/static", "hdf5-sys/zlib"]

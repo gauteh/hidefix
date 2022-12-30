@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::io::{Read, Seek};
 
-use schnellru::{ByLength, LruMap};
+use lru::LruCache;
 
 use super::{chunk::read_chunk, dataset::Reader};
 use crate::filters::byteorder::Order;
@@ -10,7 +10,7 @@ use crate::idx::Dataset;
 pub struct CacheReader<'a, R: Read + Seek, const D: usize> {
     ds: &'a Dataset<'a, D>,
     fd: R,
-    cache: LruMap<u64, Vec<u8>>,
+    cache: LruCache<u64, Vec<u8>>,
     chunk_sz: u64,
 }
 
@@ -23,7 +23,7 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> {
         Ok(CacheReader {
             ds,
             fd,
-            cache: LruMap::new(ByLength::new(cache_sz as u32)),
+            cache: LruCache::new(cache_sz as usize),
             chunk_sz,
         })
     }
@@ -75,8 +75,12 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
 
             let slice_sz = end - start;
 
-            let chunk = self.cache.get_or_insert_fallible(c.addr.get(), || {
-                read_chunk(
+            if let Some(cache) = self.cache.get(&c.addr.get()) {
+                debug_assert!(start <= cache.len());
+                debug_assert!(end <= cache.len());
+                dst[..slice_sz].copy_from_slice(&cache[start..end]);
+            } else {
+                let cache = read_chunk(
                     &mut self.fd,
                     c.addr.get(),
                     c.size.get(),
@@ -85,12 +89,13 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
                     self.ds.gzip.is_some(),
                     self.ds.shuffle,
                     false,
-                )
-            })?.unwrap();
+                )?;
 
-            debug_assert!(start <= chunk.len());
-            debug_assert!(end <= chunk.len());
-            dst[..slice_sz].copy_from_slice(&chunk[start..end]);
+                debug_assert!(start <= cache.len());
+                debug_assert!(end <= cache.len());
+                dst[..slice_sz].copy_from_slice(&cache[start..end]);
+                self.cache.put(c.addr.get(), cache);
+            }
 
             dst = &mut dst[slice_sz..];
         }

@@ -6,7 +6,7 @@ use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
     // Serialize file
-    if !Path::new("norkyst.idx").exists() {
+    if !Path::new("example.idx").exists() {
         println!("Serializing..");
         let i = Index::index("tests/data/Barents-2.5km_ZDEPTHS_his.an.2022112006.nc")?;
         let idx = bincode::serialize(&i)?;
@@ -29,6 +29,7 @@ fn main() -> anyhow::Result<()> {
         println!("Reading values..");
         let values = r.values::<f32>(None, None).unwrap();
 
+        println!("Number of values: {}", values.len());
         println!("First value: {}", values.first().unwrap());
     }
 

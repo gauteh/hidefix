@@ -1,4 +1,4 @@
-use itertools::izip;
+use itertools::{izip, Itertools};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::cmp::min;
@@ -474,7 +474,6 @@ impl<const D: usize> Dataset<'_, D> {
         }
     }
 
-
     /// Returns an Vec with chunks, offset and size grouped by chunk, with segments and
     /// destination offset.
     pub fn group_chunk_slices(
@@ -510,6 +509,9 @@ impl<const D: usize> Dataset<'_, D> {
                 }
             }
         }
+
+        debug_assert!(groups.iter().map(|(c, _)| c).all_unique());
+        debug_assert!(groups.iter().map(|(_, s)| s.iter().map(|(current, _, _)| current)).flatten().all_unique());
 
         groups
     }

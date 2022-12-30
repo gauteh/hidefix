@@ -21,7 +21,6 @@ fn main() -> anyhow::Result<()> {
         let values = r.values::<f32>(None, None)?;
 
         println!("Number of values: {}", values.len());
-
         println!("First value: {}", values.first().unwrap());
     }
 
