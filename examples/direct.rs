@@ -4,12 +4,12 @@ use hidefix::idx::DatasetD;
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    let f = &args[0];
+    let f = &args[1];
 
     println!("Indexing file: {f}..");
     let i = Index::index(&f)?;
 
-    for var in &args[1..] {
+    for var in &args[2..] {
         let ds = if let DatasetD::D4(ds) = i.dataset(var).unwrap() {
             ds
         } else {
