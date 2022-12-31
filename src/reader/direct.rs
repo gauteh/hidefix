@@ -1,4 +1,5 @@
 use crate::filters::byteorder::Order;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use super::{
@@ -57,55 +58,50 @@ impl<'a, const D: usize> Direct<'a, D> {
         );
 
         let groups = self.ds.group_chunk_slices(indices, Some(counts));
-
-        use std::sync::{Arc, Mutex};
-
-        let fd = Arc::new(Mutex::new(std::fs::File::open(&self.path)?));
-
-        let mut i = 0;
-
         let groups = groups.group_by(|a, b| a.0.addr == b.0.addr);
-        let groups = groups.collect::<Vec<_>>();
-        groups.par_iter().for_each(|group| {
-            let c = group[0].0;
-            let mut fd = std::fs::File::open(&self.path).unwrap();
+        let groups = groups.collect::<Vec<_>>(); // this vec of vec's might slow things
+                                                 // down.
 
-            let mut chunk: Vec<u8> = vec![0; c.size.get() as usize];
-            read_chunk_to(&mut fd, c.addr.get(), &mut chunk).unwrap();
+        groups.par_iter().try_for_each_init(
+            || File::open(&self.path),
+            |fd, group| {
+                let mut fd = fd.as_mut().map_err(|_| anyhow::anyhow!("Could not open file."))?;
+                let c = group[0].0;
 
-            // Heavy part!
-            let chunk = decode_chunk(
-                chunk,
-                self.chunk_sz,
-                dsz,
-                self.ds.gzip.is_some(),
-                self.ds.shuffle,
-            )
-            .unwrap();
+                let mut chunk: Vec<u8> = vec![0; c.size.get() as usize];
+                read_chunk_to(&mut fd, c.addr.get(), &mut chunk)?;
 
-            // Let's go!
-            for (_c, current, start, end) in *group {
-                let start = (start * dsz) as usize;
-                let end = (end * dsz) as usize;
-                let current = (current * dsz) as usize;
+                let chunk = decode_chunk(
+                    chunk,
+                    self.chunk_sz,
+                    dsz,
+                    self.ds.gzip.is_some(),
+                    self.ds.shuffle,
+                )?;
 
-                debug_assert!(start <= chunk.len());
-                debug_assert!(end <= chunk.len());
+                for (_c, current, start, end) in *group {
+                    let start = (start * dsz) as usize;
+                    let end = (end * dsz) as usize;
+                    let current = (current * dsz) as usize;
 
-                let sz = end - start;
+                    debug_assert!(start <= chunk.len());
+                    debug_assert!(end <= chunk.len());
 
-                // Make sure `dst` and `cache` are aligned: copying could (maybe) be SIMD-ifyed.
-                let dptr = dst[current..].as_ptr() as *mut [u8; 4];
-                let src = chunk[start..end].as_ptr() as *const [u8; 4];
+                    let sz = end - start;
 
-                unsafe {
-                    core::ptr::copy_nonoverlapping(src, dptr, sz / 4);
+                    // Make sure `dst` and `cache` are aligned: copying could (maybe) be SIMD-ifyed.
+                    let dptr = dst[current..].as_ptr() as *mut [u8; 4];
+                    let src = chunk[start..end].as_ptr() as *const [u8; 4];
+
+                    unsafe {
+                        core::ptr::copy_nonoverlapping(src, dptr, sz / 4);
+                    }
                 }
 
-            }
-        });
+                Ok::<_, anyhow::Error>(())
+            },
+        )?;
 
-        println!("chunks read: {}", i);
         Ok(vsz)
     }
 }
