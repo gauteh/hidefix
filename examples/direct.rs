@@ -1,7 +1,6 @@
 use hidefix::prelude::*;
 use hidefix::reader::direct::*;
 use hidefix::idx::DatasetD;
-use std::fs;
 
 fn main() -> anyhow::Result<()> {
     println!("Indexing file..");
@@ -14,10 +13,10 @@ fn main() -> anyhow::Result<()> {
             panic!()
         };
         // println!("datatype: {:?}", ds.dtype);
-        let mut r = Direct::with_dataset(ds, i.path().unwrap())?;
+        let r = Direct::with_dataset(ds, i.path().unwrap())?;
 
         println!("Reading values..");
-        let values = r.values::<f32>(None, None).unwrap();
+        let values = r.values_par::<f32>(None, None).unwrap();
 
         println!("Number of values: {}", values.len());
         println!("First value: {}", values.first().unwrap());

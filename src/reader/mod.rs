@@ -1,7 +1,7 @@
 pub mod cache;
-pub mod direct;
 pub(crate) mod chunk;
 pub mod dataset;
+pub mod direct;
 pub mod stream;
 
-pub use dataset::{Reader, ReaderExt, Streamer, StreamerExt};
+pub use dataset::{ParReader, ParReaderExt, Reader, ReaderExt, Streamer, StreamerExt};

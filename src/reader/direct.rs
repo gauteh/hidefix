@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use super::{
     chunk::{decode_chunk, read_chunk, read_chunk_to},
-    dataset::Reader,
+    dataset::{Reader, ParReader},
 };
 use crate::idx::{Chunk, Dataset};
 
@@ -27,13 +27,15 @@ impl<'a, const D: usize> Direct<'a, D> {
             chunk_sz,
         })
     }
+}
 
-    pub fn read_to_par(
+impl<'a, const D: usize> ParReader for Direct<'a, D> {
+    fn read_to_par(
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
         dst: &mut [u8],
-    ) -> Result<u64, anyhow::Error> {
+    ) -> Result<usize, anyhow::Error> {
         use rayon::prelude::*;
 
         let indices: Option<&[u64; D]> = indices
@@ -104,7 +106,7 @@ impl<'a, const D: usize> Direct<'a, D> {
             },
         )?;
 
-        Ok(vsz)
+        Ok(vsz as usize)
     }
 }
 
@@ -127,9 +129,6 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
         counts: Option<&[u64]>,
         dst: &mut [u8],
     ) -> Result<usize, anyhow::Error> {
-        let sz = self.read_to_par(indices, counts, dst)?;
-        return Ok(sz as usize);
-
         let indices: Option<&[u64; D]> = indices
             .map(|i| i.try_into())
             .map_or(Ok(None), |v| v.map(Some))

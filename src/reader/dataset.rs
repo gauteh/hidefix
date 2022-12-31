@@ -82,6 +82,73 @@ pub trait ReaderExt: Reader {
 
 impl<T: ?Sized + Reader> ReaderExt for T {}
 
+pub trait ParReader {
+    fn read_to_par(
+        &self,
+        indices: Option<&[u64]>,
+        counts: Option<&[u64]>,
+        dst: &mut [u8],
+    ) -> Result<usize, anyhow::Error>;
+}
+
+pub trait ParReaderExt: Reader + ParReader {
+    /// Reads values into desitination slice. Returns values read.
+    fn values_to_par<T>(
+        &self,
+        indices: Option<&[u64]>,
+        counts: Option<&[u64]>,
+        dst: &mut [T],
+    ) -> Result<usize, anyhow::Error>
+    where
+        T: ToMutByteSlice,
+        [T]: ToNative,
+    {
+        let r = self.read_to_par(indices, counts, dst.as_mut_byte_slice())?;
+        dst.to_native(self.order());
+
+        Ok(r)
+    }
+
+    /// Reads slice of dataset into `Vec<T>`.
+    fn values_par<T>(
+        &self,
+        indices: Option<&[u64]>,
+        counts: Option<&[u64]>,
+    ) -> Result<Vec<T>, anyhow::Error>
+    where
+        T: ToMutByteSlice,
+        [T]: ToNative,
+    {
+        let dsz = self.dsize();
+        ensure!(
+            dsz % std::mem::size_of::<T>() == 0,
+            "size of datatype ({}) not multiple of target {}",
+            dsz,
+            std::mem::size_of::<T>()
+        );
+
+        if dsz != std::mem::size_of::<T>() {
+            error!("size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
+        }
+
+        let vsz = counts
+            .unwrap_or_else(|| self.shape())
+            .iter()
+            .product::<u64>() as usize
+            * dsz
+            / std::mem::size_of::<T>();
+        let mut values = Vec::with_capacity(vsz);
+        unsafe {
+            values.set_len(vsz);
+        }
+        self.values_to_par(indices, counts, values.as_mut_slice())?;
+
+        Ok(values)
+    }
+}
+
+impl<T: ?Sized + Reader + ParReader> ParReaderExt for T {}
+
 pub trait Streamer {
     /// Stream slice of dataset as chunks of `Bytes`.
     fn stream(
