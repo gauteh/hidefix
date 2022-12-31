@@ -34,7 +34,6 @@ impl<'a, const D: usize> Direct<'a, D> {
         counts: Option<&[u64]>,
         dst: &mut [u8],
     ) -> Result<u64, anyhow::Error> {
-        use itertools::Itertools;
         use rayon::prelude::*;
 
         let indices: Option<&[u64; D]> = indices
@@ -59,13 +58,14 @@ impl<'a, const D: usize> Direct<'a, D> {
 
         let groups = self.ds.group_chunk_slices(indices, Some(counts));
         let groups = groups.group_by(|a, b| a.0.addr == b.0.addr);
-        let groups = groups.collect::<Vec<_>>(); // this vec of vec's might slow things
-                                                 // down.
+        let groups = groups.collect::<Vec<_>>();
 
         groups.par_iter().try_for_each_init(
             || File::open(&self.path),
             |fd, group| {
-                let mut fd = fd.as_mut().map_err(|_| anyhow::anyhow!("Could not open file."))?;
+                let mut fd = fd
+                    .as_mut()
+                    .map_err(|_| anyhow::anyhow!("Could not open file."))?;
                 let c = group[0].0;
 
                 let mut chunk: Vec<u8> = vec![0; c.size.get() as usize];
@@ -89,12 +89,14 @@ impl<'a, const D: usize> Direct<'a, D> {
 
                     let sz = end - start;
 
-                    // Make sure `dst` and `cache` are aligned: copying could (maybe) be SIMD-ifyed.
-                    let dptr = dst[current..].as_ptr() as *mut [u8; 4];
-                    let src = chunk[start..end].as_ptr() as *const [u8; 4];
+                    // Safety: The sub-slices never overlap between threads and segments. But I
+                    // cannot find a good way to do this in Rust at the moment. Maybe with a
+                    // slice::split_at_indices method or equivalent that gives a new slice of sub-slices.
+                    let dptr = dst[current..].as_ptr() as _;
+                    let src = chunk[start..end].as_ptr();
 
                     unsafe {
-                        core::ptr::copy_nonoverlapping(src, dptr, sz / 4);
+                        core::ptr::copy_nonoverlapping(src, dptr, sz);
                     }
                 }
 
