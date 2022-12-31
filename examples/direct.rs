@@ -3,19 +3,22 @@ use hidefix::reader::direct::*;
 use hidefix::idx::DatasetD;
 
 fn main() -> anyhow::Result<()> {
-    println!("Indexing file..");
-    let i = Index::index("tests/data/Barents-2.5km_ZDEPTHS_his.an.2022112006.nc")?;
+    let args: Vec<String> = std::env::args().collect();
+    let f = &args[0];
 
-    for var in ["temperature", "u", "v"] {
+    println!("Indexing file: {f}..");
+    let i = Index::index(&f)?;
+
+    for var in &args[1..] {
         let ds = if let DatasetD::D4(ds) = i.dataset(var).unwrap() {
             ds
         } else {
             panic!()
         };
-        // println!("datatype: {:?}", ds.dtype);
+        println!("Datatype: {:?}", ds.dtype);
         let r = Direct::with_dataset(ds, i.path().unwrap())?;
 
-        println!("Reading values..");
+        println!("Reading values from {var}..");
         let values = r.values_par::<f32>(None, None).unwrap();
 
         println!("Number of values: {}", values.len());

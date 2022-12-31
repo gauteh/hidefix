@@ -1,10 +1,12 @@
 fn main() -> anyhow::Result<()> {
-    let h = hdf5::File::open("tests/data/Barents-2.5km_ZDEPTHS_his.an.2022112006.nc").unwrap();
+    let args: Vec<String> = std::env::args().collect();
+    let f = &args[0];
+    let h = hdf5::File::open(&f).unwrap();
 
-    for var in ["temperature", "u", "v"] {
+    for var in &args[1..] {
         let d = h.dataset(var)?;
 
-        println!("Reading values..");
+        println!("Reading values from {var}..");
         let values = d.read_raw::<f32>()?;
 
         println!("Number of values: {}", values.len());

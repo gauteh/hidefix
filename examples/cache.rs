@@ -1,15 +1,16 @@
 use hidefix::prelude::*;
-use std::fs;
-use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
-    println!("Indexing file..");
-    let i = Index::index("tests/data/Barents-2.5km_ZDEPTHS_his.an.2022112006.nc")?;
+    let args: Vec<String> = std::env::args().collect();
+    let f = &args[0];
 
-    for var in ["temperature", "u", "v"] {
+    println!("Indexing file: {f}..");
+    let i = Index::index(&f)?;
+
+    for var in &args[1..] {
         let mut r = i.reader(var).unwrap();
 
-        println!("Reading values..");
+        println!("Reading values from {var}..");
         let values = r.values::<f32>(None, None)?;
 
         println!("Number of values: {}", values.len());
