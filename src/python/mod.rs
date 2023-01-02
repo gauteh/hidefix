@@ -1,16 +1,40 @@
 //! Wrappers for using hidefix in Python.
 
-use crate::idx;
 use pyo3::prelude::*;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use crate::idx;
 
 #[pymodule]
 fn hidefix(_py: Python, m: &PyModule) -> PyResult<()> {
-    // m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     m.add_class::<Index>()?;
     Ok(())
 }
 
 #[pyclass]
+#[derive(Debug)]
 struct Index {
-    idx: idx::Index<'static>,
+    idx: Arc<idx::Index<'static>>,
+}
+
+#[pymethods]
+impl Index {
+    #[new]
+    pub fn new(p: PathBuf) -> PyResult<Index> {
+        Ok(Index {
+            idx: Arc::new(idx::Index::index(&p)?)
+        })
+    }
+
+    pub fn dataset(&self, s: &str) -> Option<Dataset> {
+        self.idx.dataset(s).map(|_| Dataset { idx: self.idx.clone(), ds: String::from(s) })
+    }
+}
+
+#[pyclass]
+#[derive(Debug)]
+struct Dataset {
+    idx: Arc<idx::Index<'static>>,
+    ds: String,
 }
