@@ -2,9 +2,10 @@ from hidefix import Index
 
 def test_index_coads(coads):
     i = Index(coads)
-    print(i)
+    print(str(i))
 
 def test_dataset_coads(coads):
     i = Index(coads)
-    print(i.dataset('SST'))
+    ds = i.dataset('SST')
+    print(ds)
 

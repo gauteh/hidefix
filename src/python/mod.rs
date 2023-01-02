@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::idx;
+use crate::prelude::*;
 
 #[pymodule]
 fn hidefix(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -30,6 +31,14 @@ impl Index {
     pub fn dataset(&self, s: &str) -> Option<Dataset> {
         self.idx.dataset(s).map(|_| Dataset { idx: self.idx.clone(), ds: String::from(s) })
     }
+
+    fn __repr__(&self) -> String {
+        format!("{:?}", self)
+    }
+
+    fn __str__(&self) -> String {
+        format!("Index(file: {:?}, datasets: {}", self.idx.path(), self.idx.datasets().len())
+    }
 }
 
 #[pyclass]
@@ -37,4 +46,11 @@ impl Index {
 struct Dataset {
     idx: Arc<idx::Index<'static>>,
     ds: String,
+}
+
+#[pymethods]
+impl Dataset {
+    fn __repr__(&self) -> String {
+        format!("Dataset (\"{}\")", self.ds)
+    }
 }
