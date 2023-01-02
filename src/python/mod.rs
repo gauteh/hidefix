@@ -1,7 +1,7 @@
 //! Wrappers for using hidefix in Python.
 
-use pyo3::prelude::*;
 use crate::idx;
+use pyo3::prelude::*;
 
 #[pymodule]
 fn hidefix(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -12,6 +12,5 @@ fn hidefix(_py: Python, m: &PyModule) -> PyResult<()> {
 
 #[pyclass]
 struct Index {
-    idx: idx::Index<'static>
+    idx: idx::Index<'static>,
 }
-

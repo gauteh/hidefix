@@ -1,6 +1,6 @@
+use hidefix::idx::DatasetD;
 use hidefix::prelude::*;
 use hidefix::reader::direct::*;
-use hidefix::idx::DatasetD;
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();

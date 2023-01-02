@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use super::{
     chunk::{decode_chunk, read_chunk, read_chunk_to},
-    dataset::{Reader, ParReader},
+    dataset::{ParReader, Reader},
 };
 use crate::idx::{Chunk, Dataset};
 
