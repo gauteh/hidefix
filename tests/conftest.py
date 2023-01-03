@@ -1,12 +1,22 @@
+import os
+from pathlib import Path
 import pytest
 
 @pytest.fixture
 def data():
-    from pathlib import Path
     return Path(__file__).parent / 'data'
 
 @pytest.fixture
 def coads():
-    from pathlib import Path
     return Path(__file__).parent / 'data' / 'coads_climatology.nc4'
+
+@pytest.fixture
+def large_file():
+    f = os.getenv('HIDEFIX_LARGE_FILE')
+    v = os.getenv('HIDEFIX_LARGE_VAR')
+
+    if f is None or v is None:
+        pytest.skip("No HIDEFIX_LARGE_FILE or HIDEFIX_LARGE_VAR specified")
+
+    return Path(f), v
 

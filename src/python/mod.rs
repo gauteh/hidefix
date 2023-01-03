@@ -33,10 +33,6 @@ impl Index {
     }
 
     fn __repr__(&self) -> String {
-        format!("{:?}", self)
-    }
-
-    fn __str__(&self) -> String {
         format!("Index(file: {:?}, datasets: {}", self.idx.path(), self.idx.datasets().len())
     }
 }
