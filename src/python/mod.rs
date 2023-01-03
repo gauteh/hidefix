@@ -53,4 +53,8 @@ impl Dataset {
     fn __repr__(&self) -> String {
         format!("Dataset (\"{}\")", self.ds)
     }
+
+    fn __getitem__(&self, slice: &pyo3::types::PySlice) -> Vec<u8> {
+        vec![]
+    }
 }

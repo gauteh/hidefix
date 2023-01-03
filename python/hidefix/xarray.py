@@ -170,6 +170,9 @@ class HidefixArray(BackendArray):
 
     def _getitem(self, key):
         array = self.store.idx.dataset(self.variable_name)
-        return operator.getitem(array, key)
+        print(array)
+        print("key=", key)
+        return array[key[0]]
+        # return operator.getitem(array, key)
 
 BACKEND_ENTRYPOINTS["hidefix"] = HidefixBackendEntrypoint
