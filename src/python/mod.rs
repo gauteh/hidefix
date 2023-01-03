@@ -32,6 +32,10 @@ impl Index {
         self.idx.dataset(s).map(|_| Dataset { idx: self.idx.clone(), ds: String::from(s) })
     }
 
+    pub fn datasets(&self) -> Vec<String> {
+        self.idx.datasets().keys().cloned().collect::<Vec<_>>()
+    }
+
     fn __repr__(&self) -> String {
         format!("Index(file: {:?}, datasets: {}", self.idx.path(), self.idx.datasets().len())
     }
