@@ -5,7 +5,7 @@ use byte_slice_cast::ToMutByteSlice;
 use numpy::{PyArray, PyArray1};
 use pyo3::{
     prelude::*,
-    types::{PySlice, PyTuple},
+    types::{PyInt, PySlice, PyTuple},
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -73,23 +73,29 @@ impl Dataset {
         T: numpy::Element + ToMutByteSlice + 'py,
         [T]: ToNative,
     {
-        let r = ds.as_par_reader(self.idx.path().unwrap())?;
+        let mut dims = counts
+            .iter()
+            .cloned()
+            .map(|d| d as usize)
+            .filter(|d| *d > 1)
+            .collect::<Vec<_>>();
+
+        if dims.is_empty() {
+            dims.push(1);
+        }
+
         let (a, dst) = unsafe {
-            let a = PyArray::<T, _>::new(
-                py,
-                counts
-                    .iter()
-                    .cloned()
-                    .map(|d| d as usize)
-                    .collect::<Vec<_>>(),
-                false,
-            );
+            let a = PyArray::<T, _>::new(py, dims, false);
             let dst = a.as_slice_mut()?;
 
             (a, dst)
         };
 
-        r.values_to_par(Some(indices), Some(counts), dst)?;
+        py.allow_threads(|| {
+            let r = ds.as_par_reader(self.idx.path().unwrap())?;
+            r.values_to_par(Some(indices), Some(counts), dst)
+        })?;
+
         Ok(a.as_ref())
     }
 }
@@ -123,9 +129,13 @@ impl Dataset {
         // when read.
         let (mut indices, (mut counts, mut strides)): (Vec<_>, (Vec<_>, Vec<_>)) = slice
             .iter()
-            .map(|el| {
-                el.downcast::<PySlice>()
-                    .expect("__getitem__ only accepts slices")
+            .map(|el| match el {
+                el if el.is_instance_of::<PySlice>().unwrap() => el.downcast::<PySlice>().unwrap(),
+                el if el.is_instance_of::<PyInt>().unwrap() => {
+                    let ind: isize = el.downcast::<PyInt>().unwrap().extract().unwrap();
+                    PySlice::new(py, ind, ind + 1, 1)
+                }
+                _ => unimplemented!(),
             })
             .zip(shape)
             .map(|(slice, dim_sz)| {
@@ -146,36 +156,16 @@ impl Dataset {
 
         // read the data into correct datatype, convert to pyarray and cast as pyany.
         match ds.dtype() {
-            Datatype::UInt(sz) if sz == 1 => {
-                self.read_py_array::<u8>(py, ds, &indices, &counts)
-            }
-            Datatype::UInt(sz) if sz == 2 => {
-                self.read_py_array::<u16>(py, ds, &indices, &counts)
-            }
-            Datatype::UInt(sz) if sz == 4 => {
-                self.read_py_array::<u32>(py, ds, &indices, &counts)
-            }
-            Datatype::UInt(sz) if sz == 8 => {
-                self.read_py_array::<u64>(py, ds, &indices, &counts)
-            }
-            Datatype::Int(sz) if sz == 1 => {
-                self.read_py_array::<i8>(py, ds, &indices, &counts)
-            }
-            Datatype::Int(sz) if sz == 2 => {
-                self.read_py_array::<i16>(py, ds, &indices, &counts)
-            }
-            Datatype::Int(sz) if sz == 4 => {
-                self.read_py_array::<i32>(py, ds, &indices, &counts)
-            }
-            Datatype::Int(sz) if sz == 8 => {
-                self.read_py_array::<i64>(py, ds, &indices, &counts)
-            }
-            Datatype::Float(sz) if sz == 4 => {
-                self.read_py_array::<f32>(py, ds, &indices, &counts)
-            }
-            Datatype::Float(sz) if sz == 8 => {
-                self.read_py_array::<f64>(py, ds, &indices, &counts)
-            }
+            Datatype::UInt(sz) if sz == 1 => self.read_py_array::<u8>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 2 => self.read_py_array::<u16>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 4 => self.read_py_array::<u32>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 8 => self.read_py_array::<u64>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 1 => self.read_py_array::<i8>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 2 => self.read_py_array::<i16>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 4 => self.read_py_array::<i32>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 8 => self.read_py_array::<i64>(py, ds, &indices, &counts),
+            Datatype::Float(sz) if sz == 4 => self.read_py_array::<f32>(py, ds, &indices, &counts),
+            Datatype::Float(sz) if sz == 8 => self.read_py_array::<f64>(py, ds, &indices, &counts),
             _ => unimplemented!(),
         }
     }
@@ -186,12 +176,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn slice_coads() {
+    fn coads_slice() {
         Python::with_gil(|py| {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
             let ds = i.dataset("SST").unwrap();
 
             let arr = ds.__getitem__(py, PyTuple::new(py, vec![PySlice::new(py, 0, 10, 1)]));
+            println!("{:?}", arr);
+        });
+    }
+
+    #[test]
+    fn coads_index_slice() {
+        Python::with_gil(|py| {
+            let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
+            let ds = i.dataset("SST").unwrap();
+
+            let arr = ds.__getitem__(py, PyTuple::new(py, vec![0, 10, 1]));
             println!("{:?}", arr);
         });
     }
