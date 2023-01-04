@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use pyo3::{prelude::*, types::PySlice};
-use numpy::PyArray;
+use numpy::{PyArray, PyArray1, PyArrayDyn};
 
 use crate::idx;
 use crate::prelude::*;
@@ -57,6 +57,16 @@ impl Dataset {
 
     fn __len__(&self) -> usize {
         self.idx.dataset(&self.ds).unwrap().size()
+    }
+
+    fn shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
+        PyArray::from_slice(py,
+            self.idx.dataset(&self.ds).unwrap().shape())
+    }
+
+    fn chunk_shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
+        PyArray::from_slice(py,
+            self.idx.dataset(&self.ds).unwrap().chunk_shape())
     }
 
     fn __getitem__<'py>(&self, py: Python<'py>, slice: &PySlice) -> &'py PyAny {

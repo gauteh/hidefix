@@ -400,6 +400,14 @@ impl<const D: usize> DatasetExt for Dataset<'_, D> {
     fn dsize(&self) -> usize {
         self.dsize
     }
+
+    fn shape(&self) -> &[u64] {
+        self.shape.as_slice()
+    }
+
+    fn chunk_shape(&self) -> &[u64] {
+        self.chunk_shape.as_slice()
+    }
 }
 
 pub struct ChunkSlicer<'a, const D: usize> {

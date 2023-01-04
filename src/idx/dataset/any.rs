@@ -108,6 +108,10 @@ pub trait DatasetExt {
     fn dtype(&self) -> Datatype;
 
     fn dsize(&self) -> usize;
+
+    fn shape(&self) -> &[u64];
+
+    fn chunk_shape(&self) -> &[u64];
 }
 
 impl<'a> DatasetExt for DatasetD<'a> {
@@ -121,5 +125,13 @@ impl<'a> DatasetExt for DatasetD<'a> {
 
     fn dsize(&self) -> usize {
         self.inner().dsize()
+    }
+
+    fn shape(&self) -> &[u64] {
+        self.inner().shape()
+    }
+
+    fn chunk_shape(&self) -> &[u64] {
+        self.inner().chunk_shape()
     }
 }
