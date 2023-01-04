@@ -1,8 +1,9 @@
 //! Wrappers for using hidefix in Python.
 
-use pyo3::prelude::*;
 use std::path::PathBuf;
 use std::sync::Arc;
+use pyo3::{prelude::*, types::PySlice};
+use numpy::PyArray;
 
 use crate::idx;
 use crate::prelude::*;
@@ -54,7 +55,33 @@ impl Dataset {
         format!("Dataset (\"{}\")", self.ds)
     }
 
-    fn __getitem__(&self, slice: &pyo3::types::PySlice) -> Vec<u8> {
-        vec![]
+    fn __len__(&self) -> usize {
+        self.idx.dataset(&self.ds).unwrap().size()
+    }
+
+    fn __getitem__<'py>(&self, py: Python<'py>, slice: &PySlice) -> &'py PyAny {
+        let ds = self.idx.dataset(&self.ds).unwrap();
+        println!("dtype: {:?}", ds.dtype());
+
+        let arr = PyArray::arange(py, 0., 4., 1.);
+
+        arr.as_ref()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slice_coads() {
+        Python::with_gil(|py| {
+            let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
+            let ds = i.dataset("SST").unwrap();
+
+            let arr = ds.__getitem__(py, PySlice::new(py, 0, 10, 1));
+            println!("{:?}", arr);
+        });
+    }
+}
+

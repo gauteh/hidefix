@@ -36,8 +36,8 @@ hdf5-src = "0.8"
 log = "0.4"
 tokio-uring = "0.4.0"
 rayon = "1.6"
-pyo3 = { version = "0.17.3", optional = true, features = ["extension-module", "anyhow"] }
-schnellru = "0.1.1"
+pyo3 = { version = "0.17.3", optional = true, features = ["anyhow", "auto-initialize"] }
+numpy = { version = "0.17.2", optional = true }
 
 [dependencies.serde]
 features = ["derive"]
@@ -66,5 +66,6 @@ debug = true
 default = ["static", "fast-index"]
 static = ["hdf5-sys/static", "hdf5-sys/zlib"]
 fast-index = ["hdf5-src/1_13"]
-python = [ "pyo3" ]
+python = ["pyo3", "numpy"]
+extension-module = ["python", "pyo3/extension-module"]
 

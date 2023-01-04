@@ -4,7 +4,7 @@ mod index;
 pub mod serde;
 
 pub use chunk::{Chunk, ULE};
-pub use dataset::{Dataset, DatasetD, Datatype};
+pub use dataset::{Dataset, DatasetD, Datatype, DatasetExt};
 pub use index::Index;
 
 /// Convenience trait for returning an index for an existing HDF5 file or dataset opened with

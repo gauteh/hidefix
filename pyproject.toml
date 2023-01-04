@@ -14,7 +14,7 @@ classifiers = [
 
 [tool.maturin]
 python-source = "python"
-features = [ "static", "python", "fast-index" ]
+features = [ "static", "python", "extension-module", "fast-index" ]
 
 [tool.pytest.ini_options]
 addopts = "--benchmark-disable"

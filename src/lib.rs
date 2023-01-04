@@ -65,7 +65,7 @@ pub mod idx;
 pub mod reader;
 
 pub mod prelude {
-    pub use super::idx::{Index, IntoIndex};
+    pub use super::idx::{Index, IntoIndex, DatasetExt};
     pub use super::reader::{ParReader, ParReaderExt, Reader, ReaderExt, Streamer, StreamerExt};
 }
 

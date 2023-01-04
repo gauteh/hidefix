@@ -7,6 +7,7 @@ use strength_reduce::StrengthReducedU64;
 
 use super::super::chunk::{Chunk, ULE};
 use super::types::*;
+use super::DatasetExt;
 use crate::filters::byteorder::Order as ByteOrder;
 
 /// A HDF5 dataset (a single variable).
@@ -384,6 +385,20 @@ impl<const D: usize> Dataset<'_, D> {
             });
 
         &self.chunks[offset as usize]
+    }
+}
+
+impl<const D: usize> DatasetExt for Dataset<'_, D> {
+    fn size(&self) -> usize {
+        self.size()
+    }
+
+    fn dtype(&self) -> Datatype {
+        self.dtype
+    }
+
+    fn dsize(&self) -> usize {
+        self.dsize
     }
 }
 

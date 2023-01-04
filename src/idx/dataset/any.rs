@@ -85,35 +85,41 @@ impl DatasetD<'_> {
         })
     }
 
-    pub fn dsize(&self) -> usize {
+    pub fn inner(&self) -> &dyn DatasetExt {
         use DatasetD::*;
         match self {
-            D0(ds) => ds.dsize,
-            D1(ds) => ds.dsize,
-            D2(ds) => ds.dsize,
-            D3(ds) => ds.dsize,
-            D4(ds) => ds.dsize,
-            D5(ds) => ds.dsize,
-            D6(ds) => ds.dsize,
-            D7(ds) => ds.dsize,
-            D8(ds) => ds.dsize,
-            D9(ds) => ds.dsize,
+            D0(ds) => ds as &dyn DatasetExt,
+            D1(ds) => ds,
+            D2(ds) => ds,
+            D3(ds) => ds,
+            D4(ds) => ds,
+            D5(ds) => ds,
+            D6(ds) => ds,
+            D7(ds) => ds,
+            D8(ds) => ds,
+            D9(ds) => ds,
         }
     }
+}
 
-    pub fn dtype(&self) -> Datatype {
-        use DatasetD::*;
-        match self {
-            D0(ds) => ds.dtype,
-            D1(ds) => ds.dtype,
-            D2(ds) => ds.dtype,
-            D3(ds) => ds.dtype,
-            D4(ds) => ds.dtype,
-            D5(ds) => ds.dtype,
-            D6(ds) => ds.dtype,
-            D7(ds) => ds.dtype,
-            D8(ds) => ds.dtype,
-            D9(ds) => ds.dtype,
-        }
+pub trait DatasetExt {
+    fn size(&self) -> usize;
+
+    fn dtype(&self) -> Datatype;
+
+    fn dsize(&self) -> usize;
+}
+
+impl<'a> DatasetExt for DatasetD<'a> {
+    fn size(&self) -> usize {
+        self.inner().size()
+    }
+
+    fn dtype(&self) -> Datatype {
+        self.inner().dtype()
+    }
+
+    fn dsize(&self) -> usize {
+        self.inner().dsize()
     }
 }
