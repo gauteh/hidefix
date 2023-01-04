@@ -4,10 +4,11 @@ use std::borrow::Cow;
 use std::cmp::min;
 use std::convert::TryInto;
 use strength_reduce::StrengthReducedU64;
+use std::path::Path;
 
 use super::super::chunk::{Chunk, ULE};
 use super::types::*;
-use super::DatasetExt;
+use super::{DatasetExt, DatasetExtReader};
 use crate::filters::byteorder::Order as ByteOrder;
 
 /// A HDF5 dataset (a single variable).
@@ -407,6 +408,12 @@ impl<const D: usize> DatasetExt for Dataset<'_, D> {
 
     fn chunk_shape(&self) -> &[u64] {
         self.chunk_shape.as_slice()
+    }
+
+    fn as_par_reader(&self, p: &Path) -> anyhow::Result<Box<dyn DatasetExtReader + '_>> {
+        use crate::reader::direct::Direct;
+
+        Ok(Box::new(Direct::with_dataset(self, p)?))
     }
 }
 

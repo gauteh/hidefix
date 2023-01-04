@@ -1,7 +1,7 @@
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 
-use crate::prelude::{Reader, Streamer};
+use crate::prelude::{Reader, ParReader, Streamer};
 use super::*;
 
 /// Dataset in possible dimensions.
@@ -102,6 +102,9 @@ impl DatasetD<'_> {
     }
 }
 
+pub trait DatasetExtReader: Reader + ParReader {}
+impl<T: Reader + ParReader> DatasetExtReader for T {}
+
 pub trait DatasetExt {
     fn size(&self) -> usize;
 
@@ -112,6 +115,8 @@ pub trait DatasetExt {
     fn shape(&self) -> &[u64];
 
     fn chunk_shape(&self) -> &[u64];
+
+    fn as_par_reader(&self, p: &Path) -> anyhow::Result<Box<dyn DatasetExtReader + '_>>;
 }
 
 impl<'a> DatasetExt for DatasetD<'a> {
@@ -133,5 +138,9 @@ impl<'a> DatasetExt for DatasetD<'a> {
 
     fn chunk_shape(&self) -> &[u64] {
         self.inner().chunk_shape()
+    }
+
+    fn as_par_reader(&self, p: &Path) -> anyhow::Result<Box<dyn DatasetExtReader + '_>> {
+        self.inner().as_par_reader(p)
     }
 }

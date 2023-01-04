@@ -11,6 +11,10 @@ def coads():
     return Path(__file__).parent / 'data' / 'coads_climatology.nc4'
 
 @pytest.fixture
+def feb():
+    return Path(__file__).parent / 'data' / 'feb.nc4'
+
+@pytest.fixture
 def large_file():
     f = os.getenv('HIDEFIX_LARGE_FILE')
     v = os.getenv('HIDEFIX_LARGE_VAR')
