@@ -86,7 +86,6 @@ impl Dataset {
         println!("dtype: {:?}", ds.dtype());
         println!("shape: {:?}", shape);
 
-
         // if there are fewer slices than dimensions they will be extended by the full dimension
         // when read.
         let (mut indices, (mut counts, mut strides)): (Vec<_>, (Vec<_>, Vec<_>)) = slice
@@ -116,11 +115,30 @@ impl Dataset {
 
         // read the data into correct datatype, convert to pyarray and cast as pyany.
         let a = match ds.dtype() {
-            Datatype::Float(sz) if sz == 4 => PyArray::from_vec(py, r.values_par::<f32>(Some(&indices), Some(&counts))?).as_ref(),
-            Datatype::Float(sz) if sz == 8 => PyArray::from_vec(py, r.values_par::<f64>(Some(&indices), Some(&counts))?).as_ref(),
-            _ => unimplemented!()
-        };
+            Datatype::Float(sz) if sz == 4 => {
+                let (a, dst) = unsafe {
+                    let a = PyArray::<f32, _>::new(
+                        py,
+                        counts
+                            .iter()
+                            .cloned()
+                            .map(|d| d as usize)
+                            .collect::<Vec<_>>(),
+                        false,
+                    );
+                    let dst = a.as_slice_mut()?;
 
+                    (a, dst)
+                };
+
+                r.values_to_par(Some(&indices), Some(&counts), dst)?;
+                a.as_ref()
+            }
+            Datatype::Float(sz) if sz == 8 => {
+                PyArray::from_vec(py, r.values_par::<f64>(Some(&indices), Some(&counts))?).as_ref()
+            }
+            _ => unimplemented!(),
+        };
 
         Ok(a)
     }
