@@ -1,6 +1,8 @@
 //! Wrappers for using hidefix in Python.
 
-use numpy::{PyArray, PyArray1, PyArrayDyn};
+use crate::filters::byteorder::ToNative;
+use byte_slice_cast::ToMutByteSlice;
+use numpy::{PyArray, PyArray1};
 use pyo3::{
     prelude::*,
     types::{PySlice, PyTuple},
@@ -59,7 +61,38 @@ struct Dataset {
     ds: String,
 }
 
-impl Dataset {}
+impl Dataset {
+    fn read_py_array<'py, T>(
+        &self,
+        py: Python<'py>,
+        ds: &idx::DatasetD<'_>,
+        indices: &[u64],
+        counts: &[u64],
+    ) -> PyResult<&'py PyAny>
+    where
+        T: numpy::Element + ToMutByteSlice + 'py,
+        [T]: ToNative,
+    {
+        let r = ds.as_par_reader(self.idx.path().unwrap())?;
+        let (a, dst) = unsafe {
+            let a = PyArray::<T, _>::new(
+                py,
+                counts
+                    .iter()
+                    .cloned()
+                    .map(|d| d as usize)
+                    .collect::<Vec<_>>(),
+                false,
+            );
+            let dst = a.as_slice_mut()?;
+
+            (a, dst)
+        };
+
+        r.values_to_par(Some(indices), Some(counts), dst)?;
+        Ok(a.as_ref())
+    }
+}
 
 #[pymethods]
 impl Dataset {
@@ -111,36 +144,40 @@ impl Dataset {
         dbg!(&counts);
         dbg!(&strides);
 
-        let r = ds.as_par_reader(self.idx.path().unwrap())?;
-
         // read the data into correct datatype, convert to pyarray and cast as pyany.
-        let a = match ds.dtype() {
+        match ds.dtype() {
+            Datatype::UInt(sz) if sz == 1 => {
+                self.read_py_array::<u8>(py, ds, &indices, &counts)
+            }
+            Datatype::UInt(sz) if sz == 2 => {
+                self.read_py_array::<u16>(py, ds, &indices, &counts)
+            }
+            Datatype::UInt(sz) if sz == 4 => {
+                self.read_py_array::<u32>(py, ds, &indices, &counts)
+            }
+            Datatype::UInt(sz) if sz == 8 => {
+                self.read_py_array::<u64>(py, ds, &indices, &counts)
+            }
+            Datatype::Int(sz) if sz == 1 => {
+                self.read_py_array::<i8>(py, ds, &indices, &counts)
+            }
+            Datatype::Int(sz) if sz == 2 => {
+                self.read_py_array::<i16>(py, ds, &indices, &counts)
+            }
+            Datatype::Int(sz) if sz == 4 => {
+                self.read_py_array::<i32>(py, ds, &indices, &counts)
+            }
+            Datatype::Int(sz) if sz == 8 => {
+                self.read_py_array::<i64>(py, ds, &indices, &counts)
+            }
             Datatype::Float(sz) if sz == 4 => {
-                let (a, dst) = unsafe {
-                    let a = PyArray::<f32, _>::new(
-                        py,
-                        counts
-                            .iter()
-                            .cloned()
-                            .map(|d| d as usize)
-                            .collect::<Vec<_>>(),
-                        false,
-                    );
-                    let dst = a.as_slice_mut()?;
-
-                    (a, dst)
-                };
-
-                r.values_to_par(Some(&indices), Some(&counts), dst)?;
-                a.as_ref()
+                self.read_py_array::<f32>(py, ds, &indices, &counts)
             }
             Datatype::Float(sz) if sz == 8 => {
-                PyArray::from_vec(py, r.values_par::<f64>(Some(&indices), Some(&counts))?).as_ref()
+                self.read_py_array::<f64>(py, ds, &indices, &counts)
             }
             _ => unimplemented!(),
-        };
-
-        Ok(a)
+        }
     }
 }
 
