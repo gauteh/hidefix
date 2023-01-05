@@ -2,7 +2,7 @@
 
 use crate::filters::byteorder::ToNative;
 use byte_slice_cast::ToMutByteSlice;
-use numpy::{PyArray, PyArray1};
+use numpy::{PyArray, PyArray1, IntoPyArray};
 use pyo3::{
     prelude::*,
     types::{PyInt, PySlice, PyTuple},
@@ -103,7 +103,7 @@ impl Dataset {
         Ok(a.as_ref())
     }
 
-    fn read_py_array<'py, T>(
+    fn read_ndarray<'py, T>(
         &self,
         py: Python<'py>,
         ds: &idx::DatasetD<'_>,
@@ -111,33 +111,17 @@ impl Dataset {
         counts: &[u64],
     ) -> PyResult<&'py PyAny>
     where
-        T: numpy::Element + ToMutByteSlice + 'py,
+        T: Default + numpy::Element + ToMutByteSlice + 'py,
         [T]: ToNative,
     {
-        let mut dims = counts
-            .iter()
-            .cloned()
-            .map(|d| d as usize)
-            .filter(|d| *d > 1)
-            .collect::<Vec<_>>();
-
-        if dims.is_empty() {
-            dims.push(1);
-        }
-
-        let (a, dst) = unsafe {
-            let a = PyArray::<T, _>::new(py, dims, false);
-            let dst = a.as_slice_mut()?;
-
-            (a, dst)
-        };
-
-        py.allow_threads(|| {
+        let a = py.allow_threads(|| {
             let r = ds.as_par_reader(self.idx.path().unwrap())?;
-            r.values_to_par(Some(indices), Some(counts), dst)
+            r.values_dyn_par(Some(indices), Some(counts))
         })?;
 
-        Ok(a.as_ref())
+        let a = a.into_pyarray(py);
+
+        Ok(a)
     }
 }
 
@@ -192,16 +176,16 @@ impl Dataset {
 
         // read the data into correct datatype, convert to pyarray and cast as pyany.
         match ds.dtype() {
-            Datatype::UInt(sz) if sz == 1 => self.read_py_array::<u8>(py, ds, &indices, &counts),
-            Datatype::UInt(sz) if sz == 2 => self.read_py_array::<u16>(py, ds, &indices, &counts),
-            Datatype::UInt(sz) if sz == 4 => self.read_py_array::<u32>(py, ds, &indices, &counts),
-            Datatype::UInt(sz) if sz == 8 => self.read_py_array::<u64>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 1 => self.read_py_array::<i8>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 2 => self.read_py_array::<i16>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 4 => self.read_py_array::<i32>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 8 => self.read_py_array::<i64>(py, ds, &indices, &counts),
-            Datatype::Float(sz) if sz == 4 => self.read_py_array::<f32>(py, ds, &indices, &counts),
-            Datatype::Float(sz) if sz == 8 => self.read_py_array::<f64>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 1 => self.read_ndarray::<u8>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 2 => self.read_ndarray::<u16>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 4 => self.read_ndarray::<u32>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 8 => self.read_ndarray::<u64>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 1 => self.read_ndarray::<i8>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 2 => self.read_ndarray::<i16>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 4 => self.read_ndarray::<i32>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 8 => self.read_ndarray::<i64>(py, ds, &indices, &counts),
+            Datatype::Float(sz) if sz == 4 => self.read_ndarray::<f32>(py, ds, &indices, &counts),
+            Datatype::Float(sz) if sz == 8 => self.read_ndarray::<f64>(py, ds, &indices, &counts),
             _ => unimplemented!(),
         }
     }
