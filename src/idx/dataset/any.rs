@@ -1,8 +1,8 @@
-use std::path::Path;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
-use crate::prelude::{Reader, ParReader, Streamer};
 use super::*;
+use crate::prelude::{ParReader, Reader, Streamer};
 
 /// Dataset in possible dimensions.
 #[derive(Debug, Serialize, Deserialize)]

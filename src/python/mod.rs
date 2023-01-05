@@ -41,6 +41,10 @@ impl Index {
         })
     }
 
+    fn __getitem__(&self, s: &str) -> Option<Dataset> {
+        self.dataset(s)
+    }
+
     pub fn datasets(&self) -> Vec<String> {
         self.idx.datasets().keys().cloned().collect::<Vec<_>>()
     }
@@ -122,9 +126,6 @@ impl Dataset {
         let ds = self.idx.dataset(&self.ds).unwrap();
         let shape = ds.shape();
 
-        println!("dtype: {:?}", ds.dtype());
-        println!("shape: {:?}", shape);
-
         // if there are fewer slices than dimensions they will be extended by the full dimension
         // when read.
         let (mut indices, (mut counts, mut strides)): (Vec<_>, (Vec<_>, Vec<_>)) = slice
@@ -150,9 +151,7 @@ impl Dataset {
         strides.resize_with(shape.len(), || 1);
         counts.extend_from_slice(&shape[counts.len()..]);
 
-        dbg!(&indices);
-        dbg!(&counts);
-        dbg!(&strides);
+        assert!(strides.iter().all(|i| *i == 1), "strides not yet supported");
 
         // read the data into correct datatype, convert to pyarray and cast as pyany.
         match ds.dtype() {

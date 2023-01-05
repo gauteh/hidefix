@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::cmp::min;
 use std::convert::TryInto;
-use strength_reduce::StrengthReducedU64;
 use std::path::Path;
+use strength_reduce::StrengthReducedU64;
 
 use super::super::chunk::{Chunk, ULE};
 use super::types::*;
