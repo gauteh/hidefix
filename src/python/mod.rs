@@ -102,6 +102,43 @@ impl Dataset {
 
         Ok(a.as_ref())
     }
+
+    fn read_py_array<'py, T>(
+        &self,
+        py: Python<'py>,
+        ds: &idx::DatasetD<'_>,
+        indices: &[u64],
+        counts: &[u64],
+    ) -> PyResult<&'py PyAny>
+    where
+        T: numpy::Element + ToMutByteSlice + 'py,
+        [T]: ToNative,
+    {
+        let mut dims = counts
+            .iter()
+            .cloned()
+            .map(|d| d as usize)
+            .filter(|d| *d > 1)
+            .collect::<Vec<_>>();
+
+        if dims.is_empty() {
+            dims.push(1);
+        }
+
+        let (a, dst) = unsafe {
+            let a = PyArray::<T, _>::new(py, dims, false);
+            let dst = a.as_slice_mut()?;
+
+            (a, dst)
+        };
+
+        py.allow_threads(|| {
+            let r = ds.as_par_reader(self.idx.path().unwrap())?;
+            r.values_to_par(Some(indices), Some(counts), dst)
+        })?;
+
+        Ok(a.as_ref())
+    }
 }
 
 #[pymethods]

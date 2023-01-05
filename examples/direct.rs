@@ -19,7 +19,8 @@ fn main() -> anyhow::Result<()> {
         let r = Direct::with_dataset(ds, i.path().unwrap())?;
 
         println!("Reading values from {var}..");
-        let values = r.values_par::<f32>(None, None).unwrap();
+        // let values = r.values_par::<f32>(None, None).unwrap();
+        let values = r.values_par_arr::<f32>(None, None).unwrap();
 
         println!("Number of values: {}", values.len());
         println!("First value: {}", values.first().unwrap());

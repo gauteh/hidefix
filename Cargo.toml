@@ -36,6 +36,7 @@ hdf5-src = "0.8"
 log = "0.4"
 tokio-uring = "0.4.0"
 rayon = "1.6"
+ndarray = "0.15"
 pyo3 = { version = "0.17.3", optional = true, features = ["anyhow", "auto-initialize"] }
 numpy = { version = "0.17.2", optional = true }
 
@@ -48,7 +49,6 @@ features = ["sync", "macros", "rt-multi-thread"]
 version = "1"
 
 [dev-dependencies]
-ndarray = "0.15"
 rand = "0.8"
 sled = "0.34.6"
 

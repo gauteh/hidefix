@@ -181,7 +181,8 @@ pub trait ParReaderExt: Reader + ParReader {
             .map(|d| d as usize)
             .collect::<Vec<_>>();
 
-        let mut a = ndarray::Array1::<T>::default(vsz);
+        // this is not safe: better to let read_to take maybeuninit's
+        let mut a = unsafe { ndarray::Array1::<T>::uninit(vsz).assume_init() };
         let dst = a.as_slice_mut().unwrap();
         self.values_to_par(indices, counts, dst)?;
         let a = a.into_shape(dims)?;
