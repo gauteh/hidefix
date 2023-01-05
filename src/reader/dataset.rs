@@ -146,7 +146,7 @@ pub trait ParReaderExt: Reader + ParReader {
         Ok(values)
     }
 
-    fn values_par_arr<T>(
+    fn values_dyn_par<T>(
         &self,
         indices: Option<&[u64]>,
         counts: Option<&[u64]>,
