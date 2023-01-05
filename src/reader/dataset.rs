@@ -145,6 +145,49 @@ pub trait ParReaderExt: Reader + ParReader {
 
         Ok(values)
     }
+
+    fn values_par_arr<T>(
+        &self,
+        indices: Option<&[u64]>,
+        counts: Option<&[u64]>,
+    ) -> Result<ndarray::ArrayD<T>, anyhow::Error>
+    where
+        T: ToMutByteSlice + Default,
+        [T]: ToNative,
+    {
+        let dsz = self.dsize();
+        ensure!(
+            dsz % std::mem::size_of::<T>() == 0,
+            "size of datatype ({}) not multiple of target {}",
+            dsz,
+            std::mem::size_of::<T>()
+        );
+
+        if dsz != std::mem::size_of::<T>() {
+            error!("size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
+        }
+
+        let vsz = counts
+            .unwrap_or_else(|| self.shape())
+            .iter()
+            .product::<u64>() as usize
+            * dsz
+            / std::mem::size_of::<T>();
+
+        let dims = counts
+            .unwrap_or_else(|| self.shape())
+            .iter()
+            .cloned()
+            .map(|d| d as usize)
+            .collect::<Vec<_>>();
+
+        let mut a = ndarray::Array1::<T>::default(vsz);
+        let dst = a.as_slice_mut().unwrap();
+        self.values_to_par(indices, counts, dst)?;
+        let a = a.into_shape(dims)?;
+
+        Ok(a)
+    }
 }
 
 impl<T: ?Sized + Reader + ParReader> ParReaderExt for T {}
