@@ -10,7 +10,7 @@ def test_nc_open_large(large_file, benchmark):
     i = benchmark(Dataset, f)
     print(str(i))
 
-def test_read_large(large_file, benchmark):
+def test_read_large_netcdf4(large_file, benchmark):
     f, v = large_file
     d = Dataset(f)
     var = d[v]

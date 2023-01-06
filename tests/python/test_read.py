@@ -1,7 +1,7 @@
 from operator import getitem
 from hidefix import Index
 
-def test_read_large(large_file, benchmark):
+def test_read_large_hidefix(large_file, benchmark):
     f, v = large_file
     i = Index(f)
     var = i[v]
