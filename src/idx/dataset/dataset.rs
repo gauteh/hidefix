@@ -410,7 +410,7 @@ impl<const D: usize> DatasetExt for Dataset<'_, D> {
         self.chunk_shape.as_slice()
     }
 
-    fn as_par_reader(&self, p: &Path) -> anyhow::Result<Box<dyn DatasetExtReader + '_>> {
+    fn as_par_reader(&self, p: &dyn AsRef<Path>) -> anyhow::Result<Box<dyn DatasetExtReader + '_>> {
         use crate::reader::direct::Direct;
 
         Ok(Box::new(Direct::with_dataset(self, p)?))
