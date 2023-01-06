@@ -10,6 +10,7 @@ import operator
 import hidefix
 import netCDF4 as nc
 import xarray as xr
+import numpy as np
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -91,7 +92,7 @@ class HidefixDataStore(WritableCFDataStore):
 
         # These can be done concurrently
         self.idx = hidefix.Index(path)
-        self.ds = nc.Dataset(path, mode = 'r')
+        self.ds = nc.Dataset(path, mode='r')
 
     @classmethod
     def open(
@@ -115,20 +116,26 @@ class HidefixDataStore(WritableCFDataStore):
 
     def get_encoding(self):
         return {
-            "unlimited_dims": {
-                k for k, v in self.ds.dimensions.items() if v.isunlimited()
-            }
+            "unlimited_dims":
+            {k
+             for k, v in self.ds.dimensions.items() if v.isunlimited()}
         }
+
     def get_variables(self):
-        return FrozenDict((k, self.open_store_variable(k)) for k in self.idx.datasets())
+        return FrozenDict(
+            (k, self.open_store_variable(k)) for k in self.idx.datasets())
 
     def open_store_variable(self, k):
-        data = indexing.LazilyIndexedArray(HidefixArray(self, k))
-
         var = self.ds.variables[k]
+        attributes = {k: var.getncattr(k) for k in var.ncattrs()}
+
+        data = indexing.LazilyIndexedArray(
+            HidefixArray(self, k, var, attributes))
+
+        attributes.pop('_FillValue', None)
+        attributes.pop('missing_value', None)
 
         dimensions = var.dimensions
-        attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         xr.backends.netCDF4_._ensure_fill_value_valid(data, attributes)
         encoding = {}
         filters = var.filters()
@@ -153,23 +160,33 @@ class HidefixDataStore(WritableCFDataStore):
 
         return Variable(dimensions, data, attributes, encoding)
 
+
 class HidefixArray(BackendArray):
-    def __init__(self, store, name):
+
+    def __init__(self, store, name, var, attributes):
         self.store = store
         self.variable_name = name
 
-        array = self.store.ds.variables[name]
-
-        self.shape = array.shape
-        self.dtype = array.dtype
+        self.shape = var.shape
+        self.dtype = var.dtype
+        self.fill_value = attributes.get('_FillValue', None)
+        missing = attributes.get('missing_value', None)
+        if missing is not None:
+            if self.fill_value is None:
+                self.fill_value = missing
+            else:
+                assert missing == self.fill_value, "mismatch between missing_value and _FillValue"
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
-        )
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
     def _getitem(self, key):
         array = self.store.idx[self.variable_name]
-        return array[key]
+        data = array[key]
+        if self.fill_value is not None:
+            array.apply_fill_value(self.fill_value, np.nan, data)
+        return data
+
 
 BACKEND_ENTRYPOINTS["hidefix"] = HidefixBackendEntrypoint

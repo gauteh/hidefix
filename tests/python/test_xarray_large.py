@@ -27,10 +27,11 @@ def test_read_large(large_file, benchmark, engine):
     f, v = large_file
 
     def setup():
-        return (xr.open_dataset(f, engine=engine), v), {}
+        ds = xr.open_dataset(f, engine=engine)
+        return (ds[v], v), {}
 
     def read(ds, v):
-        return ds[v].load()
+        return ds.values
         # return ds[v].values
 
     vals = benchmark.pedantic(read, setup=setup)
