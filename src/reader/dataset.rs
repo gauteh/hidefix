@@ -167,13 +167,6 @@ pub trait ParReaderExt: Reader + ParReader {
             error!("size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
         }
 
-        let vsz = counts
-            .unwrap_or_else(|| self.shape())
-            .iter()
-            .product::<u64>() as usize
-            * dsz
-            / std::mem::size_of::<T>();
-
         let dims = counts
             .unwrap_or_else(|| self.shape())
             .iter()
@@ -182,10 +175,9 @@ pub trait ParReaderExt: Reader + ParReader {
             .collect::<Vec<_>>();
 
         // this is not safe: better to let read_to take maybeuninit's
-        let mut a = unsafe { ndarray::Array1::<T>::uninit(vsz).assume_init() };
+        let mut a = unsafe { ndarray::ArrayD::<T>::uninit(dims).assume_init() };
         let dst = a.as_slice_mut().unwrap();
         self.values_to_par(indices, counts, dst)?;
-        let a = a.into_shape(dims)?;
 
         Ok(a)
     }

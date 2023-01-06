@@ -176,16 +176,16 @@ impl Dataset {
 
         // read the data into correct datatype, convert to pyarray and cast as pyany.
         match ds.dtype() {
-            Datatype::UInt(sz) if sz == 1 => self.read_ndarray::<u8>(py, ds, &indices, &counts),
-            Datatype::UInt(sz) if sz == 2 => self.read_ndarray::<u16>(py, ds, &indices, &counts),
-            Datatype::UInt(sz) if sz == 4 => self.read_ndarray::<u32>(py, ds, &indices, &counts),
-            Datatype::UInt(sz) if sz == 8 => self.read_ndarray::<u64>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 1 => self.read_ndarray::<i8>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 2 => self.read_ndarray::<i16>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 4 => self.read_ndarray::<i32>(py, ds, &indices, &counts),
-            Datatype::Int(sz) if sz == 8 => self.read_ndarray::<i64>(py, ds, &indices, &counts),
-            Datatype::Float(sz) if sz == 4 => self.read_ndarray::<f32>(py, ds, &indices, &counts),
-            Datatype::Float(sz) if sz == 8 => self.read_ndarray::<f64>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 1 => self.read_py_array::<u8>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 2 => self.read_py_array::<u16>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 4 => self.read_py_array::<u32>(py, ds, &indices, &counts),
+            Datatype::UInt(sz) if sz == 8 => self.read_py_array::<u64>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 1 => self.read_py_array::<i8>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 2 => self.read_py_array::<i16>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 4 => self.read_py_array::<i32>(py, ds, &indices, &counts),
+            Datatype::Int(sz) if sz == 8 => self.read_py_array::<i64>(py, ds, &indices, &counts),
+            Datatype::Float(sz) if sz == 4 => self.read_py_array::<f32>(py, ds, &indices, &counts),
+            Datatype::Float(sz) if sz == 8 => self.read_py_array::<f64>(py, ds, &indices, &counts),
             _ => unimplemented!(),
         }
     }
