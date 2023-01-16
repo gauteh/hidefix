@@ -1,3 +1,4 @@
+#![feature(const_option_ext)]
 #![feature(test)]
 extern crate test;
 use test::Bencher;
@@ -5,8 +6,8 @@ use test::Bencher;
 use hidefix::prelude::*;
 use ndarray::s;
 
-const FILE: &'static str = env!("HIDEFIX_LARGE_FILE");
-const VAR: &'static str = env!("HIDEFIX_LARGE_VAR");
+const FILE: &'static str = option_env!("HIDEFIX_LARGE_FILE").unwrap_or("");
+const VAR: &'static str = option_env!("HIDEFIX_LARGE_VAR").unwrap_or("");
 
 #[ignore]
 #[bench]
