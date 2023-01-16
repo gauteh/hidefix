@@ -2,7 +2,7 @@
 
 use crate::filters::byteorder::ToNative;
 use byte_slice_cast::ToMutByteSlice;
-use numpy::{PyArray, PyArrayDyn, PyArray1, IntoPyArray};
+use numpy::{IntoPyArray, PyArray, PyArray1, PyArrayDyn};
 use pyo3::{
     prelude::*,
     types::{PyInt, PySlice, PyTuple},
@@ -124,8 +124,19 @@ impl Dataset {
         Ok(a)
     }
 
-    fn apply_fill_value_impl<'py, T>(&self, py: Python<'py>, cond: &'py PyAny, fv: &'py PyAny, arr: &'py PyAny)
-        where T: Clone + pyo3::conversion::FromPyObject<'py> + numpy::Element + Sync + std::cmp::PartialEq + Copy
+    fn apply_fill_value_impl<'py, T>(
+        &self,
+        py: Python<'py>,
+        cond: &'py PyAny,
+        fv: &'py PyAny,
+        arr: &'py PyAny,
+    ) where
+        T: Clone
+            + pyo3::conversion::FromPyObject<'py>
+            + numpy::Element
+            + Sync
+            + std::cmp::PartialEq
+            + Copy,
     {
         let cond: T = cond.extract().unwrap();
         let fv: T = fv.extract().unwrap();
@@ -201,7 +212,13 @@ impl Dataset {
         }
     }
 
-    pub fn apply_fill_value<'py>(&self, py: Python<'py>, cond: &PyAny, fv: &PyAny, arr: &'py PyAny) {
+    pub fn apply_fill_value<'py>(
+        &self,
+        py: Python<'py>,
+        cond: &PyAny,
+        fv: &PyAny,
+        arr: &'py PyAny,
+    ) {
         let ds = self.idx.dataset(&self.ds).unwrap();
         match ds.dtype() {
             Datatype::UInt(sz) if sz == 1 => self.apply_fill_value_impl::<u8>(py, cond, fv, arr),
@@ -214,7 +231,7 @@ impl Dataset {
             Datatype::Int(sz) if sz == 8 => self.apply_fill_value_impl::<i64>(py, cond, fv, arr),
             Datatype::Float(sz) if sz == 4 => self.apply_fill_value_impl::<f32>(py, cond, fv, arr),
             Datatype::Float(sz) if sz == 8 => self.apply_fill_value_impl::<f64>(py, cond, fv, arr),
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
@@ -252,11 +269,18 @@ mod tests {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
             let ds = i.dataset("SST").unwrap();
 
-            let arr = ds.__getitem__(py, PyTuple::new(py, vec![0, 10, 1])).unwrap();
+            let arr = ds
+                .__getitem__(py, PyTuple::new(py, vec![0, 10, 1]))
+                .unwrap();
             println!("{:?}", arr);
 
             // apply fill value
-            ds.apply_fill_value(py, PyFloat::new(py, -1.0e+34), PyFloat::new(py, f64::NAN), &arr);
+            ds.apply_fill_value(
+                py,
+                PyFloat::new(py, -1.0e+34),
+                PyFloat::new(py, f64::NAN),
+                &arr,
+            );
         });
     }
 }
