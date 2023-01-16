@@ -78,7 +78,7 @@ jobs:
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
-        toolchain: nightly
+        rust-toolchain: nightly
         target: ${{ matrix.target }}
         manylinux: auto
         args: --release --out dist -m python/Cargo.toml
@@ -106,7 +106,7 @@ jobs:
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
-        toolchain: nightly
+        rust-toolchain: nightly
         target: ${{ matrix.target }}
         manylinux: auto
         args: --release --out dist -m python/Cargo.toml
