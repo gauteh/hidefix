@@ -184,8 +184,8 @@ impl Dataset {
             .zip(shape)
             .map(|(slice, dim_sz)| {
                 let i = slice
-                    .indices(*dim_sz as i64)
-                    .expect("slice could not be retrieced, too big for dimension?");
+                    .indices((*dim_sz).try_into().unwrap())
+                    .expect("slice could not be retrieved, too big for dimension?");
                 (i.start as u64, ((i.stop - i.start) as u64, i.step as u64))
             })
             .unzip();
