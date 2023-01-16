@@ -37,7 +37,7 @@ log = "0.4"
 tokio-uring = "0.4.0"
 rayon = "1.6"
 ndarray = { version = "0.15", features = [ "rayon" ] }
-pyo3 = { version = "0.17.3", optional = true, features = ["anyhow", "auto-initialize"] }
+pyo3 = { version = "0.17.3", optional = true, features = ["anyhow", "auto-initialize", "abi3-py37"] }
 numpy = { version = "0.17.2", optional = true }
 
 [dependencies.serde]
