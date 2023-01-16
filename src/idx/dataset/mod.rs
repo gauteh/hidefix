@@ -1,4 +1,5 @@
 mod any;
+#[allow(clippy::module_inception)]
 mod dataset;
 mod types;
 

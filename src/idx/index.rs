@@ -36,6 +36,7 @@ impl TryFrom<&hdf5::File> for Index<'_> {
 
 impl Index<'_> {
     /// Open an existing HDF5 file and index all variables.
+    #[allow(clippy::self_named_constructors)]
     pub fn index<P>(path: P) -> Result<Index<'static>, anyhow::Error>
     where
         P: AsRef<Path>,

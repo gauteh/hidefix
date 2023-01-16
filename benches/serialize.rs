@@ -1,10 +1,11 @@
+#![feature(const_option_ext)]
 #![feature(test)]
 extern crate test;
 use test::Bencher;
 
 use hidefix::idx::Index;
 
-const FILE: &'static str = env!("HIDEFIX_LARGE_FILE");
+const FILE: &'static str = option_env!("HIDEFIX_LARGE_FILE").unwrap_or("");
 // const VAR: &'static str = env!("HIDEFIX_LARGE_VAR");
 
 mod serde_bincode {

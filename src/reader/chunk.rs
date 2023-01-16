@@ -10,6 +10,7 @@ where
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn read_chunk<F>(
     fd: &mut F,
     addr: u64,
