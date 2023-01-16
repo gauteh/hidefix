@@ -52,6 +52,7 @@
 #![feature(assert_matches)]
 #![feature(slice_group_by)]
 #![feature(mutex_unlock)]
+#![feature(new_uninit)]
 extern crate test;
 
 #[macro_use]

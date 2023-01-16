@@ -103,7 +103,7 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
 
             dst = &mut dst[slice_sz..];
         }
-        println!("chunks read: {}", i);
+        println!("chunks read: {i}");
 
         Ok(vsz as usize)
     }

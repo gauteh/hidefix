@@ -114,7 +114,7 @@ impl<const D: usize> Dataset<'_, D> {
                                 .as_slice()
                                 .try_into()
                                 .unwrap(),
-                            size: ULE::new(ci.size as u64),
+                            size: ULE::new(ci.size),
                             addr: ULE::new(ci.addr),
                         });
 
@@ -338,7 +338,7 @@ impl<const D: usize> Dataset<'_, D> {
             .scan(0u64, |offset, (c, start, end)| {
                 let slice_sz = end - start;
                 let current = *offset;
-                *offset = *offset + slice_sz;
+                *offset += slice_sz;
 
                 Some((c, current, start, end))
             })

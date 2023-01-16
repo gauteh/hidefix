@@ -44,7 +44,7 @@ impl DatasetD<'_> {
             7 => Ok(D7(Dataset::<7>::index(ds)?)),
             8 => Ok(D8(Dataset::<8>::index(ds)?)),
             9 => Ok(D9(Dataset::<9>::index(ds)?)),
-            n => panic!("Dataset only implemented for 0..9 dimensions (not {})", n),
+            n => panic!("Dataset only implemented for 0..9 dimensions (not {n})"),
         }
     }
 

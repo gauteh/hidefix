@@ -70,11 +70,11 @@ pub trait ReaderExt: Reader {
             .product::<u64>() as usize
             * dsz
             / std::mem::size_of::<T>();
-        let mut values = Vec::with_capacity(vsz);
-        unsafe {
-            values.set_len(vsz);
-        }
-        self.values_to(indices, counts, values.as_mut_slice())?;
+
+        let values = Box::<[T]>::new_uninit_slice(vsz);
+        let values = unsafe { values.assume_init() };
+        let mut values = values.into_vec();
+        self.values_to(indices, counts, values.as_mut_slice())?; // XXX: take maybeuninit
 
         Ok(values)
     }
@@ -137,10 +137,10 @@ pub trait ParReaderExt: Reader + ParReader {
             .product::<u64>() as usize
             * dsz
             / std::mem::size_of::<T>();
-        let mut values = Vec::with_capacity(vsz);
-        unsafe {
-            values.set_len(vsz);
-        }
+
+        let values = Box::<[T]>::new_uninit_slice(vsz);
+        let values = unsafe { values.assume_init() };
+        let mut values = values.into_vec();
         self.values_to_par(indices, counts, values.as_mut_slice())?;
 
         Ok(values)

@@ -18,7 +18,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let fin = &args[1];
 
-    println!("Loading index from {}..", fin);
+    println!("Loading index from {fin}..");
 
     let b = std::fs::read(fin)?;
     let idx = flexbuffers::Reader::get_root(&*b)?.as_map();

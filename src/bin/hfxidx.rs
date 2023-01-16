@@ -23,13 +23,13 @@ fn main() -> Result<(), anyhow::Error> {
     let fin = &args[1];
     let fout = &args[2];
 
-    print!("Indexing {}..", fin);
+    print!("Indexing {fin}..");
 
     let idx = Index::index(fin)?;
 
     println!("done.");
 
-    print!("Writing index to {} (as flxebuffer)..", fout);
+    print!("Writing index to {fout} (as flxebuffer)..");
 
     let mut s = ser::new();
     idx.serialize(&mut s)?;

@@ -194,7 +194,7 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
             dst[current..(current + sz)].copy_from_slice(&cache[start..end]);
         }
 
-        println!("chunks read: {}", i);
+        println!("chunks read: {i}");
 
         Ok(vsz as usize)
     }
