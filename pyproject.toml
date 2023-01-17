@@ -18,3 +18,7 @@ features = [ "static", "python", "extension-module", "fast-index" ]
 
 [tool.pytest.ini_options]
 addopts = "--benchmark-disable"
+
+[project.entry-points."xarray.backends"]
+hidefix = "hidefix.xarray:HidefixBackendEntrypoint"
+

@@ -103,6 +103,7 @@ impl Dataset {
         Ok(a.as_ref())
     }
 
+    #[cfg(off)]
     fn read_ndarray<'py, T>(
         &self,
         py: Python<'py>,
@@ -126,7 +127,7 @@ impl Dataset {
 
     fn apply_fill_value_impl<'py, T>(
         &self,
-        py: Python<'py>,
+        _py: Python<'py>,
         cond: &'py PyAny,
         fv: &'py PyAny,
         arr: &'py PyAny,
