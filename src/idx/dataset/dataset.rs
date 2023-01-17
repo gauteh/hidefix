@@ -108,8 +108,8 @@ impl<const D: usize> Dataset<'_, D> {
                             offset: ci
                                 .offset
                                 .iter()
-                                .zip(chunk_shape.as_slice())
-                                .map(|(o, s)| ULE::new(*o * *s))
+                                .copied()
+                                .map(ULE::new)
                                 .collect::<Vec<_>>()
                                 .as_slice()
                                 .try_into()
