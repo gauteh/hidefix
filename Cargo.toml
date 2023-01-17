@@ -53,9 +53,9 @@ rand = "0.8"
 sled = "0.34.6"
 
 [patch.crates-io]
-hdf5 = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix" }
-hdf5-sys = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix" }
-hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix" }
+hdf5 = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jan_2023" }
+hdf5-sys = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jan_2023" }
+hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jan_2023" }
 
 [profile.release]
 lto = 'thin'
@@ -65,7 +65,7 @@ debug = true
 [features]
 default = ["static", "fast-index"]
 static = ["hdf5-sys/static", "hdf5-sys/zlib"]
-fast-index = ["hdf5-src/1_13"]
+fast-index = ["hdf5-src/1_14"]
 python = ["pyo3", "numpy"]
 extension-module = ["python", "pyo3/extension-module"]
 
