@@ -47,7 +47,6 @@ jobs:
       matrix:
         include:
           - {ubuntu: 20.04, rust: nightly}
-          - {ubuntu: 20.04, rust: nightly}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
