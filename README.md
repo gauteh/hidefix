@@ -1,6 +1,7 @@
 [![Crates.io](https://img.shields.io/crates/v/hidefix.svg)](https://crates.io/crates/hidefix)
 [![Documentation](https://docs.rs/hidefix/badge.svg)](https://docs.rs/hidefix/)
-[![Build Status](https://github.com/gauteh/hidefix/workflows/CI/badge.svg)](https://github.com/gauteh/hidefix/actions?query=branch%3Amain)
+[![Build (rust)](https://github.com/gauteh/hidefix/workflows/Rust/badge.svg)](https://github.com/gauteh/hidefix/actions?query=branch%3Amain)
+[![Build (python)](https://github.com/gauteh/hidefix/workflows/Python/badge.svg)](https://github.com/gauteh/hidefix/actions?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/gauteh/hidefix/branch/main/graph/badge.svg)](https://codecov.io/gh/gauteh/hidefix)
 [![Rust nightly](https://img.shields.io/badge/rustc-nightly-orange)](https://rust-lang.github.io/rustup/installation/other.html)
 
