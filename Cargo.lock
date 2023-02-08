@@ -317,7 +317,7 @@ dependencies = [
 [[package]]
 name = "hdf5"
 version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix#038eb65aea4cc52cad26d176e3b17b796c749da3"
+source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jan_2023#90f05d0ce4af1ffa684f70255e636638e48ff901"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -327,14 +327,14 @@ dependencies = [
  "lazy_static",
  "libc",
  "ndarray",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "paste",
 ]
 
 [[package]]
 name = "hdf5-derive"
 version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix#038eb65aea4cc52cad26d176e3b17b796c749da3"
+source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jan_2023#90f05d0ce4af1ffa684f70255e636638e48ff901"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -345,7 +345,7 @@ dependencies = [
 [[package]]
 name = "hdf5-src"
 version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix#038eb65aea4cc52cad26d176e3b17b796c749da3"
+source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jan_2023#90f05d0ce4af1ffa684f70255e636638e48ff901"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -354,7 +354,7 @@ dependencies = [
 [[package]]
 name = "hdf5-sys"
 version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix#038eb65aea4cc52cad26d176e3b17b796c749da3"
+source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jan_2023#90f05d0ce4af1ffa684f70255e636638e48ff901"
 dependencies = [
  "hdf5-src",
  "libc",
@@ -370,7 +370,7 @@ dependencies = [
 [[package]]
 name = "hdf5-types"
 version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix#038eb65aea4cc52cad26d176e3b17b796c749da3"
+source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jan_2023#90f05d0ce4af1ffa684f70255e636638e48ff901"
 dependencies = [
  "ascii",
  "cfg-if",
