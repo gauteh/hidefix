@@ -26,6 +26,7 @@ jobs:
     - name: Install built wheel
       if: matrix.target == 'x86_64'
       run: |
+        pip install numpy xarray netCDF4
         pip install hidefix --no-index --find-links dist --force-reinstall
         python -c "import hidefix"
     - name: Upload wheels
