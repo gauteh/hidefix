@@ -27,7 +27,7 @@ jobs:
       if: matrix.target == 'x86_64'
       run: |
         pip install numpy xarray netCDF4
-        pip install hidefix --no-index --find-links dist --force-reinstall
+        pip install hidefix --no-index --find-links dist --force-reinstall --no-deps
         python -c "import hidefix"
     - name: Upload wheels
       uses: actions/upload-artifact@v3
