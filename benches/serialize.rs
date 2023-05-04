@@ -1,11 +1,10 @@
-#![feature(const_option_ext)]
 #![feature(test)]
 extern crate test;
 use test::Bencher;
 
 use hidefix::idx::Index;
 
-const FILE: &'static str = option_env!("HIDEFIX_LARGE_FILE").unwrap_or("");
+const FILE: Option<&'static str> = option_env!("HIDEFIX_LARGE_FILE");
 // const VAR: &'static str = env!("HIDEFIX_LARGE_VAR");
 
 mod serde_bincode {
@@ -52,7 +51,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn serialize_large_bincode(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
 
         b.iter(|| bincode::serialize(&i).unwrap())
     }
@@ -60,7 +59,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn deserialize_large_bincode(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
         let bb = bincode::serialize(&i).unwrap();
 
         b.iter(|| bincode::deserialize::<Index>(&bb).unwrap())
@@ -69,7 +68,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn serialize_large_bincode_file(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
 
         b.iter(|| {
             let f = std::fs::File::create("/tmp/large.idx.bc").unwrap();
@@ -81,7 +80,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn deserialize_large_bincode_file(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
         let f = std::fs::File::create("/tmp/large.idx.bc").unwrap();
         bincode::serialize_into(f, &i).unwrap();
 
@@ -94,7 +93,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn deserialize_large_bincode_db_sled(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
 
         let bts = bincode::serialize(&i).unwrap();
 
@@ -115,7 +114,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn deserialize_large_bincode_db_sled_only_read(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
 
         let bts = bincode::serialize(&i).unwrap();
 
@@ -135,7 +134,7 @@ mod serde_bincode {
     #[ignore]
     #[bench]
     fn deserialize_large_file_only_read(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
         let f = std::fs::File::create("/tmp/large.idx.bc").unwrap();
         bincode::serialize_into(f, &i).unwrap();
 
@@ -210,7 +209,7 @@ mod serde_flexbuffers {
     #[ignore]
     #[bench]
     fn deserialize_large_file(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
         let mut s = ser::new();
         i.serialize(&mut s).unwrap();
         std::fs::write("/tmp/large.idx.fx", s.view()).unwrap();
@@ -224,7 +223,7 @@ mod serde_flexbuffers {
     #[ignore]
     #[bench]
     fn deserialize_large_file_only_read(b: &mut Bencher) {
-        let i = Index::index(FILE).unwrap();
+        let i = Index::index(FILE.unwrap()).unwrap();
         let mut s = ser::new();
         i.serialize(&mut s).unwrap();
         std::fs::write("/tmp/large.idx.fx", s.view()).unwrap();
