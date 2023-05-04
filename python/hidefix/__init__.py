@@ -1,4 +1,5 @@
 from .hidefix import *
+from . import xarray
 
 
 __doc__ = hidefix.__doc__

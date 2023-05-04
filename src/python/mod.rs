@@ -2,7 +2,7 @@
 
 use crate::filters::byteorder::ToNative;
 use byte_slice_cast::ToMutByteSlice;
-use numpy::{IntoPyArray, PyArray, PyArray1, PyArrayDyn};
+use numpy::{PyArray, PyArray1, PyArrayDyn};
 use pyo3::{
     prelude::*,
     types::{PyInt, PySlice, PyTuple},

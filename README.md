@@ -1,4 +1,5 @@
 [![Crates.io](https://img.shields.io/crates/v/hidefix.svg)](https://crates.io/crates/hidefix)
+[![PyPI](https://img.shields.io/pypi/v/hidefix.svg?style=flat-square)](https://pypi.org/project/hidefix/)
 [![Documentation](https://docs.rs/hidefix/badge.svg)](https://docs.rs/hidefix/)
 [![Build (rust)](https://github.com/gauteh/hidefix/workflows/Rust/badge.svg)](https://github.com/gauteh/hidefix/actions?query=branch%3Amain)
 [![Build (python)](https://github.com/gauteh/hidefix/workflows/Python/badge.svg)](https://github.com/gauteh/hidefix/actions?query=branch%3Amain)

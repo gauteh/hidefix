@@ -189,4 +189,4 @@ class HidefixArray(BackendArray):
         return data
 
 
-BACKEND_ENTRYPOINTS["hidefix"] = HidefixBackendEntrypoint
+BACKEND_ENTRYPOINTS["hidefix"] = ('hidefix', HidefixBackendEntrypoint)
