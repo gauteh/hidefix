@@ -11,6 +11,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
+dependencies = [
+    "numpy",
+    "xarray>=2023",
+    "netCDF4"
+]
+
 
 [tool.maturin]
 python-source = "python"
