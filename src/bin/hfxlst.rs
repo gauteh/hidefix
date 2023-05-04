@@ -1,4 +1,4 @@
-///! List a summary of a flexbuffer serialized index to stdout.
+//! List a summary of a flexbuffer serialized index to stdout.
 use std::env;
 
 #[macro_use]

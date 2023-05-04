@@ -101,13 +101,13 @@ impl<const D: usize> Chunk<D> {
             let ptr = ptr as *const ULE;
             std::slice::from_raw_parts(
                 ptr,
-                chunks.len() * std::mem::size_of::<Self>() / std::mem::size_of::<ULE>(),
+                std::mem::size_of_val(chunks) / std::mem::size_of::<ULE>(),
             )
         };
 
         assert_eq!(
             slice.len(),
-            chunks.len() * std::mem::size_of::<Self>() / std::mem::size_of::<ULE>()
+            std::mem::size_of_val(chunks) / std::mem::size_of::<ULE>()
         );
 
         slice
@@ -127,7 +127,7 @@ impl<const D: usize> Chunk<D> {
 
         assert_eq!(
             slice.len(),
-            chunks.len() * std::mem::size_of::<Self>() / std::mem::size_of::<ULE>()
+            std::mem::size_of_val(chunks) / std::mem::size_of::<ULE>()
         );
 
         chunks

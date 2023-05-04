@@ -1,4 +1,4 @@
-///! Create an index serialized to a flexbuffer.
+//! Create an index serialized to a flexbuffer.
 use std::env;
 
 #[macro_use]

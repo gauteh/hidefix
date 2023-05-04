@@ -85,7 +85,7 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
                 if let Some(cache) = ds_cache.get(&addr) {
                     debug_assert!(start <= cache.len());
                     debug_assert!(end <= cache.len());
-                    yield Ok((cache.slice(start..end)));
+                    yield Ok(cache.slice(start..end));
                 } else {
                     let cache = read_chunk(&mut fd, addr, sz, chunk_sz, dsz, gzip.is_some(), shuffle, true)?;
                     let cache = Bytes::from(cache);
@@ -146,7 +146,7 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
                 if let Some(cache) = ds_cache.get(&addr) {
                     debug_assert!(start <= cache.len());
                     debug_assert!(end <= cache.len());
-                    yield Ok((cache.slice(start..end)));
+                    yield Ok(cache.slice(start..end));
                 } else {
                     let cache = read_chunk(&mut fd, addr, sz, chunk_sz, dsz, gzip.is_some(), shuffle, true)?;
 
