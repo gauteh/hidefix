@@ -10,7 +10,7 @@
 
 # HIDEFIX
 
-This library provides an alternative reader for the
+This Rust and Python library provides an alternative reader for the
 [HDF5](https://support.hdfgroup.org/HDF5/doc/H5.format.html) file or [NetCDF4
 file](https://www.unidata.ucar.edu/software/netcdf/docs/file_format_specifications.html)
 (which uses HDF5) which supports concurrent access to data. This is achieved by
@@ -18,6 +18,8 @@ building an index of the chunks, allowing a thread to use many file handles to
 read the file. The original (native) HDF5 library is used to build the index,
 but once it has been created it is no longer needed. The index can be
 serialized to disk so that performing the indexing is not necessary.
+
+In Rust:
 
 ```rust
 use hidefix::prelude::*;
@@ -28,6 +30,15 @@ let mut r = idx.reader("SST").unwrap();
 let values = r.values::<f32>(None, None).unwrap();
 
 println!("SST: {:?}", values);
+```
+
+or with Python using Xarray:
+```python
+import xarray as xr
+import hidefix
+
+ds = xr.open_dataset('file.nc', engine='hidefix')
+print(ds)
 ```
 
 ## Motivation
