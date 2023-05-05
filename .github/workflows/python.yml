@@ -37,7 +37,7 @@ jobs:
       if: matrix.target == 'x86_64'
       run: |
         pip install pytest pytest-benchmark
-        pytest -v --log-cli-level -s
+        pytest -v --log-cli-level=debug -s
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
