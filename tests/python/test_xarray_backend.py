@@ -1,7 +1,12 @@
 import xarray as xr
-from hidefix import xarray
 import numpy as np
-import matplotlib.pyplot as plt
+import pytest
+import os
+
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass
 
 
 def test_coads_hf(coads, plot):
@@ -36,7 +41,11 @@ def test_xarray_mfdataset(data):
     print(ds)
 
 
-def test_xarray_mfdataset_nora3(data):
+@pytest.mark.skipif(not os.path.exists(
+    '/lustre/storeB/project/fou/om/NORA3/equinor/atm_hourly/arome3km_1hr_198501.nc'
+),
+                    reason='nora3 data not available')
+def test_xarray_mfdataset_nora3():
     urls = [
         '/lustre/storeB/project/fou/om/NORA3/equinor/atm_hourly/arome3km_1hr_198501.nc',
         '/lustre/storeB/project/fou/om/NORA3/equinor/atm_hourly/arome3km_1hr_198502.nc'

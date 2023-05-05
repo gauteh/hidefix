@@ -2,8 +2,12 @@ import pytest
 import xarray as xr
 from hidefix import xarray
 import numpy as np
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
+
+try:
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+except:
+    pass
 
 def test_large_hf(large_file, plot):
     f, v = large_file
