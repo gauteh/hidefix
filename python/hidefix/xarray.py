@@ -188,5 +188,3 @@ class HidefixArray(BackendArray):
             array.apply_fill_value(self.fill_value, np.nan, data)
         return data
 
-
-BACKEND_ENTRYPOINTS["hidefix"] = ('hidefix', HidefixBackendEntrypoint)
