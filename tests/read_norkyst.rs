@@ -1,4 +1,5 @@
 #![feature(test)]
+#![allow(non_snake_case)]
 extern crate test;
 
 use std::path::PathBuf;
