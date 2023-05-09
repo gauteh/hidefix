@@ -2,6 +2,7 @@ mod any;
 #[allow(clippy::module_inception)]
 mod dataset;
 mod types;
+mod slicer;
 
 pub use any::*;
 pub use dataset::*;
