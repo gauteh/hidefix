@@ -2,11 +2,15 @@
 extern crate test;
 
 use std::path::PathBuf;
+use std::sync::Mutex;
 use hidefix::prelude::*;
 
 const URL: &'static str = "https://thredds.met.no/thredds/fileServer/fou-hi/norkyst800m/NorKyst-800m_ZDEPTHS_avg.an.2023050800.nc";
 
 fn get_file() ->  PathBuf {
+    static NK: Mutex<()> = Mutex::new(());
+    let _guard = NK.lock().unwrap();
+
     let mut p = std::env::temp_dir();
     p.push("hidefix");
 
@@ -64,7 +68,12 @@ fn current() {
     let u = h.dataset("u_eastward").unwrap().read_raw::<f32>().unwrap();
     let v = h.dataset("v_northward").unwrap().read_raw::<f32>().unwrap();
 
+    assert_eq!(u.len(), h.dataset("u_eastward").unwrap().size());
+
     let hi = Index::index(&p).unwrap();
+
+    assert_eq!(u.len(), hi.dataset("u_eastward").unwrap().size());
+
     let hu = hi.reader("u_eastward").unwrap().values::<f32>(None, None).unwrap();
     let hv = hi.reader("v_northward").unwrap().values::<f32>(None, None).unwrap();
 
