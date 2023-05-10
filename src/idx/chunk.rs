@@ -43,6 +43,10 @@ impl<const D: usize> Chunk<D> {
         }
     }
 
+    pub fn offset_u64(&self) -> [u64; D] {
+        self.offset.iter().map(|o| o.get()).collect::<Vec<_>>().try_into().unwrap()
+    }
+
     /// Is the point described by the indices inside the chunk (`Equal`), before (`Less`) or after
     /// (`Greater`).
     #[must_use]

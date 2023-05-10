@@ -1,4 +1,6 @@
+#![allow(non_snake_case)]
 use itertools::izip;
+use std::cmp::min;
 
 use crate::idx::{Chunk, Dataset};
 
@@ -113,14 +115,93 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
         // Elements to advance in current sub-slice of slice.
         let mut advance = 0;
 
-        for di in (0..D).rev() {
-            let current_offset = self.slice_offset + advance;
+        // The current offset of the iterator in the entire dataset.
+        let i0 = coords_to_offset(self.slice_start, self.dataset.dim_sz) + self.slice_offset;
 
-            let dim_sz = self.dataset.shape[di];
+        // The current coordinates of the iterator in the entire dataset.
+        let I0 = offset_to_coords(i0, self.dataset.dim_sz);
+
+        let chunk = self.dataset.chunk_at_coord(&I0);
+
+        // Iterate through dimensions, starting at the last (smallest) one.
+        for di in (0..D).rev() {
+            // We will try to advance as far as possible:
+            //
+            // * We can only advance more than one step in a greater dimension as long as the
+            //   slice aligns with the chunk.
+
+            // Absolute coordinates:
+
+            // The current offset of the iterator in the entire dataset.
+            let i = i0 + advance;
+
+            // The current coordinates of the iterator in the entire dataset.
+            let I = offset_to_coords(i, self.dataset.dim_sz);
+
+            assert!(
+                i < (coords_to_offset(self.slice_start, self.dataset.dim_sz) + self.slice_end),
+                "iterator is past end of slice"
+            );
+            assert!(
+                i < self.dataset.size() as u64,
+                "iterator is past end of dataset"
+            );
+
+            // The current chunk the iterator is placed in.
+            assert_eq!(chunk, self.dataset.chunk_at_coord(&I));
+
+            debug_assert!(
+                chunk.contains(&I, &self.dataset.chunk_shape) == std::cmp::Ordering::Equal
+            );
+
+            // I[di] can now advance to end of:
+            // * count
+            // * chunk dimension
+            // * (dataset dimension)
+            //
+            // chunk dimension will always be less or equal to the dataset
+            // dimension, so we do not need to check it.
+
+            // End of chunk dimension.
+            let chunk_d = chunk.offset[di].get() + self.dataset.chunk_shape[di];
+
+            // End of count dimension.
+            let count_d = self.slice_start[di] + self.slice_counts[di];
+
+            let Id = I[di];
+            let nId = min(chunk_d, count_d);
+
+            assert!(nId > Id);
+
+            let dim_sz = self.dataset.dim_sz[di];
+
+            // Advance the number of steps in this dimension:
+            advance = (nId - Id) * dim_sz;
+
+            // We cannot move further up in the dimensions if we did not reach the
+            // end of count.
+            if nId < count_d {
+                break;
+            }
+
+            // We cannot move further up if we did not start at the beginning of
+            // this chunk dimension.
+            if Id != chunk.offset[di].get() {
+                break;
+            }
+
+            // End of slice
+            if (self.slice_offset + advance) >= self.slice_end {
+                break;
+            }
         }
 
-        // let ds_offset =
-        None
+        let chunk_start = i0 - coords_to_offset(chunk.offset_u64(), self.dataset.dim_sz);
+        let chunk_end = chunk_start + advance;
+
+        self.slice_offset += advance;
+
+        Some((chunk, chunk_start, chunk_end))
     }
 }
 
@@ -176,9 +257,9 @@ mod tests {
         assert_eq!(offset_to_coords(0, [8, 4, 1]), [0, 0, 0]);
         assert_eq!(offset_to_coords(2, [8, 4, 1]), [0, 0, 2]);
         assert_eq!(offset_to_coords(4, [8, 4, 1]), [0, 1, 0]);
-        assert_eq!(offset_to_coords(16+4, [8, 4, 1]), [2, 1, 0]);
+        assert_eq!(offset_to_coords(16 + 4, [8, 4, 1]), [2, 1, 0]);
 
-        assert_eq!(coords_to_offset([2, 1, 0], [8, 4, 1]), 16+4);
+        assert_eq!(coords_to_offset([2, 1, 0], [8, 4, 1]), 16 + 4);
         assert_eq!(coords_to_offset([0, 1, 0], [8, 4, 1]), 4);
         assert_eq!(coords_to_offset([0, 0, 2], [8, 4, 1]), 2);
     }
@@ -201,7 +282,19 @@ mod tests {
         .unwrap();
 
         ChunkSlice::new(&ds, [0], [31]).for_each(drop);
-        ChunkSlice::new(&ds, [0], [4]).for_each(drop);
+
+        let slice2 = ChunkSlice::new(&ds, [0], [4]).collect::<Vec<_>>();
+
+        assert_eq!(slice2.len(), 4);
+        assert_eq!(
+            slice2,
+            [
+                (&ds.chunks[0], 0, 1),
+                (&ds.chunks[1], 0, 1),
+                (&ds.chunks[2], 0, 1),
+                (&ds.chunks[3], 0, 1),
+            ]
+        );
     }
 
     #[test]
