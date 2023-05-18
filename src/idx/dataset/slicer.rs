@@ -127,6 +127,7 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
 
         // Iterate through dimensions, starting at the last (smallest) one.
         for di in (0..D).rev() {
+            dbg!(di);
             // We will try to advance as far as possible:
             //
             // * We can only advance more than one step in a greater dimension as long as the
@@ -158,8 +159,11 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
             // dimension, so we do not need to check it.
             //
             // When all the higher chunk dimensions are size one we
-            // will reach the next chunk and we can stop. If we advance to the end of the chunk.
+            // will reach the next chunk and we can stop. If we advance to the end of the chunk. We must however advance at least one.
             if self.dataset.chunk_shape[di] == 1 {
+                // if advance == 0 {
+                //     advance = 1;
+                // }
                 continue;
             }
 
@@ -176,8 +180,12 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
             // End of count dimension.
             let count_d = self.slice_start[di] + self.slice_counts[di];
 
-            let Id = I[di];
-            let nId = min(chunk_d, count_d);
+            let Id = I[di]; // Coordinate in current dimension of entire
+                            // dataset.
+            let nId = min(chunk_d, count_d); // New coordinate in current
+                                             // dimension of entire
+                                             // dataset.
+            debug_assert!(nId < self.dataset.shape[di]);
 
             dbg!(chunk_d);
             dbg!(count_d);
@@ -215,6 +223,8 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
         let chunk_end = chunk_start + advance;
 
         self.slice_offset += advance;
+
+        assert!(advance > 0, "Iterator not advancing");
 
         Some((chunk, chunk_start, chunk_end))
     }
@@ -356,5 +366,43 @@ mod tests {
 
     #[test]
     fn chunk_slice_1n1() {
+        let chunks = (0..2)
+            .map(|i| (0..32).map(move |j| Chunk::new(i * 32 + j * 1, 635000, [i, j, 0])))
+            .flatten()
+            .collect::<Vec<_>>();
+
+        let ds = Dataset::new(
+            Datatype::Int(2),
+            ByteOrder::BE,
+            [2, 32, 580],
+            chunks,
+            [1, 16, 1],
+            false,
+            None,
+        )
+        .unwrap();
+
+        ChunkSlice::new(&ds, [0, 0, 0], [2, 32, 580]).for_each(drop);
+
+        // Should be all chunks.
+        // let slices = ds.chunks.iter().map(|c| (c, 0, 580)).collect::<Vec<_>>();
+        // let slicer = ChunkSlice::new(&ds, [0, 0, 0], [2, 32, 580]).collect::<Vec<_>>();
+        // assert_eq!(slices, slicer);
+
+        // assert_eq!(
+        //     ChunkSlice::new(&ds, [0, 14, 0], [1, 1, 1]).collect::<Vec<_>>(),
+        //     [ (&ds.chunks[0], 15, 16) ]);
+
+        // assert_eq!(
+        //     ChunkSlice::new(&ds, [0, 1, 0], [1, 1, 1]).collect::<Vec<_>>(),
+        //     [ (&ds.chunks[1], 0, 1) ]);
+
+        // assert_eq!(
+        //     ChunkSlice::new(&ds, [1, 0, 0], [1, 1, 1]).collect::<Vec<_>>(),
+        //     [ (&ds.chunks[32], 0, 1) ]);
+
+        // assert_eq!(
+        //     ChunkSlice::new(&ds, [1, 1, 0], [1, 1, 1]).collect::<Vec<_>>(),
+        //     [ (&ds.chunks[33], 0, 1) ]);
     }
 }
