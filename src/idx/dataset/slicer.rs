@@ -52,6 +52,8 @@ impl<'a, const D: usize> ChunkSlice<'a, D> {
         let slice_counts = counts;
         let slice_offset = 0;
 
+        assert!(slice_offset < slice_end);
+
         ChunkSlice {
             dataset,
             slice_start,
@@ -147,13 +149,6 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
                 "iterator is past end of dataset"
             );
 
-            // The current chunk the iterator is placed in.
-            assert_eq!(chunk, self.dataset.chunk_at_coord(&I));
-
-            debug_assert!(
-                chunk.contains(&I, &self.dataset.chunk_shape) == std::cmp::Ordering::Equal
-            );
-
             // I[di] can now advance to end of:
             // * count
             // * chunk dimension
@@ -161,6 +156,19 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
             //
             // chunk dimension will always be less or equal to the dataset
             // dimension, so we do not need to check it.
+            //
+            // When all the higher chunk dimensions are size one we
+            // will reach the next chunk and we can stop. If we advance to the end of the chunk.
+            if self.dataset.chunk_shape[di] == 1 {
+                continue;
+            }
+
+            // Assert that we have not advanced to the next chunk.
+            assert_eq!(chunk, self.dataset.chunk_at_coord(&I));
+
+            debug_assert!(
+                chunk.contains(&I, &self.dataset.chunk_shape) == std::cmp::Ordering::Equal
+            );
 
             // End of chunk dimension.
             let chunk_d = chunk.offset[di].get() + self.dataset.chunk_shape[di];
@@ -171,12 +179,19 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
             let Id = I[di];
             let nId = min(chunk_d, count_d);
 
+            dbg!(chunk_d);
+            dbg!(count_d);
+
             assert!(nId > Id);
 
             let dim_sz = self.dataset.dim_sz[di];
 
+            dbg!(advance);
+
             // Advance the number of steps in this dimension:
             advance = (nId - Id) * dim_sz;
+
+            dbg!(advance);
 
             // We cannot move further up in the dimensions if we did not reach the
             // end of count.
@@ -300,7 +315,7 @@ mod tests {
     #[test]
     fn chunk_slice_11n() {
         let chunks = (0..2)
-            .map(|i| (0..32).map(move |j| Chunk::new(i * 32 + j * 1000, 635000, [i, j, 0])))
+            .map(|i| (0..32).map(move |j| Chunk::new(i * 32 + j * 1, 635000, [i, j, 0])))
             .flatten()
             .collect::<Vec<_>>();
 
@@ -315,8 +330,31 @@ mod tests {
         )
         .unwrap();
 
-        // ds.chunk_slices(None, Some(&[2, 4, 580, 1202]))
-        //     .for_each(drop);
         ChunkSlice::new(&ds, [0, 0, 0], [2, 32, 580]).for_each(drop);
+
+        // Should be all chunks.
+        let slices = ds.chunks.iter().map(|c| (c, 0, 580)).collect::<Vec<_>>();
+        let slicer = ChunkSlice::new(&ds, [0, 0, 0], [2, 32, 580]).collect::<Vec<_>>();
+        assert_eq!(slices, slicer);
+
+        assert_eq!(
+            ChunkSlice::new(&ds, [0, 0, 579], [1, 1, 1]).collect::<Vec<_>>(),
+            [ (&ds.chunks[0], 579, 580) ]);
+
+        assert_eq!(
+            ChunkSlice::new(&ds, [0, 1, 0], [1, 1, 1]).collect::<Vec<_>>(),
+            [ (&ds.chunks[1], 0, 1) ]);
+
+        assert_eq!(
+            ChunkSlice::new(&ds, [1, 0, 0], [1, 1, 1]).collect::<Vec<_>>(),
+            [ (&ds.chunks[32], 0, 1) ]);
+
+        assert_eq!(
+            ChunkSlice::new(&ds, [1, 1, 0], [1, 1, 1]).collect::<Vec<_>>(),
+            [ (&ds.chunks[33], 0, 1) ]);
+    }
+
+    #[test]
+    fn chunk_slice_1n1() {
     }
 }
