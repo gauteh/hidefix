@@ -50,14 +50,14 @@ impl<const D: usize> Chunk<D> {
     /// Is the point described by the indices inside the chunk (`Equal`), before (`Less`) or after
     /// (`Greater`).
     #[must_use]
-    pub fn contains(&self, i: &[u64], shape: &[u64]) -> Ordering {
-        assert!(i.len() == shape.len());
+    pub fn contains(&self, i: &[u64], chunk_shape: &[u64]) -> Ordering {
+        assert!(i.len() == chunk_shape.len());
         assert!(i.len() == self.offset.len());
 
         for j in 0..i.len() {
             if i[j] < self.offset[j].get() {
                 return Ordering::Less;
-            } else if i[j] >= self.offset[j].get() + shape[j] {
+            } else if i[j] >= self.offset[j].get() + chunk_shape[j] {
                 return Ordering::Greater;
             }
         }
