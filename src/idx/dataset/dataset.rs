@@ -300,6 +300,26 @@ impl<const D: usize> Dataset<'_, D> {
         self.shape.is_empty()
     }
 
+    /// Test whether dataset and chunk layout is valid.
+    pub fn valid(&self) -> anyhow::Result<bool> {
+        for chunk in self.chunks.iter() {
+            let offset = chunk.offset.iter().map(|u| u.get()).collect::<Vec<_>>();
+            ensure!(chunk.contains(&offset, &self.chunk_shape) == std::cmp::Ordering::Equal, "chunk does not contain its offset");
+        }
+
+        let end: u64 = self.shape.iter().product();
+        let chunk_sh: u64 = self.chunk_shape.iter().product();
+
+        ensure!(end % chunk_sh == 0, "chunks not modulo of dataset shape: {0:?} vs {1:?}", self.shape, self.chunk_shape);
+        let chunks = end / chunk_sh;
+        ensure!(chunks == self.chunks.len() as u64, "number of chunks does not match dataset shape: {chunks} != {}", self.chunks.len());
+
+
+
+
+        Ok(true)
+    }
+
     /// Returns an iterator over chunk, offset and size which if joined will make up the specified slice through the
     /// variable.
     pub fn chunk_slices(
@@ -408,6 +428,10 @@ impl<const D: usize> DatasetExt for Dataset<'_, D> {
 
     fn chunk_shape(&self) -> &[u64] {
         self.chunk_shape.as_slice()
+    }
+
+    fn valid(&self) -> anyhow::Result<bool> {
+        self.valid()
     }
 
     fn as_par_reader(&self, p: &dyn AsRef<Path>) -> anyhow::Result<Box<dyn DatasetExtReader + '_>> {

@@ -57,6 +57,8 @@ fn wind() {
     let hUw = hi.reader("Uwind").unwrap().values::<i32>(None, None).unwrap();
     let hVw = hi.reader("Vwind").unwrap().values::<i32>(None, None).unwrap();
 
+    hi.dataset("Uwind").unwrap().valid().unwrap();
+
     assert_eq!(Uw, hUw);
     assert_eq!(Vw, hVw);
 }
@@ -74,6 +76,8 @@ fn current() {
     let hi = Index::index(&p).unwrap();
 
     assert_eq!(u.len(), hi.dataset("u_eastward").unwrap().size());
+
+    // hi.dataset("u_eastward").unwrap().valid().unwrap();
 
     let hu = hi.reader("u_eastward").unwrap().values::<f32>(None, None).unwrap();
     let hv = hi.reader("v_northward").unwrap().values::<f32>(None, None).unwrap();

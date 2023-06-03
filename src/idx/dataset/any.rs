@@ -116,6 +116,8 @@ pub trait DatasetExt {
 
     fn chunk_shape(&self) -> &[u64];
 
+    fn valid(&self) -> anyhow::Result<bool>;
+
     fn as_par_reader(&self, p: &dyn AsRef<Path>) -> anyhow::Result<Box<dyn DatasetExtReader + '_>>;
 }
 
@@ -138,6 +140,10 @@ impl<'a> DatasetExt for DatasetD<'a> {
 
     fn chunk_shape(&self) -> &[u64] {
         self.inner().chunk_shape()
+    }
+
+    fn valid(&self) -> anyhow::Result<bool> {
+        self.inner().valid()
     }
 
     fn as_par_reader(&self, p: &dyn AsRef<Path>) -> anyhow::Result<Box<dyn DatasetExtReader + '_>> {

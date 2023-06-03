@@ -157,40 +157,49 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
             //
             // chunk dimension will always be less or equal to the dataset
             // dimension, so we do not need to check it.
+
+            // When a chunk_dimension is size 1 it does make the chunk greater. So
+            // we ignore it. Is the case when all dimensions are 1 special?
             //
             // When all the higher chunk dimensions are size one we
             // will reach the next chunk and we can stop. If we advance to the end of the chunk. We must however advance at least one.
-            if self.dataset.chunk_shape[di] == 1 {
-                // if advance == 0 {
-                //     advance = 1;
-                // }
-                continue;
-            }
+            // if self.dataset.chunk_shape[di] == 1 {
+            //     if advance == 0 {
+            //         advance = 1;
+            //     }
+            //     continue;
+            // }
 
             // Assert that we have not advanced to the next chunk.
-            assert_eq!(chunk, self.dataset.chunk_at_coord(&I));
+            assert_eq!(chunk, self.dataset.chunk_at_coord(&I), "advanced into next chunk");
 
+            // Assert that the coordinates are in this chunk.
             debug_assert!(
-                chunk.contains(&I, &self.dataset.chunk_shape) == std::cmp::Ordering::Equal
+                chunk.contains(&I, &self.dataset.chunk_shape) == std::cmp::Ordering::Equal,
+                "coordinates are not in this chunk."
             );
 
             // End of chunk dimension.
             let chunk_d = chunk.offset[di].get() + self.dataset.chunk_shape[di];
+            debug_assert!(chunk_d <= self.dataset.shape[di]);
 
             // End of count dimension.
             let count_d = self.slice_start[di] + self.slice_counts[di];
+            debug_assert!(count_d <= self.dataset.shape[di]);
 
             let Id = I[di]; // Coordinate in current dimension of entire
                             // dataset.
             let nId = min(chunk_d, count_d); // New coordinate in current
                                              // dimension of entire
                                              // dataset.
-            debug_assert!(nId < self.dataset.shape[di]);
+            debug_assert!(nId <= self.dataset.shape[di], "coordinate above shape of dataset dimension.");
 
             dbg!(chunk_d);
             dbg!(count_d);
 
-            assert!(nId > Id);
+            assert!(nId > Id); // XXX: This one should probably go. There might be
+                               // cases when we don't advance in this dim, but in the
+                               // next.
 
             let dim_sz = self.dataset.dim_sz[di];
 
@@ -223,6 +232,7 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
         let chunk_end = chunk_start + advance;
 
         self.slice_offset += advance;
+        assert!(self.slice_offset <= self.slice_end, "advanced further than slice end.");
 
         assert!(advance > 0, "Iterator not advancing");
 
@@ -381,6 +391,8 @@ mod tests {
             None,
         )
         .unwrap();
+
+        ds.valid().unwrap();
 
         ChunkSlice::new(&ds, [0, 0, 0], [2, 32, 580]).for_each(drop);
 
