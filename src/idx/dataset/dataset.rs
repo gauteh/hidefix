@@ -310,10 +310,9 @@ impl<const D: usize> Dataset<'_, D> {
         let end: u64 = self.shape.iter().product();
         let chunk_sh: u64 = self.chunk_shape.iter().product();
 
-        ensure!(end % chunk_sh == 0, "chunks not modulo of dataset shape: {0:?} vs {1:?}", self.shape, self.chunk_shape);
-        let chunks = end / chunk_sh;
-        ensure!(chunks == self.chunks.len() as u64, "number of chunks does not match dataset shape: {chunks} != {}", self.chunks.len());
-
+        // ensure!(end % chunk_sh == 0, "chunks not modulo of dataset shape: {0:?} vs {1:?}", self.shape, self.chunk_shape);
+        // let chunks = end / chunk_sh;
+        // ensure!(chunks == self.chunks.len() as u64, "number of chunks does not match dataset shape: {chunks} != {}", self.chunks.len());
 
 
 

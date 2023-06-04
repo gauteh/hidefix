@@ -125,6 +125,8 @@ impl<'a, const D: usize> Iterator for ChunkSlice<'a, D> {
 
         let chunk = self.dataset.chunk_at_coord(&I0);
 
+        dbg!(self.dataset.shape);
+
         // Iterate through dimensions, starting at the last (smallest) one.
         for di in (0..D).rev() {
             dbg!(di);
@@ -393,6 +395,16 @@ mod tests {
         .unwrap();
 
         ds.valid().unwrap();
+
+        let end: u64 = ds.shape.iter().product();
+        for i in 0..end {
+            let I = offset_to_coords(i, ds.dim_sz);
+            let ii = coords_to_offset(I, ds.dim_sz);
+            assert_eq!(ii, i);
+
+            let chunk = ds.chunk_at_coord(&I);
+            assert!(chunk.contains(&I, &ds.chunk_shape) == std::cmp::Ordering::Equal);
+        }
 
         ChunkSlice::new(&ds, [0, 0, 0], [2, 32, 580]).for_each(drop);
 
