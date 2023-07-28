@@ -96,7 +96,7 @@ impl<const D: usize> Chunk<D> {
     /// Reintepret a slice of `Chunk<D>`s to a slice of `u64`. This is efficient, but relies
     /// on unsafe code.
     pub fn slice_as_u64s(chunks: &[Chunk<D>]) -> &[ULE] {
-        let ptr = chunks.as_ptr() as *const Chunk<D>;
+        let ptr = chunks.as_ptr();
         let slice: &[ULE] = unsafe {
             let ptr = ptr as *const ULE;
             std::slice::from_raw_parts(
