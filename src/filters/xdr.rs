@@ -48,10 +48,10 @@ pub fn xdr(mut src: Vec<u8>, dtype: Datatype, order: Order) -> Result<Vec<u8>, a
     match dtype {
         Custom(_) => Ok(src),
 
-        UInt(sz) if sz == 1 => xdr_cast_slice::<u8, u32>(src, order),
-        UInt(sz) if sz == 2 => xdr_cast_slice::<u16, u32>(src, order),
-        Int(sz) if sz == 1 => xdr_cast_slice::<i8, i32>(src, order),
-        Int(sz) if sz == 2 => xdr_cast_slice::<i16, i32>(src, order),
+        UInt(1) => xdr_cast_slice::<u8, u32>(src, order),
+        UInt(2) => xdr_cast_slice::<u16, u32>(src, order),
+        Int(1) => xdr_cast_slice::<i8, i32>(src, order),
+        Int(2) => xdr_cast_slice::<i16, i32>(src, order),
 
         _ => {
             to_big_e_sized(&mut src, order, dtype.dsize())?;
