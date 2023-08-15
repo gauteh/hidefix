@@ -576,6 +576,18 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
         )
         .rev()
         {
+            // The chunk size may not align to the dataset size. If the chunk
+            // dimension is greater than the end of the dataset, it must be cut
+            // so that it ends at the end of the dataset.
+            //
+            // There are two possibilities:
+            // * a) Either the chunk is stored in full on disk.
+            // * b) A cut-down chunk is stored on disk.
+            //
+            // "a" makes more sense. Let's try that.
+            let chunk_dim_end = chunk_offset.get() + chunk_sz;
+            debug_assert!(chunk_dim_end < 
+
             // If the chunk size in this dimension is 1, count must also be 1, and we will
             // always carry over to the higher dimension. Unless the dimension size is 1, in which
             // case the offset will be advanced with 1.
