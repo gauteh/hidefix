@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use hidefix::prelude::*;
-use ndarray::{s, Dim, IxDyn};
+use ndarray::{s, IxDyn};
 
 const URL: &'static str = "https://thredds.met.no/thredds/fileServer/fou-hi/norkyst800m-1h/NorKyst-800m_ZDEPTHS_his.an.2023081600.nc";
 const VAR: &'static str = "u_eastward";

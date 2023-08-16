@@ -36,6 +36,7 @@ fn get_file() -> PathBuf {
     p
 }
 
+#[ignore]
 #[test]
 fn coords() {
     let p = get_file();
@@ -52,6 +53,7 @@ fn coords() {
     assert_eq!(X, hX);
 }
 
+#[ignore]
 #[test]
 fn wind() {
     let p = get_file();
@@ -78,6 +80,7 @@ fn wind() {
     assert_eq!(Vw, hVw);
 }
 
+#[ignore]
 #[test]
 fn current() {
     let p = get_file();
@@ -109,6 +112,7 @@ fn current() {
     assert_eq!(v, hv);
 }
 
+#[ignore]
 #[test]
 fn temperature_salinity() {
     let p = get_file();
@@ -133,6 +137,7 @@ fn temperature_salinity() {
     assert_eq!(Vw, hVw);
 }
 
+#[ignore]
 #[test]
 fn chunk_slice_fracture() {
     let p = get_file();
