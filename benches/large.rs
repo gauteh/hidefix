@@ -6,10 +6,12 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use hidefix::prelude::*;
-use ndarray::s;
+use ndarray::{s, Dim, IxDyn};
 
 const URL: &'static str = "https://thredds.met.no/thredds/fileServer/fou-hi/norkyst800m-1h/NorKyst-800m_ZDEPTHS_his.an.2023081600.nc";
 const VAR: &'static str = "u_eastward";
+
+type T = f32;
 
 fn get_file() -> PathBuf {
     use std::time::Duration;
@@ -49,21 +51,21 @@ fn idx_small_slice(b: &mut Bencher) {
     let h = hdf5::File::open(&p).unwrap();
     let d = h.dataset(VAR).unwrap();
     let hv = d
-        .read_slice_1d::<i32, _>(s![0..2, 0..2, 0..1, 0..5])
+        .read_slice::<T, _, IxDyn>(s![0..2, 0..2, 0..1, 0..5])
         .unwrap()
         .iter()
         .map(|v| *v)
-        .collect::<Vec<i32>>();
+        .collect::<Vec<T>>();
 
     assert_eq!(
         hv,
-        r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
+        r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
             .unwrap()
     );
 
     b.iter(|| {
         test::black_box(
-            r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
+            r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
                 .unwrap(),
         )
     });
@@ -78,7 +80,7 @@ fn native_small_slice(b: &mut Bencher) {
 
     b.iter(|| {
         test::black_box(
-            d.read_slice_1d::<i32, _>(s![0..2, 0..2, 0..1, 0..5])
+            d.read_slice::<T, _, IxDyn>(s![0..2, 0..2, 0..1, 0..5])
                 .unwrap(),
         )
     })
@@ -95,21 +97,21 @@ fn idx_med_slice(b: &mut Bencher) {
     let h = hdf5::File::open(&p).unwrap();
     let d = h.dataset(VAR).unwrap();
     let hv = d
-        .read_slice_1d::<i32, _>(s![0..10, 0..10, 0..1, 0..700])
+        .read_slice::<T, _, IxDyn>(s![0..10, 0..10, 0..1, 0..700])
         .unwrap()
         .iter()
         .map(|v| *v)
-        .collect::<Vec<i32>>();
+        .collect::<Vec<T>>();
 
     assert_eq!(
         hv,
-        r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 700]))
+        r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 700]))
             .unwrap()
     );
 
     b.iter(|| {
         test::black_box(
-            r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 700]))
+            r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 2602]))
                 .unwrap(),
         )
     });
@@ -124,7 +126,7 @@ fn native_med_slice(b: &mut Bencher) {
 
     b.iter(|| {
         test::black_box(
-            d.read_slice_1d::<i32, _>(s![0..10, 0..10, 0..1, 0..20000])
+            d.read_slice::<T, _, IxDyn>(s![0..10, 0..10, 0..1, 0..2602])
                 .unwrap(),
         )
     })
@@ -141,21 +143,21 @@ fn idx_big_slice(b: &mut Bencher) {
     let h = hdf5::File::open(&p).unwrap();
     let d = h.dataset(VAR).unwrap();
     let hv = d
-        .read_slice_1d::<i32, _>(s![0..24, 0..16, 0..1, 0..739])
+        .read_slice::<T, _, IxDyn>(s![0..24, 0..16, 0..1, 0..739])
         .unwrap()
         .iter()
         .map(|v| *v)
-        .collect::<Vec<i32>>();
+        .collect::<Vec<T>>();
 
     assert_eq!(
         hv,
-        r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 739]))
+        r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 739]))
             .unwrap()
     );
 
     b.iter(|| {
         test::black_box(
-            r.values::<i32>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 739]))
+            r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 2602]))
                 .unwrap(),
         )
     });
@@ -170,7 +172,7 @@ fn native_big_slice(b: &mut Bencher) {
 
     b.iter(|| {
         test::black_box(
-            d.read_slice_1d::<i32, _>(s![0..65, 0..65, 0..1, 0..20000])
+            d.read_slice::<T, _, IxDyn>(s![0..24, 0..16, 0..1, 0..2602])
                 .unwrap(),
         )
     })
