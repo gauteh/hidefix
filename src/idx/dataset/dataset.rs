@@ -565,14 +565,15 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
         let mut carry = 0;
         let mut di = 0;
 
-        for (idx, offset, count, count_sru, chunk_offset, chunk_sz, chunk_dim_sz) in izip!(
+        for (idx, offset, count, count_sru, chunk_offset, chunk_sz, chunk_dim_sz, dataset_shape) in izip!(
             &self.indices,
             &mut self.offset_coords,
             &self.counts,
             &self.counts_reduced,
             &chunk.offset,
             &self.dataset.chunk_shape,
-            &self.dataset.chunk_dim_sz
+            &self.dataset.chunk_dim_sz,
+            &self.dataset.shape,
         )
         .rev()
         {
@@ -581,18 +582,27 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
             // so that it ends at the end of the dataset.
             //
             // There are two possibilities:
-            // * a) Either the chunk is stored in full on disk.
+            // * a) Either the chunk is stored in full on disk, with some bogus data.
             // * b) A cut-down chunk is stored on disk.
             //
             // "a" makes more sense. Let's try that.
+            //
+            // The dimension size should remain the same, since it only depends on the lower
+            // dimensions and we are working our way from the last one (`rev`).
+            //
+            // This does seem to create a lot of chunks.
             let chunk_dim_end = chunk_offset.get() + chunk_sz;
-            debug_assert!(chunk_dim_end < 
+            let chunk_sz = if chunk_dim_end > *dataset_shape {
+                chunk_sz - (chunk_dim_end - *dataset_shape)
+            } else {
+                *chunk_sz
+            };
 
             // If the chunk size in this dimension is 1, count must also be 1, and we will
             // always carry over to the higher dimension. Unless the dimension size is 1, in which
             // case the offset will be advanced with 1.
             di += 1;
-            if *chunk_sz == 1 && *chunk_dim_sz != 1 {
+            if chunk_sz == 1 && *chunk_dim_sz != 1 {
                 *offset += carry;
                 carry = *offset / *count_sru;
                 *offset = *offset % *count_sru;
