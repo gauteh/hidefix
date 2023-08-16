@@ -153,7 +153,6 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
 
         let mut fd = std::fs::File::open(&self.path)?;
 
-        let mut i = 0;
         let mut last_chunk: Option<(&Chunk<D>, Vec<u8>)> = None;
 
         for (c, current, start, end) in groups {
@@ -173,7 +172,6 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
                         self.ds.shuffle,
                         false,
                     )?;
-                    i += 1;
 
                     last_chunk = Some((c, cache));
                     &last_chunk.as_mut().unwrap().1
@@ -193,8 +191,6 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
 
             dst[current..(current + sz)].copy_from_slice(&cache[start..end]);
         }
-
-        println!("chunks read: {i}");
 
         Ok(vsz as usize)
     }

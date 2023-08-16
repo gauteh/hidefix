@@ -304,7 +304,10 @@ impl<const D: usize> Dataset<'_, D> {
     pub fn valid(&self) -> anyhow::Result<bool> {
         for chunk in self.chunks.iter() {
             let offset = chunk.offset.iter().map(|u| u.get()).collect::<Vec<_>>();
-            ensure!(chunk.contains(&offset, &self.chunk_shape) == std::cmp::Ordering::Equal, "chunk does not contain its offset");
+            ensure!(
+                chunk.contains(&offset, &self.chunk_shape) == std::cmp::Ordering::Equal,
+                "chunk does not contain its offset"
+            );
         }
 
         Ok(true)
@@ -556,17 +559,18 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
         let mut carry = 0;
         let mut di = 0;
 
-        for (idx, offset, count, count_sru, chunk_offset, chunk_sz, chunk_dim_sz, dataset_shape) in izip!(
-            &self.indices,
-            &mut self.offset_coords,
-            &self.counts,
-            &self.counts_reduced,
-            &chunk.offset,
-            &self.dataset.chunk_shape,
-            &self.dataset.chunk_dim_sz,
-            &self.dataset.shape,
-        )
-        .rev()
+        for (idx, offset, count, count_sru, chunk_offset, chunk_sz, chunk_dim_sz, dataset_shape) in
+            izip!(
+                &self.indices,
+                &mut self.offset_coords,
+                &self.counts,
+                &self.counts_reduced,
+                &chunk.offset,
+                &self.dataset.chunk_shape,
+                &self.dataset.chunk_dim_sz,
+                &self.dataset.shape,
+            )
+            .rev()
         {
             // The chunk size may not align to the dataset size. If the chunk
             // dimension is greater than the end of the dataset, it must be cut
