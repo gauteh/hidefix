@@ -39,6 +39,7 @@ rayon = "1.6"
 ndarray = { version = "0.15", features = [ "rayon" ] }
 pyo3 = { version = "0.17.3", optional = true, features = ["anyhow", "auto-initialize", "abi3-py38"] }
 numpy = { version = "0.17.2", optional = true }
+rust-s3 = { version = "0.33.0", default-features = false, optional = true, features = [ "sync-rustls-tls" ] }
 
 [dependencies.serde]
 features = ["derive"]
@@ -69,4 +70,5 @@ static = ["hdf5-sys/static", "hdf5-sys/zlib"]
 fast-index = []
 python = ["pyo3", "numpy"]
 extension-module = ["python", "pyo3/extension-module"]
+s3 = [ "rust-s3" ]
 
