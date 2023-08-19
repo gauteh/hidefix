@@ -147,7 +147,8 @@ fn chunk_slice_fracture() {
     fn test_slices<const D: usize>(ds: &Dataset<D>) {
         let chunks = ds.chunk_slices(None, None).collect::<Vec<_>>();
 
-        println!("chunks len: {}", chunks.len());
+        println!("ds chunks: {}", ds.chunks.len());
+        println!("chunk slice len: {}", chunks.len());
 
         // might have to make `chunks` unique.
         assert_eq!(chunks.len(), ds.chunks.len());
