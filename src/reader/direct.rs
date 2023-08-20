@@ -1,6 +1,7 @@
 use crate::filters::byteorder::Order;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use itertools::Itertools;
 
 use super::{
     chunk::{decode_chunk, read_chunk, read_chunk_to},
@@ -59,7 +60,9 @@ impl<'a, const D: usize> ParReader for Direct<'a, D> {
         );
 
         let groups = self.ds.group_chunk_slices(indices, Some(counts));
-        let groups = groups.group_by(|a, b| a.0.addr == b.0.addr);
+        // requires #![feature(slice_group_by)]:
+        // let groups = groups.group_by(|a, b| a.0.addr == b.0.addr);
+        let groups = groups.into_iter().group_by(|a| a.0.addr.get());
         let groups = groups.collect::<Vec<_>>();
 
         groups.par_iter().try_for_each_init(

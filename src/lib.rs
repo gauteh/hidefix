@@ -45,12 +45,9 @@
 //! [pull-request](https://github.com/HDFGroup/hdf5/pull/6). You therefore have to use `patch` to
 //! point the `hdf5` and `hdf5-sys` dependencies to the patched versions for now.
 
-#![allow(incomplete_features)]
 #![recursion_limit = "1024"]
+#![allow(incomplete_features)]
 #![feature(test)]
-#![feature(cow_is_borrowed, array_methods)]
-#![feature(assert_matches)]
-#![feature(slice_group_by)]
 #![feature(mutex_unlock)]
 #![feature(new_uninit)]
 extern crate test;
