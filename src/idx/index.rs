@@ -34,6 +34,17 @@ impl TryFrom<&hdf5::File> for Index<'_> {
     }
 }
 
+#[cfg(feature = "netcdf")]
+impl TryFrom<&netcdf::File> for Index<'_> {
+    type Error = anyhow::Error;
+
+    fn try_from(f: &netcdf::File) -> Result<Index<'static>, anyhow::Error> {
+        let path = PathBuf::from(&f.path()?);
+
+        Index::index(path)
+    }
+}
+
 impl Index<'_> {
     /// Open an existing HDF5 file and index all variables.
     #[allow(clippy::self_named_constructors)]
@@ -135,6 +146,21 @@ mod tests {
         let i: Index = (&hf).try_into().unwrap();
         let mut r = i.reader("SST").unwrap();
         r.values::<f32>(None, None).unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "netcdf")]
+    fn index_from_netcdf() {
+        use std::convert::TryInto;
+
+        let f = netcdf::open("tests/data/coads_climatology.nc4").unwrap();
+        let i: Index = (&f).try_into().unwrap();
+        let mut r = i.reader("SST").unwrap();
+        let iv = r.values::<f32>(None, None).unwrap();
+
+        let nv = f.variable("SST").unwrap().values::<f32, _>(..).unwrap();
+
+        assert_eq!(iv, nv);
     }
 
     #[test]

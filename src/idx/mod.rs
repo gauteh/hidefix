@@ -44,6 +44,15 @@ impl IntoIndex for hdf5::Dataset {
     }
 }
 
+#[cfg(feature = "netcdf")]
+impl IntoIndex for netcdf::File {
+    type Indexed = Index<'static>;
+
+    fn index(&self) -> anyhow::Result<Self::Indexed> {
+        self.try_into()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -51,6 +60,14 @@ mod test {
     #[test]
     fn into_idx_file() {
         let hf = hdf5::File::open("tests/data/dmrpp/chunked_twoD.h5").unwrap();
+        let i = hf.index().unwrap();
+        println!("index: {:#?}", i);
+    }
+
+    #[test]
+    #[cfg(feature = "netcdf")]
+    fn into_idx_netcdf() {
+        let hf = netcdf::open("tests/data/coads_climatology.nc4").unwrap();
         let i = hf.index().unwrap();
         println!("index: {:#?}", i);
     }

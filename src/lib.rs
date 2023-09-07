@@ -32,6 +32,42 @@
 //! or convert a [hdf5::File] or [hdf5::Dataset] into an index by using
 //! [`try_from`](std::convert::TryFrom) or the [`index`](idx::IntoIndex) method.
 //!
+//! or use the [IntoIndex](idx::IntoIndex) trait:
+//!
+//! ```
+//! use hidefix::prelude::*;
+//!
+//! let i = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap().index().unwrap();
+//! let iv = i.reader("SST").unwrap().values::<f32>(None, None).unwrap();
+//! ```
+//!
+//! ## NetCDF4 files
+//!
+//! NetCDF4 uses HDF5 as their underlying data-format. Hidefix can be used to read the NetCDF
+//! variables, though there might be extra decoding necessary. The hidefix-`xarray` does that for
+//! you in the python bindings.
+//!
+//! ```
+//! use std::convert::TryInto;
+//! use hidefix::prelude::*;
+//!
+//! let f = netcdf::open("tests/data/coads_climatology.nc4").unwrap();
+//! let nv = f.variable("SST").unwrap().values::<f32, _>(..).unwrap();
+//!
+//! let i: Index = (&f).try_into().unwrap();
+//! let iv = i.reader("SST").unwrap().values::<f32>(None, None).unwrap();
+//!
+//! assert_eq!(iv, nv);
+//! ```
+//!
+//! or use the [IntoIndex](idx::IntoIndex) trait:
+//!
+//! ```
+//! use hidefix::prelude::*;
+//!
+//! let i = netcdf::open("tests/data/coads_climatology.nc4").unwrap().index().unwrap();
+//! let iv = i.reader("SST").unwrap().values::<f32>(None, None).unwrap();
+//! ```
 //!
 //! It is also possible to [stream](reader::stream::StreamReader) the values. The streamer is
 //! currently optimized for streaming bytes.
