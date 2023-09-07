@@ -85,10 +85,8 @@ pub mod chunks_u64s {
     where
         D: Deserializer<'de>,
     {
-        use zerocopy::LayoutVerified;
-
         let bytes = <&'a [u8]>::deserialize(d)?;
-        let slice = LayoutVerified::new_slice_unaligned(bytes).unwrap();
+        let slice = zerocopy::Ref::new_slice_unaligned(bytes).unwrap();
         let slice: &[ULE] = slice.into_slice();
 
         let chunks: &'a [Chunk<DE>] = Chunk::<DE>::slice_from_u64s(slice);
