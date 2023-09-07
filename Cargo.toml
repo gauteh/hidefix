@@ -33,7 +33,7 @@ zerocopy = "0.6"
 libc = "0.2"
 hdf5 = "0.8"
 hdf5-sys = "0.8"
-hdf5-src = "0.8"
+hdf5-src = { version = "0.8", features = [ "threadsafe" ] }
 log = "0.4"
 rayon = "1.6"
 ndarray = { version = "0.15", features = [ "rayon" ] }
