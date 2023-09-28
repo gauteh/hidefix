@@ -64,16 +64,8 @@ impl Index<'_> {
     where
         P: Into<PathBuf>,
     {
-        let datasets = hf
-            .group("/")?
-            .member_names()?
-            .iter()
-            .map(|m| hf.dataset(m).map(|d| (m, d)))
-            .filter_map(Result::ok)
-            .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
-            .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
-            .collect::<Result<HashMap<String, DatasetD<'static>>, _>>()?;
-
+        let mut datasets = HashMap::new();
+        index_group_rec(&hf.group("/")?, "/", &mut datasets)?;
         Ok(Index {
             path: path.map(|p| p.into()),
             datasets,
@@ -127,6 +119,33 @@ impl Index<'_> {
     }
 }
 
+fn index_group_rec(
+    grp: &hdf5::Group,
+    grp_name: &str,
+    datasets: &mut HashMap<String, DatasetD<'static>>,
+) -> Result<(), anyhow::Error> {
+    datasets.extend(
+        grp.member_names()?
+            .iter()
+            .map(|m| {
+                grp.dataset(m).map(|d| {
+                    (
+                        format!("{grp_name}/{m}").trim_start_matches('/').to_owned(),
+                        d,
+                    )
+                })
+            })
+            .filter_map(Result::ok)
+            .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
+            .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
+            .collect::<Result<HashMap<String, DatasetD<'static>>, _>>()?,
+    );
+    for subgrp in grp.groups()?.iter() {
+        index_group_rec(subgrp, subgrp.name().as_str(), datasets)?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,6 +191,38 @@ mod tests {
         let i: Index = p.as_path().try_into().unwrap();
         let mut r = i.reader("SST").unwrap();
         r.values::<f32, _>(..).unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "netcdf")]
+    fn test_index_groups() {
+        let path = std::env::temp_dir().join("test_index_groups.nc");
+        {
+            let mut ncfile = netcdf::create(path.clone()).unwrap();
+            ncfile.add_dimension("x", 1).unwrap();
+            ncfile
+                .add_variable::<f64>("x", &["x"])
+                .unwrap()
+                .put_values(&[1.0], ..)
+                .unwrap();
+            let mut ab = ncfile.add_group("a/b").unwrap();
+            ab.add_dimension("x", 1).unwrap();
+            ab.add_variable::<f64>("x", &["x"])
+                .unwrap()
+                .put_values(&[1.0], ..)
+                .unwrap();
+            let mut abc = ab.add_group("c").unwrap();
+            abc.add_dimension("x", 1).unwrap();
+            abc.add_variable::<f64>("x", &["x"])
+                .unwrap()
+                .put_values(&[1.0], ..)
+                .unwrap();
+        }
+        let idx = Index::index(path).unwrap();
+        assert_eq!(idx.datasets.len(), 3);
+        assert!(idx.datasets.contains_key("x"));
+        assert!(idx.datasets.contains_key("a/b/x"));
+        assert!(idx.datasets.contains_key("a/b/c/x"));
     }
 
     #[test]
