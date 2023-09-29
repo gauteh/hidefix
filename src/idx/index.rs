@@ -306,10 +306,10 @@ mod tests {
 
         println!("deserialize");
         let r = flexbuffers::Reader::get_root(s.view()).unwrap();
-        let mi = GroupIndex::deserialize(r).unwrap();
+        let mi = Index::deserialize(r).unwrap();
         println!("Deserialized Index: {:#?}", mi);
 
         let s = bincode::serialize(&i).unwrap();
-        bincode::deserialize::<GroupIndex>(&s).unwrap();
+        bincode::deserialize::<Index>(&s).unwrap();
     }
 }
