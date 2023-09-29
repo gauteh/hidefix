@@ -419,12 +419,12 @@ mod tests {
                 10000 * std::mem::size_of::<Chunk<3>>() / std::mem::size_of::<u64>()
             );
 
-            let dechunks = Chunk::<3>::slice_from_u64s(&slice);
+            let dechunks = Chunk::<3>::slice_from_u64s(slice);
             assert_eq!(dechunks.len(), chunks.len());
             assert_eq!(dechunks, chunks.as_slice());
 
             b.iter(|| {
-                test::black_box(Chunk::<3>::slice_from_u64s(&slice));
+                test::black_box(Chunk::<3>::slice_from_u64s(slice));
             });
         }
     }

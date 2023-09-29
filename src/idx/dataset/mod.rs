@@ -58,8 +58,7 @@ mod tests {
     #[test]
     fn chunk_slice_11n() {
         let chunks = (0..2)
-            .map(|i| (0..32).map(move |j| Chunk::new(i * 32 + j * 1000, 635000, [i, j, 0])))
-            .flatten()
+            .flat_map(|i| (0..32).map(move |j| Chunk::new(i * 32 + j * 1000, 635000, [i, j, 0])))
             .collect::<Vec<_>>();
 
         let ds = Dataset::new(

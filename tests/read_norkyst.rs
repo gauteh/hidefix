@@ -7,7 +7,7 @@ use hidefix::prelude::*;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-const URL: &'static str = "https://thredds.met.no/thredds/fileServer/fou-hi/norkyst800m-1h/NorKyst-800m_ZDEPTHS_his.an.2023081600.nc";
+const URL: &str = "https://thredds.met.no/thredds/fileServer/fou-hi/norkyst800m-1h/NorKyst-800m_ZDEPTHS_his.an.2023081600.nc";
 
 fn get_file() -> PathBuf {
     use std::time::Duration;
@@ -24,7 +24,7 @@ fn get_file() -> PathBuf {
 
     if !p.exists() {
         println!("downloading norkyst file to {p:#?}..");
-        std::fs::create_dir_all(&d).unwrap();
+        std::fs::create_dir_all(d).unwrap();
         let c = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(10 * 60))
             .build()

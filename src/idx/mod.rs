@@ -5,7 +5,7 @@ pub mod serde;
 
 pub use chunk::{Chunk, ULE};
 pub use dataset::{Dataset, DatasetD, DatasetExt, Datatype};
-pub use index::Index;
+pub use self::index::Index;
 
 /// Convenience trait for returning an index for an existing HDF5 file or dataset opened with
 /// the standard rust HDF5 library.

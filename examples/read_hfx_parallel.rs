@@ -6,7 +6,7 @@ fn main() -> anyhow::Result<()> {
     let f = &args[1];
 
     println!("Indexing file: {f}..");
-    let i = Index::index(&f)?;
+    let i = Index::index(f)?;
 
     for var in &args[2..] {
         let ds = i.dataset(var).unwrap();

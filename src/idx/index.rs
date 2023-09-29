@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 use hdf5::File;
@@ -12,10 +13,44 @@ use crate::reader::{Reader, Streamer};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Index<'a> {
     path: Option<PathBuf>,
-
     #[serde(borrow)]
-    datasets: HashMap<String, DatasetD<'a>>,
+    root: GroupIndex<'a>
 }
+
+impl<'a> Deref for Index<'a> {
+    type Target = GroupIndex<'a>;
+    fn deref(&self) -> &Self::Target {
+        &self.root
+    }
+}
+
+
+impl Index<'_> {
+    /// Open an existing HDF5 file and index all variables and groups.
+    #[allow(clippy::self_named_constructors)]
+    pub fn index<P>(path: P) -> Result<Index<'static>, anyhow::Error>
+    where
+        P: AsRef<Path>,
+    {
+        let path = path.as_ref();
+
+        let hf = File::open(path)?;
+        Index::index_file(&hf, Some(path))
+    }
+
+    /// Index an open HDF5 file.
+    pub fn index_file<P>(hf: &hdf5::File, path: Option<P>) -> Result<Index<'static>, anyhow::Error>
+    where
+        P: Into<PathBuf>,
+    {
+        let path = path.map(|p| p.into());
+        Ok(Index {
+            path: path.clone(),
+            root: GroupIndex::index_group(&hf.group("/")?, path)?
+        })
+    }
+}
+
 
 impl TryFrom<&Path> for Index<'_> {
     type Error = anyhow::Error;
@@ -46,35 +81,46 @@ impl TryFrom<&netcdf::File> for Index<'_> {
     }
 }
 
-impl Index<'_> {
-    /// Open an existing HDF5 file and index all variables.
-    #[allow(clippy::self_named_constructors)]
-    pub fn index<P>(path: P) -> Result<Index<'static>, anyhow::Error>
-    where
-        P: AsRef<Path>,
-    {
-        let path = path.as_ref();
 
-        let hf = File::open(path)?;
-        Index::index_file(&hf, Some(path))
-    }
 
-    /// Index an open HDF5 file.
-    pub fn index_file<P>(hf: &hdf5::File, path: Option<P>) -> Result<Index<'static>, anyhow::Error>
-    where
-        P: Into<PathBuf>,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GroupIndex<'a> {
+    path: Option<PathBuf>,
+    #[serde(borrow)]
+    datasets: HashMap<String, DatasetD<'a>>,
+    #[serde(borrow)]
+    groups: HashMap<String, GroupIndex<'a>>
+}
+
+impl GroupIndex<'_> {
+    /// Index an HDF5 Group.
+    pub fn index_group<P>(grp: &hdf5::Group, path: Option<P>) -> Result<GroupIndex<'static>, anyhow::Error>
+    where P:Into<PathBuf>
     {
-        let mut datasets = HashMap::new();
-        index_group_rec(&hf.group("/")?, "/", &mut datasets)?;
-        Ok(Index {
-            path: path.map(|p| p.into()),
-            datasets,
-        })
+        let path: Option<PathBuf> = path.map(|p| p.into());
+        let datasets =  grp.member_names()?
+            .iter()
+            .map(|m| {
+                grp.dataset(m).map(|d| {(m,d,)})
+            })
+            .filter_map(Result::ok)
+            .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
+            .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
+            .collect::<Result<HashMap<String, DatasetD<'static>>, _>>()?;
+        let groups = grp.groups()?.iter().map(|grp| {
+            GroupIndex::index_group(grp,path.clone()).map(|idx| (grp.name().split('/').next_back().unwrap().to_owned(),idx))
+        }).collect::<Result<HashMap<String,GroupIndex<'static>>,anyhow::Error>>()?;
+        Ok(GroupIndex{ path, datasets, groups})
     }
 
     #[must_use]
     pub fn dataset(&self, s: &str) -> Option<&DatasetD> {
-        self.datasets.get(s)
+        let mut s = s.trim_start_matches('/').split('/');
+        let ds_name = s.next_back()?;
+        let grp = s.try_fold(self, |grp,grp_name|
+            grp.groups.get(grp_name)
+        )?;
+        grp.datasets.get(ds_name)
     }
 
     pub fn datasets(&self) -> &HashMap<String, DatasetD> {
@@ -84,6 +130,17 @@ impl Index<'_> {
     #[must_use]
     pub fn path(&self) -> Option<&Path> {
         self.path.as_ref().map(|p| p.as_ref())
+    }
+
+    #[must_use]
+    pub fn group(&self, s: &str) -> Option<&GroupIndex<'_>> {
+        s.trim_start_matches('/').trim_end_matches('/').split('/').try_fold(self, |grp,grp_name| {
+            grp.groups.get(grp_name)
+        })
+    }
+
+    pub fn groups(&self) -> &HashMap<String, GroupIndex<'_>> {
+        &self.groups
     }
 
     /// Create a cached reader for dataset.
@@ -117,33 +174,6 @@ impl Index<'_> {
             None => Err(anyhow!("dataset does not exist")),
         }
     }
-}
-
-fn index_group_rec(
-    grp: &hdf5::Group,
-    grp_name: &str,
-    datasets: &mut HashMap<String, DatasetD<'static>>,
-) -> Result<(), anyhow::Error> {
-    datasets.extend(
-        grp.member_names()?
-            .iter()
-            .map(|m| {
-                grp.dataset(m).map(|d| {
-                    (
-                        format!("{grp_name}/{m}").trim_start_matches('/').to_owned(),
-                        d,
-                    )
-                })
-            })
-            .filter_map(Result::ok)
-            .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
-            .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
-            .collect::<Result<HashMap<String, DatasetD<'static>>, _>>()?,
-    );
-    for subgrp in grp.groups()?.iter() {
-        index_group_rec(subgrp, subgrp.name().as_str(), datasets)?;
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -219,10 +249,13 @@ mod tests {
                 .unwrap();
         }
         let idx = Index::index(path).unwrap();
-        assert_eq!(idx.datasets.len(), 3);
-        assert!(idx.datasets.contains_key("x"));
-        assert!(idx.datasets.contains_key("a/b/x"));
-        assert!(idx.datasets.contains_key("a/b/c/x"));
+        assert_eq!(idx.datasets().len(), 1);
+        assert_eq!(idx.reader("x").unwrap().values::<f64>(None, None).unwrap(),vec![1.0]);
+        assert_eq!(idx.groups().len(),1);
+        assert_eq!(idx.group("a").unwrap().groups().len(),1);
+        assert_eq!(idx.group("a/b").unwrap().groups().len(),1);
+        assert_eq!(idx.reader("a/b/x").unwrap().values::<f64>(None, None).unwrap(),vec![1.0]);
+        assert_eq!(idx.reader("a/b/c/x").unwrap().values::<f64>(None, None).unwrap(),vec![1.0]);
     }
 
     #[test]
@@ -251,10 +284,10 @@ mod tests {
 
         println!("deserialize");
         let r = flexbuffers::Reader::get_root(s.view()).unwrap();
-        let mi = Index::deserialize(r).unwrap();
+        let mi = GroupIndex::deserialize(r).unwrap();
         println!("Deserialized Index: {:#?}", mi);
 
         let s = bincode::serialize(&i).unwrap();
-        bincode::deserialize::<Index>(&s).unwrap();
+        bincode::deserialize::<GroupIndex>(&s).unwrap();
     }
 }
