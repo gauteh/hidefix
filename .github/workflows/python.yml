@@ -12,9 +12,13 @@ on:
 
 jobs:
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.platform}}
     strategy:
       matrix:
+        platform:
+          - ubuntu-latest
+          - windows-latest
+          - macosx-latest
         target: [x86_64]
     steps:
     - uses: actions/checkout@v3
