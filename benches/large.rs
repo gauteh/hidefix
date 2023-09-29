@@ -8,8 +8,8 @@ use std::sync::Mutex;
 use hidefix::prelude::*;
 use ndarray::{s, IxDyn};
 
-const URL: &'static str = "https://thredds.met.no/thredds/fileServer/fou-hi/norkyst800m-1h/NorKyst-800m_ZDEPTHS_his.an.2023081600.nc";
-const VAR: &'static str = "u_eastward";
+const URL: &str = "https://thredds.met.no/thredds/fileServer/fou-hi/norkyst800m-1h/NorKyst-800m_ZDEPTHS_his.an.2023081600.nc";
+const VAR: &str = "u_eastward";
 
 type T = f32;
 
@@ -28,7 +28,7 @@ fn get_file() -> PathBuf {
 
     if !p.exists() {
         println!("downloading norkyst file to {p:#?}..");
-        std::fs::create_dir_all(&d).unwrap();
+        std::fs::create_dir_all(d).unwrap();
         let c = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(10 * 60))
             .build()
@@ -54,7 +54,7 @@ fn idx_small_slice(b: &mut Bencher) {
         .read_slice::<T, _, IxDyn>(s![0..2, 0..2, 0..1, 0..5])
         .unwrap()
         .iter()
-        .map(|v| *v)
+        .copied()
         .collect::<Vec<T>>();
 
     assert_eq!(
@@ -69,7 +69,7 @@ fn idx_small_slice(b: &mut Bencher) {
 #[bench]
 fn native_small_slice(b: &mut Bencher) {
     let p = get_file();
-    let h = hdf5::File::open(&p).unwrap();
+    let h = hdf5::File::open(p).unwrap();
     let d = h.dataset(VAR).unwrap();
 
     b.iter(|| {
@@ -94,7 +94,7 @@ fn idx_med_slice(b: &mut Bencher) {
         .read_slice::<T, _, IxDyn>(s![0..10, 0..10, 0..1, 0..700])
         .unwrap()
         .iter()
-        .map(|v| *v)
+        .copied()
         .collect::<Vec<T>>();
 
     assert_eq!(
@@ -115,7 +115,7 @@ fn idx_med_slice(b: &mut Bencher) {
 #[bench]
 fn native_med_slice(b: &mut Bencher) {
     let p = get_file();
-    let h = hdf5::File::open(&p).unwrap();
+    let h = hdf5::File::open(p).unwrap();
     let d = h.dataset(VAR).unwrap();
 
     b.iter(|| {
@@ -140,7 +140,7 @@ fn idx_big_slice(b: &mut Bencher) {
         .read_slice::<T, _, IxDyn>(s![0..24, 0..16, 0..1, 0..739])
         .unwrap()
         .iter()
-        .map(|v| *v)
+        .copied()
         .collect::<Vec<T>>();
 
     assert_eq!(
@@ -161,7 +161,7 @@ fn idx_big_slice(b: &mut Bencher) {
 #[bench]
 fn native_big_slice(b: &mut Bencher) {
     let p = get_file();
-    let h = hdf5::File::open(&p).unwrap();
+    let h = hdf5::File::open(p).unwrap();
     let d = h.dataset(VAR).unwrap();
 
     b.iter(|| {

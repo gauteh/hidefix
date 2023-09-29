@@ -26,7 +26,7 @@ fn chunked_2d() {
     let hval = hvs
         .slice(s![10..25, 10..25])
         .iter()
-        .map(|v| *v)
+        .copied()
         .collect::<Vec<T>>();
     assert_eq!(values, hval);
 }
@@ -51,7 +51,7 @@ fn chunked_3d() {
     let hval = hvs
         .slice(s![10..11, 10..12, 10..11])
         .iter()
-        .map(|v| *v)
+        .copied()
         .collect::<Vec<T>>();
     assert_eq!(values, hval);
 }
@@ -78,7 +78,7 @@ fn chunked_4d() {
     let hval = hvs
         .slice(s![10..25, 10..25, 10..25, 5..19])
         .iter()
-        .map(|v| *v)
+        .copied()
         .collect::<Vec<T>>();
     assert_eq!(values, hval);
 }

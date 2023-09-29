@@ -5,7 +5,7 @@ use futures::executor::block_on_stream;
 use futures::pin_mut;
 use hidefix::prelude::*;
 
-const SVIM: &'static str = "/home/gauteh/dev/dars/data/met/ocean_avg_19600101.nc4";
+const SVIM: &str = "/home/gauteh/dev/dars/data/met/ocean_avg_19600101.nc4";
 
 #[ignore]
 #[test]
