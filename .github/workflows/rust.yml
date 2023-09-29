@@ -39,12 +39,14 @@ jobs:
 
   test:
     name: Test
-    runs-on: ubuntu-${{matrix.ubuntu}}
+    runs-on: ${{matrix.platform}}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {ubuntu: 20.04, rust: nightly}
+          - {platform: ubuntu-latest, rust: nightly}
+          - {platform: windows-latest, rust: nightly}
+          - {platform: macosx-latest, rust: nightly}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
