@@ -14,7 +14,7 @@ use crate::reader::{Reader, Streamer};
 pub struct Index<'a> {
     path: Option<PathBuf>,
     #[serde(borrow)]
-    root: GroupIndex<'a>
+    root: GroupIndex<'a>,
 }
 
 impl<'a> Deref for Index<'a> {
@@ -23,7 +23,6 @@ impl<'a> Deref for Index<'a> {
         &self.root
     }
 }
-
 
 impl Index<'_> {
     /// Open an existing HDF5 file and index all variables and groups.
@@ -46,11 +45,10 @@ impl Index<'_> {
         let path = path.map(|p| p.into());
         Ok(Index {
             path: path.clone(),
-            root: GroupIndex::index_group(&hf.group("/")?, path)?
+            root: GroupIndex::index_group(&hf.group("/")?, path)?,
         })
     }
 }
-
 
 impl TryFrom<&Path> for Index<'_> {
     type Error = anyhow::Error;
@@ -81,45 +79,53 @@ impl TryFrom<&netcdf::File> for Index<'_> {
     }
 }
 
-
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GroupIndex<'a> {
     path: Option<PathBuf>,
     #[serde(borrow)]
     datasets: HashMap<String, DatasetD<'a>>,
     #[serde(borrow)]
-    groups: HashMap<String, GroupIndex<'a>>
+    groups: HashMap<String, GroupIndex<'a>>,
 }
 
 impl GroupIndex<'_> {
     /// Index an HDF5 Group.
-    pub fn index_group<P>(grp: &hdf5::Group, path: Option<P>) -> Result<GroupIndex<'static>, anyhow::Error>
-    where P:Into<PathBuf>
+    pub fn index_group<P>(
+        grp: &hdf5::Group,
+        path: Option<P>,
+    ) -> Result<GroupIndex<'static>, anyhow::Error>
+    where
+        P: Into<PathBuf>,
     {
         let path: Option<PathBuf> = path.map(|p| p.into());
-        let datasets =  grp.member_names()?
+        let datasets = grp
+            .member_names()?
             .iter()
-            .map(|m| {
-                grp.dataset(m).map(|d| {(m,d,)})
-            })
+            .map(|m| grp.dataset(m).map(|d| (m, d)))
             .filter_map(Result::ok)
             .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
             .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
             .collect::<Result<HashMap<String, DatasetD<'static>>, _>>()?;
-        let groups = grp.groups()?.iter().map(|grp| {
-            GroupIndex::index_group(grp,path.clone()).map(|idx| (grp.name().split('/').next_back().unwrap().to_owned(),idx))
-        }).collect::<Result<HashMap<String,GroupIndex<'static>>,anyhow::Error>>()?;
-        Ok(GroupIndex{ path, datasets, groups})
+        let groups = grp
+            .groups()?
+            .iter()
+            .map(|grp| {
+                GroupIndex::index_group(grp, path.clone())
+                    .map(|idx| (grp.name().split('/').next_back().unwrap().to_owned(), idx))
+            })
+            .collect::<Result<HashMap<String, GroupIndex<'static>>, anyhow::Error>>()?;
+        Ok(GroupIndex {
+            path,
+            datasets,
+            groups,
+        })
     }
 
     #[must_use]
     pub fn dataset(&self, s: &str) -> Option<&DatasetD> {
         let mut s = s.trim_start_matches('/').split('/');
         let ds_name = s.next_back()?;
-        let grp = s.try_fold(self, |grp,grp_name|
-            grp.groups.get(grp_name)
-        )?;
+        let grp = s.try_fold(self, |grp, grp_name| grp.groups.get(grp_name))?;
         grp.datasets.get(ds_name)
     }
 
@@ -134,9 +140,10 @@ impl GroupIndex<'_> {
 
     #[must_use]
     pub fn group(&self, s: &str) -> Option<&GroupIndex<'_>> {
-        s.trim_start_matches('/').trim_end_matches('/').split('/').try_fold(self, |grp,grp_name| {
-            grp.groups.get(grp_name)
-        })
+        s.trim_start_matches('/')
+            .trim_end_matches('/')
+            .split('/')
+            .try_fold(self, |grp, grp_name| grp.groups.get(grp_name))
     }
 
     pub fn groups(&self) -> &HashMap<String, GroupIndex<'_>> {
@@ -250,12 +257,27 @@ mod tests {
         }
         let idx = Index::index(path).unwrap();
         assert_eq!(idx.datasets().len(), 1);
-        assert_eq!(idx.reader("x").unwrap().values::<f64>(None, None).unwrap(),vec![1.0]);
-        assert_eq!(idx.groups().len(),1);
-        assert_eq!(idx.group("a").unwrap().groups().len(),1);
-        assert_eq!(idx.group("a/b").unwrap().groups().len(),1);
-        assert_eq!(idx.reader("a/b/x").unwrap().values::<f64>(None, None).unwrap(),vec![1.0]);
-        assert_eq!(idx.reader("a/b/c/x").unwrap().values::<f64>(None, None).unwrap(),vec![1.0]);
+        assert_eq!(
+            idx.reader("x").unwrap().values::<f64>(None, None).unwrap(),
+            vec![1.0]
+        );
+        assert_eq!(idx.groups().len(), 1);
+        assert_eq!(idx.group("a").unwrap().groups().len(), 1);
+        assert_eq!(idx.group("a/b").unwrap().groups().len(), 1);
+        assert_eq!(
+            idx.reader("a/b/x")
+                .unwrap()
+                .values::<f64>(None, None)
+                .unwrap(),
+            vec![1.0]
+        );
+        assert_eq!(
+            idx.reader("a/b/c/x")
+                .unwrap()
+                .values::<f64>(None, None)
+                .unwrap(),
+            vec![1.0]
+        );
     }
 
     #[test]
