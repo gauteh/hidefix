@@ -105,7 +105,7 @@ jobs:
       - name: Install tarpaulin
         run: cargo install cargo-tarpaulin
       - name: Run code coverage
-        run: cargo tarpaulin --verbose --out Xml --ignore-tests
+        run: cargo tarpaulin --verbose --out xml --ignore-tests
       - name: Upload code coverage
         run: bash <(curl -s https://codecov.io/bash)
 
