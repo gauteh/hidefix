@@ -46,6 +46,24 @@ mod shuffled_compressed {
 
     #[ignore]
     #[bench]
+    fn direct_sequential_parallel(b: &mut Bencher) {
+        let i = Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
+        let ds = i.dataset("d_4_shufzip_chunks").unwrap();
+        let r = ds
+            .as_par_reader(&"tests/data/dmrpp/chunked_shufzip_twoD.h5")
+            .unwrap();
+
+        b.iter(|| {
+            for _ in 0..ITERATIONS {
+                for _ in 0..REPETITIONS {
+                    test::black_box(&r.values_par::<f32>(None, None).unwrap());
+                }
+            }
+        })
+    }
+
+    #[ignore]
+    #[bench]
     fn native_sequential(b: &mut Bencher) {
         let h = hdf5::File::open("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
         let d = h.dataset("d_4_shufzip_chunks").unwrap();
