@@ -1,3 +1,4 @@
+//! This example reads a dataset in parallel.
 use hidefix::prelude::*;
 
 fn main() -> anyhow::Result<()> {
