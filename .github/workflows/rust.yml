@@ -46,7 +46,7 @@ jobs:
         include:
           - {platform: ubuntu-latest, rust: nightly}
           - {platform: windows-latest, rust: nightly}
-          - {platform: macosx-latest, rust: nightly}
+          - {platform: macos-latest, rust: nightly}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

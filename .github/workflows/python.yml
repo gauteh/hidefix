@@ -18,7 +18,7 @@ jobs:
         platform:
           - ubuntu-latest
           - windows-latest
-          - macosx-latest
+          - macos-latest
         target: [x86_64]
     steps:
     - uses: actions/checkout@v3
