@@ -41,6 +41,10 @@ ds = xr.open_dataset('file.nc', engine='hidefix')
 print(ds)
 ```
 
+See the [example](examples/) for how to use hidefix for
+[regular](examples/read_hfx_cache.rs), [parallel](examples/read_hfx_parallel.rs) or
+[concurrent](examples/read_hfx_concurrent.rs) reads.
+
 ## Motivation
 
 The HDF5 library requires internal locks to be _thread-safe_ since it relies on
