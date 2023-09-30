@@ -15,7 +15,6 @@ fn main() -> anyhow::Result<()> {
         println!("Reading values from {var}..");
 
         const ITERATIONS: usize = 100;
-        const REPETITIONS: usize = 100;
 
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(8)
@@ -28,15 +27,13 @@ fn main() -> anyhow::Result<()> {
 
                 s.spawn(move |_| {
                     let mut r = i.reader(var).unwrap();
-                    for _ in 0..REPETITIONS {
-                        let values = &r.values::<f32>(None, None).unwrap();
-                        println!("Iteration: {}, Number of values: {}", ii, values.len());
-                        println!(
-                            "Iteration: {}, First value: {}",
-                            ii,
-                            values.first().unwrap()
-                        );
-                    }
+                    let values = &r.values::<f32>(None, None).unwrap();
+                    println!("Iteration: {}, Number of values: {}", ii, values.len());
+                    println!(
+                        "Iteration: {}, First value: {}",
+                        ii,
+                        values.first().unwrap()
+                    );
                 });
             }
         });
