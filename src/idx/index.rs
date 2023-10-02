@@ -10,6 +10,7 @@ use hdf5::File;
 use super::dataset::DatasetD;
 use crate::reader::{Reader, Streamer};
 
+/// HDF5 indexer holding reference to the root group indexer
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Index<'a> {
     path: Option<PathBuf>,
@@ -25,7 +26,7 @@ impl<'a> Deref for Index<'a> {
 }
 
 impl Index<'_> {
-    /// Open an existing HDF5 file and index all variables and groups.
+    /// Open an existing HDF5 file and index datasets and groups.
     #[allow(clippy::self_named_constructors)]
     pub fn index<P>(path: P) -> Result<Index<'static>, anyhow::Error>
     where
@@ -37,7 +38,7 @@ impl Index<'_> {
         Index::index_file(&hf, Some(path))
     }
 
-    /// Index an open HDF5 file.
+    /// Index an open HDF5 file and index datasets and groups.
     pub fn index_file<P>(hf: &hdf5::File, path: Option<P>) -> Result<Index<'static>, anyhow::Error>
     where
         P: Into<PathBuf>,
@@ -79,6 +80,8 @@ impl TryFrom<&netcdf::File> for Index<'_> {
     }
 }
 
+/// Indexer of HDF5 group holding references to both datasets and nested
+/// groups within the HDF5 group
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GroupIndex<'a> {
     path: Option<PathBuf>,
@@ -89,7 +92,7 @@ pub struct GroupIndex<'a> {
 }
 
 impl GroupIndex<'_> {
-    /// Index an HDF5 Group.
+    /// Index datasets and nested groups of an HDF5 Group
     pub fn index_group<P>(
         grp: &hdf5::Group,
         path: Option<P>,
@@ -121,6 +124,10 @@ impl GroupIndex<'_> {
         })
     }
 
+    /// Retrieves a reference to a dataset within a HDF5 group indexer hierarchy if it exists.
+    ///
+    /// This function allows you to access a dataset by providing its path, using the "path/to/dataset" naming structure.
+    /// The function traverses nested groups based on the path until it finds the desired dataset.
     #[must_use]
     pub fn dataset(&self, s: &str) -> Option<&DatasetD> {
         let mut s = s.trim_start_matches('/').split('/');
@@ -146,6 +153,7 @@ impl GroupIndex<'_> {
             .try_fold(self, |grp, grp_name| grp.groups.get(grp_name))
     }
 
+    /// Nested group getter
     pub fn groups(&self) -> &HashMap<String, GroupIndex<'_>> {
         &self.groups
     }
@@ -157,6 +165,9 @@ impl GroupIndex<'_> {
     ///
     /// This method assumes the HDF5 file has the same location as at the time of
     /// indexing.
+    ///
+    /// This function allows you to access a dataset by providing its path, using the "path/to/dataset" naming structure.
+    /// The function traverses nested groups based on the path until it finds the desired dataset.
     pub fn reader(&self, ds: &str) -> Result<Box<dyn Reader + '_>, anyhow::Error> {
         let path = self.path().ok_or_else(|| anyhow!("missing path"))?;
 
