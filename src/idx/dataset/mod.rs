@@ -51,8 +51,8 @@ mod tests {
         )
         .unwrap();
 
-        ds.chunk_slices(None, None).for_each(drop);
-        ds.chunk_slices(None, Some(&[4])).for_each(drop);
+        ds.chunk_slices(..).for_each(drop);
+        ds.chunk_slices((&[0], &[4])).for_each(drop);
     }
 
     #[test]
@@ -75,27 +75,27 @@ mod tests {
 
         // ds.chunk_slices(None, Some(&[2, 4, 580, 1202]))
         //     .for_each(drop);
-        ds.chunk_slices(None, Some(&[2, 32, 580])).for_each(drop);
+        ds.chunk_slices((&[0, 0, 0], &[2, 32, 580])).for_each(drop);
     }
 
     #[test]
     fn chunk_slice_zero_count() {
         let d = test_dataset();
-        assert_eq!(d.chunk_slices(None, Some(&[1, 0])).next(), None);
+        assert_eq!(d.chunk_slices((&[0, 0], &[1, 0])).next(), None);
     }
 
     #[bench]
     fn chunk_slices_range(b: &mut Bencher) {
         let d = test_dataset();
 
-        b.iter(|| d.chunk_slices(None, None).for_each(drop));
+        b.iter(|| d.chunk_slices(..).for_each(drop));
     }
 
     #[bench]
     fn make_chunk_slices_iterator(b: &mut Bencher) {
         let d = test_dataset();
 
-        b.iter(|| test::black_box(d.chunk_slices(None, None)))
+        b.iter(|| test::black_box(d.chunk_slices(..)))
     }
 
     #[bench]
@@ -136,31 +136,31 @@ mod tests {
         let d = test_dataset();
 
         assert_eq!(
-            d.chunk_slices(Some(&[0, 0]), Some(&[1, 10]))
+            d.chunk_slices((&[0, 0], &[1, 10]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [(&d.chunks[0], 0, 10)]
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[0, 0]), Some(&[1, 20]))
+            d.chunk_slices((&[0, 0], &[1, 20]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [(&d.chunks[0], 0, 10), (&d.chunks[1], 0, 10)]
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[0, 5]), Some(&[1, 15]))
+            d.chunk_slices((&[0, 5], &[1, 15]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [(&d.chunks[0], 5, 10), (&d.chunks[1], 0, 10)]
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[0, 0]), Some(&[2, 10]))
+            d.chunk_slices((&[0, 0], &[2, 10]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [(&d.chunks[0], 0, 20)]
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[0, 5]), Some(&[2, 10]))
+            d.chunk_slices((&[0, 5], &[2, 10]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [
                 (&d.chunks[0], 5, 10),
@@ -171,7 +171,7 @@ mod tests {
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[0, 0]), Some(&[2, 20]))
+            d.chunk_slices((&[0, 0], &[2, 20]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [
                 (&d.chunks[0], 0, 10),
@@ -182,20 +182,20 @@ mod tests {
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[2, 0]), Some(&[1, 10]))
+            d.chunk_slices((&[2, 0], &[1, 10]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [(&d.chunks[0], 20, 30),]
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[2, 5]), Some(&[1, 10]))
+            d.chunk_slices((&[2, 5], &[1, 10]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [(&d.chunks[0], 25, 30), (&d.chunks[1], 20, 25),]
         );
 
         // column
         assert_eq!(
-            d.chunk_slices(Some(&[2, 5]), Some(&[4, 1]))
+            d.chunk_slices((&[2, 5], &[4, 1]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [
                 (&d.chunks[0], 25, 26),
@@ -206,7 +206,7 @@ mod tests {
         );
 
         assert_eq!(
-            d.chunk_slices(Some(&[2, 15]), Some(&[4, 1]))
+            d.chunk_slices(([2_u64, 15], [4_u64, 1]))
                 .collect::<Vec<(&Chunk<2>, u64, u64)>>(),
             [
                 (&d.chunks[1], 25, 26),
@@ -342,7 +342,7 @@ mod tests {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let d = i.dataset("SST").unwrap();
         if let DatasetD::D3(d) = d {
-            let sliced = d.chunk_slices(None, None).collect::<Vec<_>>();
+            let sliced = d.chunk_slices(..).collect::<Vec<_>>();
             println!("slices: {:#?}", sliced);
 
             assert_eq!(sliced, slicebr);

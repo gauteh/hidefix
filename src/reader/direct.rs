@@ -1,4 +1,5 @@
 use crate::filters::byteorder::Order;
+use anyhow::ensure;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -6,6 +7,7 @@ use super::{
     chunk::{decode_chunk, read_chunk, read_chunk_to},
     dataset::{ParReader, Reader},
 };
+use crate::extent::Extents;
 use crate::idx::{Chunk, Dataset};
 
 pub struct Direct<'a, const D: usize> {
@@ -30,35 +32,20 @@ impl<'a, const D: usize> Direct<'a, D> {
 }
 
 impl<'a, const D: usize> ParReader for Direct<'a, D> {
-    fn read_to_par(
-        &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-        dst: &mut [u8],
-    ) -> Result<usize, anyhow::Error> {
+    fn read_to_par(&self, extents: &Extents, dst: &mut [u8]) -> Result<usize, anyhow::Error> {
         use rayon::prelude::*;
 
-        let indices: Option<&[u64; D]> = indices
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-
-        let counts: Option<&[u64; D]> = counts
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-
-        let counts: &[u64; D] = counts.unwrap_or(&self.ds.shape);
+        let counts = extents.get_counts(self.shape())?;
 
         let dsz = self.ds.dsize as u64;
-        let vsz = counts.iter().product::<u64>() * dsz;
+        let vsz = counts.product::<u64>() * dsz;
 
         ensure!(
             dst.len() >= vsz as usize,
             "destination buffer has insufficient capacity"
         );
 
-        let groups = self.ds.group_chunk_slices(indices, Some(counts));
+        let groups = self.ds.group_chunk_slices(extents);
         let groups = groups.group_by(|a, b| a.0.addr == b.0.addr);
         let groups = groups.collect::<Vec<_>>();
 
@@ -123,33 +110,18 @@ impl<'a, const D: usize> Reader for Direct<'a, D> {
         &self.ds.shape
     }
 
-    fn read_to(
-        &mut self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-        dst: &mut [u8],
-    ) -> Result<usize, anyhow::Error> {
-        let indices: Option<&[u64; D]> = indices
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-
-        let counts: Option<&[u64; D]> = counts
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-
-        let counts: &[u64; D] = counts.unwrap_or(&self.ds.shape);
+    fn read_to(&mut self, extents: &Extents, dst: &mut [u8]) -> Result<usize, anyhow::Error> {
+        let counts = extents.get_counts(self.shape())?;
 
         let dsz = self.ds.dsize as u64;
-        let vsz = counts.iter().product::<u64>() * dsz;
+        let vsz = counts.product::<u64>() * dsz;
 
         ensure!(
             dst.len() >= vsz as usize,
             "destination buffer has insufficient capacity"
         );
 
-        let groups = self.ds.group_chunk_slices(indices, Some(counts));
+        let groups = self.ds.group_chunk_slices(extents);
 
         let mut fd = std::fs::File::open(&self.path)?;
 
@@ -212,7 +184,7 @@ mod tests {
         };
         let mut r = Direct::with_dataset(ds, i.path().unwrap()).unwrap();
 
-        let vs = r.values::<f32>(None, None).unwrap();
+        let vs = r.values::<f32, _>(..).unwrap();
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("SST").unwrap().read_raw::<f32>().unwrap();
 

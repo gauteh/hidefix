@@ -1,6 +1,5 @@
 use async_stream::stream;
 use futures::{Stream, StreamExt};
-use std::convert::TryInto;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -9,6 +8,7 @@ use bytes::Bytes;
 use lru::LruCache;
 
 use super::{chunk::read_chunk, Streamer};
+use crate::extent::Extents;
 use crate::filters::byteorder::Order;
 use crate::filters::xdr;
 use crate::idx::Dataset;
@@ -47,23 +47,13 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
     /// A stream of bytes from the variable. Always in Big Endian.
     fn stream(
         &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
+        extents: &Extents,
     ) -> Pin<Box<dyn Stream<Item = Result<Bytes, anyhow::Error>> + Send + 'static>> {
         let dsz = self.ds.dsize as u64;
 
-        let indices: Option<&[u64; D]> = indices
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-        let counts: Option<&[u64; D]> = counts
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-
         let slices = self
             .ds
-            .chunk_slices(indices, counts)
+            .chunk_slices(extents)
             .map(|(c, a, b)| (c.addr.get(), c.size.get(), a * dsz, b * dsz))
             .collect::<Vec<_>>();
 
@@ -104,23 +94,13 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
     /// A stream of bytes serialized as XDR/DAP2-DODS from the variable.
     fn stream_xdr(
         &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
+        extents: &Extents,
     ) -> Pin<Box<dyn Stream<Item = Result<Bytes, anyhow::Error>> + Send + 'static>> {
         let dsz = self.ds.dsize as u64;
 
-        let indices: Option<&[u64; D]> = indices
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-        let counts: Option<&[u64; D]> = counts
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-
         let slices = self
             .ds
-            .chunk_slices(indices, counts)
+            .chunk_slices(extents)
             .map(|(c, a, b)| (c.addr.get(), c.size.get(), a * dsz, b * dsz))
             .collect::<Vec<_>>();
 
@@ -181,7 +161,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
         let r = i.streamer("d32_1").unwrap();
 
-        let v = r.stream_values::<f32>(None, None);
+        let v = r.stream_values::<f32, _>(..);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
@@ -195,7 +175,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
         let r = i.streamer("d_4_chunks").unwrap();
 
-        let v = r.stream_values::<f32>(None, None);
+        let v = r.stream_values::<f32, _>(..);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
@@ -209,7 +189,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
         let r = i.streamer("d_4_chunks").unwrap();
 
-        let v = r.stream_values::<f32>(None, None);
+        let v = r.stream_values::<f32, _>(..);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();

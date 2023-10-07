@@ -15,7 +15,7 @@ fn main() -> anyhow::Result<()> {
 
         println!("Reading values from {var}..");
         // let values = r.values_par::<f32>(None, None).unwrap();
-        let values = r.values_dyn_par::<f32>(None, None).unwrap();
+        let values = r.values_dyn_par::<f32, _>(..).unwrap();
 
         println!("Number of values: {}", values.len());
         println!("First value: {}", values.first().unwrap());

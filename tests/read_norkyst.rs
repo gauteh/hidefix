@@ -46,8 +46,8 @@ fn coords() {
     let X = h.dataset("X").unwrap().read_raw::<f64>().unwrap();
 
     let hi = Index::index(&p).unwrap();
-    let hY = hi.reader("Y").unwrap().values::<f64>(None, None).unwrap();
-    let hX = hi.reader("X").unwrap().values::<f64>(None, None).unwrap();
+    let hY = hi.reader("Y").unwrap().values::<f64, _>(..).unwrap();
+    let hX = hi.reader("X").unwrap().values::<f64, _>(..).unwrap();
 
     assert_eq!(Y, hY);
     assert_eq!(X, hX);
@@ -63,16 +63,8 @@ fn wind() {
     let Vw = h.dataset("Vwind").unwrap().read_raw::<f32>().unwrap();
 
     let hi = Index::index(&p).unwrap();
-    let hUw = hi
-        .reader("Uwind")
-        .unwrap()
-        .values::<f32>(None, None)
-        .unwrap();
-    let hVw = hi
-        .reader("Vwind")
-        .unwrap()
-        .values::<f32>(None, None)
-        .unwrap();
+    let hUw = hi.reader("Uwind").unwrap().values::<f32, _>(..).unwrap();
+    let hVw = hi.reader("Vwind").unwrap().values::<f32, _>(..).unwrap();
 
     hi.dataset("Uwind").unwrap().valid().unwrap();
 
@@ -100,12 +92,12 @@ fn current() {
     let hu = hi
         .reader("u_eastward")
         .unwrap()
-        .values::<f32>(None, None)
+        .values::<f32, _>(..)
         .unwrap();
     let hv = hi
         .reader("v_northward")
         .unwrap()
-        .values::<f32>(None, None)
+        .values::<f32, _>(..)
         .unwrap();
 
     assert_eq!(u, hu);
@@ -125,13 +117,9 @@ fn temperature_salinity() {
     let hUw = hi
         .reader("temperature")
         .unwrap()
-        .values::<i16>(None, None)
+        .values::<i16, _>(..)
         .unwrap();
-    let hVw = hi
-        .reader("salinity")
-        .unwrap()
-        .values::<i16>(None, None)
-        .unwrap();
+    let hVw = hi.reader("salinity").unwrap().values::<i16, _>(..).unwrap();
 
     assert_eq!(Uw, hUw);
     assert_eq!(Vw, hVw);
@@ -145,7 +133,7 @@ fn chunk_slice_fracture() {
 
     // test that chunks are not unnecessarily fractured
     fn test_slices<const D: usize>(ds: &Dataset<D>) {
-        let chunks = ds.chunk_slices(None, None).collect::<Vec<_>>();
+        let chunks = ds.chunk_slices(..).collect::<Vec<_>>();
 
         println!("ds chunks: {}", ds.chunks.len());
         println!("chunk slice len: {}", chunks.len());

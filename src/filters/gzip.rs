@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use libdeflater::Decompressor;
 
 /// Helper to decompress a gzipped slice of `u8`s to another buffer of `u8`s.

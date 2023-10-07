@@ -1,3 +1,4 @@
+use anyhow::{anyhow, ensure};
 use itertools::izip;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -9,6 +10,7 @@ use strength_reduce::StrengthReducedU64;
 use super::super::chunk::{Chunk, ULE};
 use super::types::*;
 use super::{DatasetExt, DatasetExtReader};
+use crate::extent::Extents;
 use crate::filters::byteorder::Order as ByteOrder;
 
 /// A HDF5 dataset (a single variable).
@@ -315,14 +317,13 @@ impl<const D: usize> Dataset<'_, D> {
 
     /// Returns an iterator over chunk, offset and size which if joined will make up the specified slice through the
     /// variable.
-    pub fn chunk_slices(
-        &self,
-        indices: Option<&[u64; D]>,
-        counts: Option<&[u64; D]>,
-    ) -> impl Iterator<Item = (&Chunk<D>, u64, u64)> {
-        let indices: [u64; D] = *indices.unwrap_or(&[0; D]);
-        let counts: [u64; D] = *counts.unwrap_or(&self.shape);
-
+    pub fn chunk_slices<E>(&self, extents: E) -> impl Iterator<Item = (&Chunk<D>, u64, u64)>
+    where
+        E: TryInto<Extents>,
+        <E as TryInto<Extents>>::Error: std::fmt::Debug,
+    {
+        let extents = extents.try_into().unwrap();
+        let (indices, counts) = extents.get_start_count_sized(&self.shape).unwrap();
         if indices
             .iter()
             .zip(counts.iter())
@@ -340,14 +341,15 @@ impl<const D: usize> Dataset<'_, D> {
 
     /// Returns an Vec with chunks, offset and size grouped by chunk, with segments and
     /// destination offset.
-    pub fn group_chunk_slices(
-        &self,
-        indices: Option<&[u64; D]>,
-        counts: Option<&[u64; D]>,
-    ) -> Vec<(&Chunk<D>, u64, u64, u64)> {
+    pub fn group_chunk_slices<E>(&self, extents: E) -> Vec<(&Chunk<D>, u64, u64, u64)>
+    where
+        E: TryInto<Extents>,
+        <E as TryInto<Extents>>::Error: std::fmt::Debug,
+    {
         // Find chunks and calculate offset in destination vector.
+        let extents = extents.try_into().unwrap();
         let mut chunks = self
-            .chunk_slices(indices, counts)
+            .chunk_slices(&extents)
             .scan(0u64, |offset, (c, start, end)| {
                 let slice_sz = end - start;
                 let current = *offset;

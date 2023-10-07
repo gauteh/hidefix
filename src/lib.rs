@@ -24,7 +24,7 @@
 //! let idx = Index::index("tests/data/coads_climatology.nc4").unwrap();
 //! let mut r = idx.reader("SST").unwrap();
 //!
-//! let values = r.values::<f32>(None, None).unwrap();
+//! let values = r.values::<f32, _>(..).unwrap();
 //!
 //! println!("SST: {:?}", values);
 //! ```
@@ -38,7 +38,7 @@
 //! use hidefix::prelude::*;
 //!
 //! let i = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap().index().unwrap();
-//! let iv = i.reader("SST").unwrap().values::<f32>(None, None).unwrap();
+//! let iv = i.reader("SST").unwrap().values::<f32, _>(..).unwrap();
 //! ```
 //!
 //! ## NetCDF4 files
@@ -55,7 +55,7 @@
 //! let nv = f.variable("SST").unwrap().values::<f32, _>(..).unwrap();
 //!
 //! let i: Index = (&f).try_into().unwrap();
-//! let iv = i.reader("SST").unwrap().values::<f32>(None, None).unwrap();
+//! let iv = i.reader("SST").unwrap().values::<f32, _>(..).unwrap();
 //!
 //! assert_eq!(iv, nv);
 //! ```
@@ -66,7 +66,7 @@
 //! use hidefix::prelude::*;
 //!
 //! let i = netcdf::open("tests/data/coads_climatology.nc4").unwrap().index().unwrap();
-//! let iv = i.reader("SST").unwrap().values::<f32>(None, None).unwrap();
+//! let iv = i.reader("SST").unwrap().values::<f32, _>(..).unwrap();
 //! ```
 //!
 //! It is also possible to [stream](reader::stream::StreamReader) the values. The streamer is
@@ -95,19 +95,16 @@
 #![feature(slice_group_by)]
 #![feature(mutex_unlock)]
 #![feature(new_uninit)]
+
 extern crate test;
 
-#[macro_use]
-extern crate anyhow;
-
-#[macro_use]
-extern crate log;
-
+pub mod extent;
 pub mod filters;
 pub mod idx;
 pub mod reader;
 
 pub mod prelude {
+    pub use super::extent::{Extent, Extents};
     pub use super::idx::{DatasetExt, Datatype, Index, IntoIndex};
     pub use super::reader::{ParReader, ParReaderExt, Reader, ReaderExt, Streamer, StreamerExt};
 }

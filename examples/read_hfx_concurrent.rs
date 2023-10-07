@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
 
                 s.spawn(move |_| {
                     let mut r = i.reader(var).unwrap();
-                    let values = &r.values::<f32>(None, None).unwrap();
+                    let values = &r.values::<f32, _>(..).unwrap();
                     println!("Iteration: {}, Number of values: {}", ii, values.len());
                     println!(
                         "Iteration: {}, First value: {}",

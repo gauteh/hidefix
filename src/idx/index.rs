@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -145,7 +146,7 @@ mod tests {
         let hf = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
         let i: Index = (&hf).try_into().unwrap();
         let mut r = i.reader("SST").unwrap();
-        r.values::<f32>(None, None).unwrap();
+        r.values::<f32, _>(..).unwrap();
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
         let f = netcdf::open("tests/data/coads_climatology.nc4").unwrap();
         let i: Index = (&f).try_into().unwrap();
         let mut r = i.reader("SST").unwrap();
-        let iv = r.values::<f32>(None, None).unwrap();
+        let iv = r.values::<f32, _>(..).unwrap();
 
         let nv = f.variable("SST").unwrap().values::<f32, _>(..).unwrap();
 
@@ -170,7 +171,7 @@ mod tests {
         let p = PathBuf::from("tests/data/coads_climatology.nc4");
         let i: Index = p.as_path().try_into().unwrap();
         let mut r = i.reader("SST").unwrap();
-        r.values::<f32>(None, None).unwrap();
+        r.values::<f32, _>(..).unwrap();
     }
 
     #[test]

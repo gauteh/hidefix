@@ -11,7 +11,7 @@ fn main() -> anyhow::Result<()> {
         let mut r = i.reader(var).unwrap();
 
         println!("Reading values from {var}..");
-        let values = r.values::<f32>(None, None)?;
+        let values = r.values::<f32, _>(..)?;
 
         println!("Number of values: {}", values.len());
         println!("First value: {}", values.first().unwrap());

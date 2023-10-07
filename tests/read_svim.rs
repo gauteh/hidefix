@@ -18,7 +18,7 @@ fn ocean_time() {
 
     let i = h.index().unwrap();
     let mut d = i.reader("ocean_time").unwrap();
-    let v = d.values::<f64>(None, None).unwrap();
+    let v = d.values::<f64, _>(..).unwrap();
 
     assert_eq!(hv, v);
 
@@ -30,7 +30,7 @@ fn ocean_time() {
     }
 
     let s = i.streamer("ocean_time").unwrap();
-    let s = s.stream_values::<f64>(None, None);
+    let s = s.stream_values::<f64, _>(..);
     pin_mut!(s);
     let vs: Vec<f64> = block_on_stream(s).flatten().flatten().collect();
 
@@ -60,14 +60,14 @@ fn temp() {
     let mut d = i.reader("temp").unwrap();
     assert_eq!(d.dsize(), 2);
 
-    let v = d.values::<i16>(None, None).unwrap();
+    let v = d.values::<i16, _>(..).unwrap();
     assert_eq!(hv, v);
 
-    d.values::<i16>(Some(&[0, 0, 0, 0]), Some(&[1, 32, 580, 1202]))
+    d.values::<i16, _>((&[0, 0, 0, 0], &[1, 32, 580, 1202]))
         .unwrap();
 
     let s = i.streamer("temp").unwrap();
-    let s = s.stream_values::<i16>(None, None);
+    let s = s.stream_values::<i16, _>(..);
     pin_mut!(s);
     let vs: Vec<i16> = block_on_stream(s).flatten().flatten().collect();
     assert_eq!(hv, vs);

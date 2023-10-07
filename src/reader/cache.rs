@@ -1,9 +1,10 @@
-use std::convert::TryInto;
 use std::io::{Read, Seek};
 
+use anyhow::ensure;
 use lru::LruCache;
 
 use super::{chunk::read_chunk, dataset::Reader};
+use crate::extent::Extents;
 use crate::filters::byteorder::Order;
 use crate::idx::Dataset;
 
@@ -42,32 +43,18 @@ impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
         &self.ds.shape
     }
 
-    fn read_to(
-        &mut self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-        mut dst: &mut [u8],
-    ) -> Result<usize, anyhow::Error> {
-        let indices: Option<&[u64; D]> = indices
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-
-        let counts: Option<&[u64; D]> = counts
-            .map(|i| i.try_into())
-            .map_or(Ok(None), |v| v.map(Some))
-            .unwrap();
-        let counts: &[u64; D] = counts.unwrap_or(&self.ds.shape);
+    fn read_to(&mut self, extents: &Extents, mut dst: &mut [u8]) -> Result<usize, anyhow::Error> {
+        let counts = extents.get_counts(self.shape())?;
 
         let dsz = self.ds.dsize as u64;
-        let vsz = counts.iter().product::<u64>() * dsz;
+        let vsz = counts.product::<u64>() * dsz;
 
         ensure!(
             dst.len() >= vsz as usize,
             "destination buffer has insufficient capacity"
         );
 
-        for (c, start, end) in self.ds.chunk_slices(indices, Some(counts)) {
+        for (c, start, end) in self.ds.chunk_slices(extents) {
             let start = (start * dsz) as usize;
             let end = (end * dsz) as usize;
 
@@ -113,7 +100,7 @@ mod tests {
         let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
         let mut r = i.reader("SST").unwrap();
 
-        let vs = r.values::<f32>(None, None).unwrap();
+        let vs = r.values::<f32, _>(..).unwrap();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("SST").unwrap().read_raw::<f32>().unwrap();
@@ -126,7 +113,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/t_float.h5").unwrap();
         let mut r = i.reader("d32_1").unwrap();
 
-        let vs = r.values::<f32>(None, None).unwrap();
+        let vs = r.values::<f32, _>(..).unwrap();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d32_1").unwrap().read_raw::<f32>().unwrap();
@@ -139,7 +126,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
         let mut r = i.reader("d_4_chunks").unwrap();
 
-        let vs = r.values::<f32>(None, None).unwrap();
+        let vs = r.values::<f32, _>(..).unwrap();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
@@ -152,7 +139,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
         let mut r = i.reader("d_4_chunks").unwrap();
 
-        let vs = r.values::<f32>(None, None).unwrap();
+        let vs = r.values::<f32, _>(..).unwrap();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
@@ -165,7 +152,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/chunked_shuffled_twoD.h5").unwrap();
         let mut r = i.reader("d_4_shuffled_chunks").unwrap();
 
-        let vs = r.values::<f32>(None, None).unwrap();
+        let vs = r.values::<f32, _>(..).unwrap();
 
         let h = hdf5::File::open(i.path().unwrap()).unwrap();
         let hvs = h
@@ -182,7 +169,7 @@ mod tests {
         let i = Index::index("tests/data/dmrpp/chunked_gzipped_twoD.h5").unwrap();
         let mut r = i.reader("d_4_gzipped_chunks").unwrap();
 
-        let vs = r.values::<f32>(None, None).unwrap();
+        let vs = r.values::<f32, _>(..).unwrap();
 
         // println!("{:?}", vs);
 

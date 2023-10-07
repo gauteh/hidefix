@@ -13,7 +13,7 @@ fn chunked_2d() {
     let i = Index::index("tests/data/dmrpp/chunked_twoD.h5").unwrap();
     let mut r = i.reader("d_4_chunks").unwrap();
 
-    let values = r.values::<T>(None, None).unwrap();
+    let values = r.values::<T, _>(..).unwrap();
 
     let h = hdf5::File::open("tests/data/dmrpp/chunked_twoD.h5").unwrap();
     let d = h.dataset("d_4_chunks").unwrap();
@@ -21,7 +21,7 @@ fn chunked_2d() {
 
     assert_eq!(values, hval);
 
-    let values = r.values::<T>(Some(&[10, 10]), Some(&[15, 15])).unwrap();
+    let values = r.values::<T, _>((&[10, 10], &[15, 15])).unwrap();
     let hvs = d.read_dyn::<T>().unwrap();
     let hval = hvs
         .slice(s![10..25, 10..25])
@@ -38,7 +38,7 @@ fn chunked_3d() {
     let i = Index::index("tests/data/dmrpp/chunked_threeD.h5").unwrap();
     let mut r = i.reader("d_8_chunks").unwrap();
 
-    let values = r.values::<T>(None, None).unwrap();
+    let values = r.values::<T, _>(..).unwrap();
 
     let h = hdf5::File::open("tests/data/dmrpp/chunked_threeD.h5").unwrap();
     let d = h.dataset("d_8_chunks").unwrap();
@@ -46,9 +46,7 @@ fn chunked_3d() {
 
     assert_eq!(values, hval);
 
-    let values = r
-        .values::<T>(Some(&[10, 10, 10]), Some(&[1, 2, 1]))
-        .unwrap();
+    let values = r.values::<T, _>((&[10, 10, 10], &[1, 2, 1])).unwrap();
     let hvs = d.read_dyn::<T>().unwrap();
     let hval = hvs
         .slice(s![10..11, 10..12, 10..11])
@@ -65,7 +63,7 @@ fn chunked_4d() {
     let i = Index::index("tests/data/dmrpp/chunked_fourD.h5").unwrap();
     let mut r = i.reader("d_16_chunks").unwrap();
 
-    let values = r.values::<T>(None, None).unwrap();
+    let values = r.values::<T, _>(..).unwrap();
 
     let h = hdf5::File::open("tests/data/dmrpp/chunked_fourD.h5").unwrap();
     let d = h.dataset("d_16_chunks").unwrap();
@@ -74,7 +72,7 @@ fn chunked_4d() {
     assert_eq!(values, hval);
 
     let values = r
-        .values::<T>(Some(&[10, 10, 10, 5]), Some(&[15, 15, 15, 14]))
+        .values::<T, _>((&[10, 10, 10, 5], &[15, 15, 15, 14]))
         .unwrap();
     let hvs = d.read_dyn::<T>().unwrap();
     let hval = hvs
@@ -92,7 +90,7 @@ fn scalar() {
     let i = Index::index("tests/data/dmrpp/t_int_scalar.h5").unwrap();
     let mut r = i.reader("scalar").unwrap();
 
-    let values = r.values::<T>(None, None).unwrap();
+    let values = r.values::<T, _>(..).unwrap();
 
     let h = hdf5::File::open("tests/data/dmrpp/t_int_scalar.h5").unwrap();
     let d = h.dataset("scalar").unwrap();

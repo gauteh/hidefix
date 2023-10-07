@@ -10,7 +10,7 @@ fn chunked_string_array() {
     let i = Index::index("tests/data/dmrpp/chunked_string_array.h5").unwrap();
     let mut r = i.reader("string_array").unwrap();
 
-    let values = r.values::<T>(None, None).unwrap();
+    let values = r.values::<T, _>(..).unwrap();
     let strs = std::str::from_utf8(&values).unwrap();
     println!("{:?}", strs);
 

@@ -17,7 +17,7 @@ pub use index::Index;
 /// let idx = hf.index().unwrap();
 ///
 /// let mut r = idx.reader("SST").unwrap();
-/// let values = r.values::<f32>(None, None).unwrap();
+/// let values = r.values::<f32, _>(..).unwrap();
 ///
 /// println!("SST: {:?}", values);
 /// ```

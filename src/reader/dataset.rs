@@ -1,18 +1,15 @@
+use anyhow::ensure;
 use byte_slice_cast::{AsMutByteSlice, AsSliceOf, FromByteSlice, ToMutByteSlice};
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 
+use crate::extent::Extents;
 use crate::filters::byteorder::{Order, ToNative};
 
 pub trait Reader {
     /// Reads raw bytes of slice into destination buffer. Returns bytes read.
-    fn read_to(
-        &mut self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-        dst: &mut [u8],
-    ) -> Result<usize, anyhow::Error>;
+    fn read_to(&mut self, extents: &Extents, dst: &mut [u8]) -> Result<usize, anyhow::Error>;
 
     /// Byte-order of dataset.
     fn order(&self) -> Order;
@@ -26,31 +23,27 @@ pub trait Reader {
 
 pub trait ReaderExt: Reader {
     /// Reads values into desitination slice. Returns values read.
-    fn values_to<T>(
-        &mut self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-        dst: &mut [T],
-    ) -> Result<usize, anyhow::Error>
+    fn values_to<T, E>(&mut self, extents: E, dst: &mut [T]) -> Result<usize, anyhow::Error>
     where
         T: ToMutByteSlice,
         [T]: ToNative,
+        E: TryInto<Extents>,
+        E::Error: Into<anyhow::Error>,
     {
-        let r = self.read_to(indices, counts, dst.as_mut_byte_slice())?;
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let r = self.read_to(&extents, dst.as_mut_byte_slice())?;
         dst.to_native(self.order());
 
         Ok(r)
     }
 
     /// Reads slice of dataset into `Vec<T>`.
-    fn values<T>(
-        &mut self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-    ) -> Result<Vec<T>, anyhow::Error>
+    fn values<T, E>(&mut self, extents: E) -> Result<Vec<T>, anyhow::Error>
     where
         T: ToMutByteSlice,
         [T]: ToNative,
+        E: TryInto<Extents>,
+        E::Error: Into<anyhow::Error>,
     {
         let dsz = self.dsize();
         ensure!(
@@ -60,21 +53,16 @@ pub trait ReaderExt: Reader {
             std::mem::size_of::<T>()
         );
 
-        if dsz != std::mem::size_of::<T>() {
-            error!("size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
-        }
+        ensure!(dsz == std::mem::size_of::<T>(), "size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
 
-        let vsz = counts
-            .unwrap_or_else(|| self.shape())
-            .iter()
-            .product::<u64>() as usize
-            * dsz
-            / std::mem::size_of::<T>();
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let counts = extents.get_counts(self.shape())?;
+        let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
 
         let values = Box::<[T]>::new_uninit_slice(vsz);
         let values = unsafe { values.assume_init() };
         let mut values = values.into_vec();
-        self.values_to(indices, counts, values.as_mut_slice())?; // XXX: take maybeuninit
+        self.values_to(extents, values.as_mut_slice())?; // XXX: take maybeuninit
 
         Ok(values)
     }
@@ -83,41 +71,32 @@ pub trait ReaderExt: Reader {
 impl<T: ?Sized + Reader> ReaderExt for T {}
 
 pub trait ParReader {
-    fn read_to_par(
-        &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-        dst: &mut [u8],
-    ) -> Result<usize, anyhow::Error>;
+    fn read_to_par(&self, extents: &Extents, dst: &mut [u8]) -> Result<usize, anyhow::Error>;
 }
 
 pub trait ParReaderExt: Reader + ParReader {
     /// Reads values into desitination slice. Returns values read.
-    fn values_to_par<T>(
-        &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-        dst: &mut [T],
-    ) -> Result<usize, anyhow::Error>
+    fn values_to_par<T, E>(&self, extents: E, dst: &mut [T]) -> Result<usize, anyhow::Error>
     where
         T: ToMutByteSlice,
         [T]: ToNative,
+        E: TryInto<Extents>,
+        E::Error: Into<anyhow::Error>,
     {
-        let r = self.read_to_par(indices, counts, dst.as_mut_byte_slice())?;
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let r = self.read_to_par(&extents, dst.as_mut_byte_slice())?;
         dst.to_native(self.order());
 
         Ok(r)
     }
 
     /// Reads slice of dataset into `Vec<T>`.
-    fn values_par<T>(
-        &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-    ) -> Result<Vec<T>, anyhow::Error>
+    fn values_par<T, E>(&self, extents: E) -> Result<Vec<T>, anyhow::Error>
     where
         T: ToMutByteSlice,
         [T]: ToNative,
+        E: TryInto<Extents>,
+        E::Error: Into<anyhow::Error>,
     {
         let dsz = self.dsize();
         ensure!(
@@ -127,33 +106,26 @@ pub trait ParReaderExt: Reader + ParReader {
             std::mem::size_of::<T>()
         );
 
-        if dsz != std::mem::size_of::<T>() {
-            error!("size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
-        }
+        ensure!(dsz == std::mem::size_of::<T>(), "size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
 
-        let vsz = counts
-            .unwrap_or_else(|| self.shape())
-            .iter()
-            .product::<u64>() as usize
-            * dsz
-            / std::mem::size_of::<T>();
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let counts = extents.get_counts(self.shape())?;
+        let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
 
         let values = Box::<[T]>::new_uninit_slice(vsz);
         let values = unsafe { values.assume_init() };
         let mut values = values.into_vec();
-        self.values_to_par(indices, counts, values.as_mut_slice())?;
+        self.values_to_par(extents, values.as_mut_slice())?;
 
         Ok(values)
     }
 
-    fn values_dyn_par<T>(
-        &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
-    ) -> Result<ndarray::ArrayD<T>, anyhow::Error>
+    fn values_dyn_par<T, E>(&self, extents: E) -> Result<ndarray::ArrayD<T>, anyhow::Error>
     where
         T: ToMutByteSlice + Default,
         [T]: ToNative,
+        E: TryInto<Extents>,
+        E::Error: Into<anyhow::Error>,
     {
         let dsz = self.dsize();
         ensure!(
@@ -163,21 +135,16 @@ pub trait ParReaderExt: Reader + ParReader {
             std::mem::size_of::<T>()
         );
 
-        if dsz != std::mem::size_of::<T>() {
-            error!("size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
-        }
+        ensure!(dsz == std::mem::size_of::<T>(), "size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
 
-        let dims = counts
-            .unwrap_or_else(|| self.shape())
-            .iter()
-            .cloned()
-            .map(|d| d as usize)
-            .collect::<Vec<_>>();
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let counts = extents.get_counts(self.shape())?;
+        let dims = counts.map(|d| d as usize).collect::<Vec<_>>();
 
         // this is not safe: better to let read_to take maybeuninit's
         let mut a = unsafe { ndarray::ArrayD::<T>::uninit(dims).assume_init() };
         let dst = a.as_slice_mut().unwrap();
-        self.values_to_par(indices, counts, dst)?;
+        self.values_to_par(extents, dst)?;
 
         Ok(a)
     }
@@ -189,15 +156,13 @@ pub trait Streamer {
     /// Stream slice of dataset as chunks of `Bytes`.
     fn stream(
         &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
+        extents: &Extents,
     ) -> Pin<Box<dyn Stream<Item = Result<Bytes, anyhow::Error>> + Send + 'static>>;
 
     /// Stream slice of dataset as chunks of `Bytes` serialized as XDR/DAP2-DODS.
     fn stream_xdr(
         &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
+        extents: &Extents,
     ) -> Pin<Box<dyn Stream<Item = Result<Bytes, anyhow::Error>> + Send + 'static>>;
 
     /// Byte-order of dataset.
@@ -209,18 +174,20 @@ pub trait Streamer {
 
 pub trait StreamerExt: Streamer {
     /// Stream slice of dataset as `Vec<T>`.
-    fn stream_values<T>(
+    fn stream_values<T, E>(
         &self,
-        indices: Option<&[u64]>,
-        counts: Option<&[u64]>,
+        extents: E,
     ) -> Pin<Box<dyn Stream<Item = Result<Vec<T>, anyhow::Error>> + Send + 'static>>
     where
         T: Unpin + Send + FromByteSlice + Clone,
         [T]: ToNative,
+        E: TryInto<Extents>,
+        E::Error: Into<anyhow::Error>,
     {
         let order = self.order();
 
-        Box::pin(self.stream(indices, counts).map(move |b| {
+        let extents = extents.try_into().map_err(|e| e.into()).unwrap();
+        Box::pin(self.stream(&extents).map(move |b| {
             let b = b?;
             let values = b.as_slice_of::<T>()?;
 

@@ -15,21 +15,21 @@ fn feb_nc4_double() {
     let d = h.dataset("T").unwrap();
     let hv = d.read_raw::<f64>().unwrap();
 
-    let v = r.values::<f64>(None, None).unwrap();
+    let v = r.values::<f64, _>(..).unwrap();
 
     assert_eq!(hv, v);
 
     println!("{:?}", v);
 
     let r = i.streamer("T").unwrap();
-    let s = r.stream_values::<f64>(None, None);
+    let s = r.stream_values::<f64, _>(..);
     pin_mut!(s);
     let vs: Vec<f64> = block_on_stream(s).flatten().flatten().collect();
 
     assert_eq!(hv, vs);
     println!("{:?}", vs);
 
-    let sb = r.stream(None, None);
+    let sb = r.stream(&Extents::All);
     pin_mut!(sb);
     let mut vb: Vec<u8> = block_on_stream(sb).flatten().flatten().collect();
 
