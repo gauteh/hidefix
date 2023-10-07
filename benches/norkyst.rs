@@ -43,7 +43,7 @@ fn idx_big_slice(b: &mut Bencher) {
     let i = Index::index(&p).unwrap();
     let mut u = i.reader("u_eastward").unwrap();
 
-    b.iter(|| test::black_box(u.values::<f32>(None, None).unwrap()));
+    b.iter(|| test::black_box(u.values::<f32, _>(..).unwrap()));
 }
 
 #[ignore]

@@ -59,16 +59,10 @@ fn idx_small_slice(b: &mut Bencher) {
 
     assert_eq!(
         hv,
-        r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
-            .unwrap()
+        r.values::<T, _>((&[0, 0, 0, 0], &[2, 2, 1, 5])).unwrap()
     );
 
-    b.iter(|| {
-        test::black_box(
-            r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[2, 2, 1, 5]))
-                .unwrap(),
-        )
-    });
+    b.iter(|| test::black_box(r.values::<T, _>((&[0, 0, 0, 0], &[2, 2, 1, 5])).unwrap()));
 }
 
 #[ignore]
@@ -105,13 +99,13 @@ fn idx_med_slice(b: &mut Bencher) {
 
     assert_eq!(
         hv,
-        r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 700]))
+        r.values::<T, _>((&[0, 0, 0, 0], &[10, 10, 1, 700]))
             .unwrap()
     );
 
     b.iter(|| {
         test::black_box(
-            r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[10, 10, 1, 2602]))
+            r.values::<T, _>((&[0, 0, 0, 0], &[10, 10, 1, 2602]))
                 .unwrap(),
         )
     });
@@ -151,13 +145,13 @@ fn idx_big_slice(b: &mut Bencher) {
 
     assert_eq!(
         hv,
-        r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 739]))
+        r.values::<T, _>((&[0, 0, 0, 0], &[24, 16, 1, 739]))
             .unwrap()
     );
 
     b.iter(|| {
         test::black_box(
-            r.values::<T>(Some(&[0, 0, 0, 0]), Some(&[24, 16, 1, 2602]))
+            r.values::<T, _>((&[0, 0, 0, 0], &[24, 16, 1, 2602]))
                 .unwrap(),
         )
     });

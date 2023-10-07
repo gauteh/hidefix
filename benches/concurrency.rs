@@ -38,7 +38,7 @@ mod shuffled_compressed {
         b.iter(|| {
             for _ in 0..ITERATIONS {
                 for _ in 0..REPETITIONS {
-                    test::black_box(&r.values::<f32>(None, None).unwrap());
+                    test::black_box(&r.values::<f32, _>(..).unwrap());
                 }
             }
         })
@@ -56,7 +56,7 @@ mod shuffled_compressed {
         b.iter(|| {
             for _ in 0..ITERATIONS {
                 for _ in 0..REPETITIONS {
-                    test::black_box(&r.values_par::<f32>(None, None).unwrap());
+                    test::black_box(&r.values_par::<f32, _>(..).unwrap());
                 }
             }
         })
@@ -96,7 +96,7 @@ mod shuffled_compressed {
                     s.spawn(move |_| {
                         let mut r = i.reader("d_4_shufzip_chunks").unwrap();
                         for _ in 0..REPETITIONS {
-                            test::black_box(&r.values::<f32>(None, None).unwrap());
+                            test::black_box(&r.values::<f32, _>(..).unwrap());
                         }
                     });
                 }

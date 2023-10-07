@@ -19,7 +19,7 @@ fn chunked_1d_values(b: &mut Bencher) {
     let r = i.streamer("d_4_chunks").unwrap();
 
     b.iter(|| {
-        let v = r.stream_values::<f32>(None, None);
+        let v = r.stream_values::<f32, _>(..);
         consume_stream(&mut rt, v);
     })
 }
@@ -31,7 +31,7 @@ fn gzip_shuffle_2d_bytes(b: &mut Bencher) {
     let r = i.streamer("data").unwrap();
 
     b.iter(|| {
-        let v = r.stream(None, None);
+        let v = r.stream(&Extents::All);
         consume_stream(&mut rt, v);
     })
 }
@@ -43,7 +43,7 @@ fn coads_values(b: &mut Bencher) {
     let r = i.streamer("SST").unwrap();
 
     {
-        let v = r.stream_values::<f32>(None, None);
+        let v = r.stream_values::<f32, _>(..);
         let vs: Vec<f32> = block_on_stream(v).flatten().flatten().collect();
 
         let h = hdf5::File::open("tests/data/coads_climatology.nc4").unwrap();
@@ -52,7 +52,7 @@ fn coads_values(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let v = r.stream_values::<f32>(None, None);
+        let v = r.stream_values::<f32, _>(..);
         consume_stream(&mut rt, v);
     })
 }
@@ -64,7 +64,7 @@ fn coads_bytes(b: &mut Bencher) {
     let r = i.streamer("SST").unwrap();
 
     b.iter(|| {
-        let v = r.stream(None, None);
+        let v = r.stream(&Extents::All);
         consume_stream(&mut rt, v);
     })
 }
@@ -81,7 +81,7 @@ fn coads_async_read(b: &mut Bencher) {
     b.iter(|| {
         block_on(async {
             let v = r
-                .stream(None, None)
+                .stream(&Extents::All)
                 .map_err(|_| std::io::ErrorKind::UnexpectedEof.into());
             let mut r = v.into_async_read();
             let mut buf = Vec::with_capacity(8 * 1024);
