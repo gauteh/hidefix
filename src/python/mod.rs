@@ -97,7 +97,7 @@ impl Dataset {
 
         py.allow_threads(|| {
             let r = ds.as_par_reader(&self.idx.path().unwrap())?;
-            r.values_to_par(Some(indices), Some(counts), dst)
+            r.values_to_par((indices, counts), dst)
         })?;
 
         Ok(a.as_ref())
@@ -117,7 +117,7 @@ impl Dataset {
     {
         let a = py.allow_threads(|| {
             let r = ds.as_par_reader(&self.idx.path().unwrap())?;
-            r.values_dyn_par(Some(indices), Some(counts))
+            r.values_dyn_par((indices, counts))
         })?;
 
         let a = a.into_pyarray(py);
