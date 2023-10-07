@@ -473,13 +473,11 @@ mod ndarray_impl {
                         let start = u64::try_from(start)?;
                         if step != 1 {
                             Err(anyhow::anyhow!("Strides are not supported"))
+                        } else if let Some(end) = end {
+                            let end = u64::try_from(end)?;
+                            Ok(Extent::SliceEnd { start, end })
                         } else {
-                            if let Some(end) = end {
-                                let end = u64::try_from(end)?;
-                                Ok(Extent::SliceEnd { start, end })
-                            } else {
-                                Ok(Extent::Slice { start })
-                            }
+                            Ok(Extent::Slice { start })
                         }
                     }
                     SliceInfoElem::Index(index) => {
