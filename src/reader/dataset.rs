@@ -46,6 +46,10 @@ pub trait ReaderExt: Reader {
         E::Error: Into<anyhow::Error>,
     {
         let dsz = self.dsize();
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let counts = extents.get_counts(self.shape())?;
+        let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
+
         ensure!(
             dsz % std::mem::size_of::<T>() == 0,
             "size of datatype ({}) not multiple of target {}",
@@ -53,11 +57,7 @@ pub trait ReaderExt: Reader {
             std::mem::size_of::<T>()
         );
 
-        ensure!(dsz == std::mem::size_of::<T>(), "size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
-
-        let extents = extents.try_into().map_err(|e| e.into())?;
-        let counts = extents.get_counts(self.shape())?;
-        let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
+        ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
         let values = Box::<[T]>::new_uninit_slice(vsz);
         let values = unsafe { values.assume_init() };
@@ -99,6 +99,10 @@ pub trait ParReaderExt: Reader + ParReader {
         E::Error: Into<anyhow::Error>,
     {
         let dsz = self.dsize();
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let counts = extents.get_counts(self.shape())?;
+        let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
+
         ensure!(
             dsz % std::mem::size_of::<T>() == 0,
             "size of datatype ({}) not multiple of target {}",
@@ -106,11 +110,7 @@ pub trait ParReaderExt: Reader + ParReader {
             std::mem::size_of::<T>()
         );
 
-        ensure!(dsz == std::mem::size_of::<T>(), "size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
-
-        let extents = extents.try_into().map_err(|e| e.into())?;
-        let counts = extents.get_counts(self.shape())?;
-        let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
+        ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
         let values = Box::<[T]>::new_uninit_slice(vsz);
         let values = unsafe { values.assume_init() };
@@ -128,6 +128,11 @@ pub trait ParReaderExt: Reader + ParReader {
         E::Error: Into<anyhow::Error>,
     {
         let dsz = self.dsize();
+        let extents = extents.try_into().map_err(|e| e.into())?;
+        let counts = extents.get_counts(self.shape())?;
+        let dims = counts.map(|d| d as usize).collect::<Vec<_>>();
+        let vsz = dims.iter().product::<usize>() as usize * dsz / std::mem::size_of::<T>();
+
         ensure!(
             dsz % std::mem::size_of::<T>() == 0,
             "size of datatype ({}) not multiple of target {}",
@@ -135,11 +140,7 @@ pub trait ParReaderExt: Reader + ParReader {
             std::mem::size_of::<T>()
         );
 
-        ensure!(dsz == std::mem::size_of::<T>(), "size of datatype ({}) not same as target {}, alignment may not match and result in unsoundness", dsz, std::mem::size_of::<T>());
-
-        let extents = extents.try_into().map_err(|e| e.into())?;
-        let counts = extents.get_counts(self.shape())?;
-        let dims = counts.map(|d| d as usize).collect::<Vec<_>>();
+        ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
         // this is not safe: better to let read_to take maybeuninit's
         let mut a = unsafe { ndarray::ArrayD::<T>::uninit(dims).assume_init() };
