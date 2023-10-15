@@ -131,7 +131,7 @@ pub trait ParReaderExt: Reader + ParReader {
         let extents = extents.try_into().map_err(|e| e.into())?;
         let counts = extents.get_counts(self.shape())?;
         let dims = counts.map(|d| d as usize).collect::<Vec<_>>();
-        let vsz = dims.iter().product::<usize>() as usize * dsz / std::mem::size_of::<T>();
+        let vsz = dims.iter().product::<usize>() * dsz / std::mem::size_of::<T>();
 
         ensure!(
             dsz % std::mem::size_of::<T>() == 0,
