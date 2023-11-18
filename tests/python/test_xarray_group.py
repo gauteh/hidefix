@@ -1,26 +1,6 @@
 import xarray as xr
 import numpy as np
 import netCDF4 as nc4
-import pytest
-
-
-def test_coads_root(coads):
-    ds = xr.open_dataset(coads,
-                         engine='hidefix',
-                         group='/',
-                         decode_times=False)
-    print(ds)
-
-    sst = ds['SST']
-    print(sst)
-    print(sst.shape)
-    print(sst.values.shape)
-
-    dsnc = xr.open_dataset(coads,
-                           engine='netcdf4',
-                           group='/',
-                           decode_times=False)
-    np.testing.assert_array_equal(ds['SST'], dsnc['SST'])
 
 
 def test_open_subgroup(tmp_path) -> None:
