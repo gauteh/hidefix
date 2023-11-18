@@ -269,24 +269,18 @@ mod tests {
         let idx = Index::index(path).unwrap();
         assert_eq!(idx.datasets().len(), 1);
         assert_eq!(
-            idx.reader("x").unwrap().values::<f64>(None, None).unwrap(),
+            idx.reader("x").unwrap().values::<f64>(..).unwrap(),
             vec![1.0]
         );
         assert_eq!(idx.groups().len(), 1);
         assert_eq!(idx.group("a").unwrap().groups().len(), 1);
         assert_eq!(idx.group("a/b").unwrap().groups().len(), 1);
         assert_eq!(
-            idx.reader("a/b/x")
-                .unwrap()
-                .values::<f64>(None, None)
-                .unwrap(),
+            idx.reader("a/b/x").unwrap().values::<f64>(..).unwrap(),
             vec![1.0]
         );
         assert_eq!(
-            idx.reader("a/b/c/x")
-                .unwrap()
-                .values::<f64>(None, None)
-                .unwrap(),
+            idx.reader("a/b/c/x").unwrap().values::<f64>(..).unwrap(),
             vec![1.0]
         );
     }
