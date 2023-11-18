@@ -55,12 +55,13 @@ class HidefixBackendEntrypoint(BackendEntrypoint):
         decode_coords=True,
         use_cftime=None,
         decode_timedelta=None,
+        group=None,
     ):
         # TODO: allow take an existing index, maybe from a serialized object.
 
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        store = HidefixDataStore.open(filename_or_obj)
+        store = HidefixDataStore.open(filename_or_obj, group)
 
         store_entrypoint = StoreBackendEntrypoint()
         return store_entrypoint.open_dataset(
@@ -85,19 +86,24 @@ class HidefixBackendEntrypoint(BackendEntrypoint):
 class HidefixDataStore(WritableCFDataStore):
     idx: hidefix.Index
     path: Path
+    group: str
     ds: nc.Dataset
 
-    def __init__(self, path):
+    def __init__(self, path, group = None):
         self.path = path
+        self.group = group
 
         # These can be done concurrently
         self.idx = hidefix.Index(path)
         self.ds = nc.Dataset(path, mode='r')
+        if self.group is not None:
+            self.ds = self.ds[self.group]
 
     @classmethod
     def open(
         cls,
         filename,
+        group,
     ):
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
@@ -106,7 +112,7 @@ class HidefixDataStore(WritableCFDataStore):
             raise ValueError(
                 "the hidefix backend can only read file-like objects")
 
-        return cls(filename)
+        return cls(filename, group)
 
     def get_attrs(self):
         return FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
@@ -123,14 +129,14 @@ class HidefixDataStore(WritableCFDataStore):
 
     def get_variables(self):
         return FrozenDict(
-            (k, self.open_store_variable(k)) for k in self.idx.datasets())
+            (k, self.open_store_variable(k)) for k in self.idx.datasets(self.group))
 
     def open_store_variable(self, k):
         var = self.ds.variables[k]
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
 
         data = indexing.LazilyIndexedArray(
-            HidefixArray(self, k, var, attributes))
+            HidefixArray(self, k, self.group, var, attributes))
 
         attributes.pop('_FillValue', None)
         attributes.pop('missing_value', None)
@@ -163,9 +169,10 @@ class HidefixDataStore(WritableCFDataStore):
 
 class HidefixArray(BackendArray):
 
-    def __init__(self, store, name, var, attributes):
+    def __init__(self, store, name, group, var, attributes):
         self.store = store
         self.variable_name = name
+        self.group = group
 
         self.shape = var.shape
         self.dtype = var.dtype
@@ -182,7 +189,8 @@ class HidefixArray(BackendArray):
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
     def _getitem(self, key):
-        array = self.store.idx[self.variable_name]
+        #TODO: perf: cache this? maybe this is making single value access slow.
+        array = self.store.idx.dataset(self.variable_name, self.group)
         data = array[key]
         if self.fill_value is not None:
             array.apply_fill_value(self.fill_value, np.nan, data)

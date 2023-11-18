@@ -34,19 +34,30 @@ impl Index {
         })
     }
 
-    pub fn dataset(&self, s: &str) -> Option<Dataset> {
-        self.idx.dataset(s).map(|_| Dataset {
+    pub fn dataset(&self, s: &str, group: Option<&str>) -> Option<Dataset> {
+        match group {
+            Some(group) => self.idx.group(group).and_then(|g| g.dataset(s)),
+            None => self.idx.dataset(s),
+        }
+        .map(|_| Dataset {
             idx: self.idx.clone(),
+            group: group.map(String::from),
             ds: String::from(s),
         })
     }
 
     fn __getitem__(&self, s: &str) -> Option<Dataset> {
-        self.dataset(s)
+        self.dataset(s, None)
     }
 
-    pub fn datasets(&self) -> Vec<String> {
-        self.idx.datasets().keys().cloned().collect::<Vec<_>>()
+    pub fn datasets(&self, group: Option<&str>) -> Vec<String> {
+        match group {
+            Some(group) => match self.idx.group(group) {
+                Some(group) => group.datasets().keys().cloned().collect::<Vec<_>>(),
+                None => vec![],
+            },
+            None => self.idx.datasets().keys().cloned().collect::<Vec<_>>(),
+        }
     }
 
     fn __repr__(&self) -> String {
@@ -62,6 +73,7 @@ impl Index {
 #[derive(Debug)]
 struct Dataset {
     idx: Arc<idx::Index<'static>>,
+    group: Option<String>,
     ds: String,
 }
 
@@ -155,19 +167,25 @@ impl Dataset {
     }
 
     fn __len__(&self) -> usize {
+        todo!();
         self.idx.dataset(&self.ds).unwrap().size()
     }
 
     fn shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
+        todo!();
         PyArray::from_slice(py, self.idx.dataset(&self.ds).unwrap().shape())
     }
 
     fn chunk_shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
+        todo!();
         PyArray::from_slice(py, self.idx.dataset(&self.ds).unwrap().chunk_shape())
     }
 
     fn __getitem__<'py>(&self, py: Python<'py>, slice: &PyTuple) -> PyResult<&'py PyAny> {
-        let ds = self.idx.dataset(&self.ds).unwrap();
+        let ds = match &self.group {
+            Some(group) => self.idx.group(&group).unwrap().dataset(&self.ds).unwrap(),
+            None => self.idx.dataset(&self.ds).unwrap(),
+        };
         let shape = ds.shape();
 
         // if there are fewer slices than dimensions they will be extended by the full dimension
@@ -220,6 +238,7 @@ impl Dataset {
         fv: &PyAny,
         arr: &'py PyAny,
     ) {
+        todo!();
         let ds = self.idx.dataset(&self.ds).unwrap();
         match ds.dtype() {
             Datatype::UInt(sz) if sz == 1 => self.apply_fill_value_impl::<u8>(py, cond, fv, arr),
@@ -246,7 +265,7 @@ mod tests {
     fn coads_slice() {
         Python::with_gil(|py| {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
-            let ds = i.dataset("SST").unwrap();
+            let ds = i.dataset("SST", None).unwrap();
 
             let arr = ds.__getitem__(py, PyTuple::new(py, vec![PySlice::new(py, 0, 10, 1)]));
             println!("{:?}", arr);
@@ -257,7 +276,7 @@ mod tests {
     fn coads_index_slice() {
         Python::with_gil(|py| {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
-            let ds = i.dataset("SST").unwrap();
+            let ds = i.dataset("SST", None).unwrap();
 
             let arr = ds.__getitem__(py, PyTuple::new(py, vec![0, 10, 1]));
             println!("{:?}", arr);
@@ -268,7 +287,7 @@ mod tests {
     fn fill_value() {
         Python::with_gil(|py| {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
-            let ds = i.dataset("SST").unwrap();
+            let ds = i.dataset("SST", None).unwrap();
 
             let arr = ds
                 .__getitem__(py, PyTuple::new(py, vec![0, 10, 1]))
@@ -283,5 +302,42 @@ mod tests {
                 &arr,
             );
         });
+    }
+
+    #[test]
+    #[cfg(feature = "netcdf")]
+    fn test_groups() {
+        let path = std::env::temp_dir().join("test_index_groups2.nc");
+        {
+            let mut ncfile = netcdf::create(path.clone()).unwrap();
+            ncfile.add_dimension("x", 1).unwrap();
+            ncfile
+                .add_variable::<f64>("x", &["x"])
+                .unwrap()
+                .put_values(&[1.0], ..)
+                .unwrap();
+            let mut ab = ncfile.add_group("a/b").unwrap();
+            ab.add_dimension("x", 1).unwrap();
+            ab.add_variable::<f64>("x", &["x"])
+                .unwrap()
+                .put_values(&[1.0], ..)
+                .unwrap();
+            let mut abc = ab.add_group("c").unwrap();
+            abc.add_dimension("x", 1).unwrap();
+            abc.add_variable::<f64>("x", &["x"])
+                .unwrap()
+                .put_values(&[1.0], ..)
+                .unwrap();
+        }
+        let idx = Index::new(path).unwrap();
+
+        assert_eq!(idx.datasets(None), ["x"]);
+        assert_eq!(idx.datasets(Some("a/b")), ["x"]);
+        assert_eq!(idx.datasets(Some("a/b/c")), ["x"]);
+
+        assert!(idx.dataset("x", None).is_some());
+        assert!(idx.dataset("x", Some("a")).is_none());
+        assert!(idx.dataset("x", Some("a/b")).is_some());
+        // assert_eq!(idx.datasets(Some("a")), []);
     }
 }
