@@ -2,11 +2,9 @@
 //!
 //! A fast and concurrent reader for HDF5 and NetCDF (v4) files.
 //!
-//! This library allows a HDF5 file to be read in a multi-threaded and concurrent way. The chunks
-//! of a dataset need to be indexed in advance, this can be time-consuming, but efficient
-//! serialization and partially zero-copy deserialization through [serde](https://serde.rs/) is
-//! implemented. In particular by storing the indexes in a fast database, like
-//! [sled](http://sled.rs/) allows speedy access.
+//! This library allows a HDF5 file to be read in a multi-threaded or concurrent (async) way. The
+//! chunks of a dataset need to be indexed in advance. Fast in newer versions of HDF5 (see below).
+//! The index can be efficiently deserialized with zero-copy through [serde](https://serde.rs/).
 //!
 //! This allows multiple [datasets](idx::Dataset) (variables) to be read at the same time, or even different
 //! domains of the same dataset to be read at the same time.
