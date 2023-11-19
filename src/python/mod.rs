@@ -78,6 +78,13 @@ struct Dataset {
 }
 
 impl Dataset {
+    fn dataset(&self) -> &idx::DatasetD {
+        match &self.group {
+            Some(group) => self.idx.group(&group).unwrap().dataset(&self.ds).unwrap(),
+            None => self.idx.dataset(&self.ds).unwrap(),
+        }
+    }
+
     fn read_py_array<'py, T>(
         &self,
         py: Python<'py>,
@@ -167,25 +174,19 @@ impl Dataset {
     }
 
     fn __len__(&self) -> usize {
-        todo!();
-        self.idx.dataset(&self.ds).unwrap().size()
+        self.dataset().size()
     }
 
     fn shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
-        todo!();
-        PyArray::from_slice(py, self.idx.dataset(&self.ds).unwrap().shape())
+        PyArray::from_slice(py, self.dataset().shape())
     }
 
     fn chunk_shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
-        todo!();
-        PyArray::from_slice(py, self.idx.dataset(&self.ds).unwrap().chunk_shape())
+        PyArray::from_slice(py, self.dataset().chunk_shape())
     }
 
     fn __getitem__<'py>(&self, py: Python<'py>, slice: &PyTuple) -> PyResult<&'py PyAny> {
-        let ds = match &self.group {
-            Some(group) => self.idx.group(&group).unwrap().dataset(&self.ds).unwrap(),
-            None => self.idx.dataset(&self.ds).unwrap(),
-        };
+        let ds = self.dataset();
         let shape = ds.shape();
 
         // if there are fewer slices than dimensions they will be extended by the full dimension
@@ -238,8 +239,7 @@ impl Dataset {
         fv: &PyAny,
         arr: &'py PyAny,
     ) {
-        todo!();
-        let ds = self.idx.dataset(&self.ds).unwrap();
+        let ds = self.dataset();
         match ds.dtype() {
             Datatype::UInt(sz) if sz == 1 => self.apply_fill_value_impl::<u8>(py, cond, fv, arr),
             Datatype::UInt(sz) if sz == 2 => self.apply_fill_value_impl::<u16>(py, cond, fv, arr),
