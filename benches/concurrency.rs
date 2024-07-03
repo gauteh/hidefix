@@ -1,7 +1,5 @@
-#![feature(test)]
-extern crate test;
 use std::sync::Arc;
-use test::Bencher;
+use divan::Bencher;
 
 use hidefix::prelude::*;
 
@@ -30,56 +28,56 @@ mod shuffled_compressed {
     use super::*;
 
     #[ignore]
-    #[bench]
-    fn cache_sequential(b: &mut Bencher) {
+    #[divan::bench]
+    fn cache_sequential(b: Bencher) {
         let i = Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
         let mut r = i.reader("d_4_shufzip_chunks").unwrap();
 
-        b.iter(|| {
+        b.bench_local(|| {
             for _ in 0..ITERATIONS {
                 for _ in 0..REPETITIONS {
-                    test::black_box(&r.values::<f32, _>(..).unwrap());
+                    divan::black_box(&r.values::<f32, _>(..).unwrap());
                 }
             }
         })
     }
 
     #[ignore]
-    #[bench]
-    fn direct_sequential_parallel(b: &mut Bencher) {
+    #[divan::bench]
+    fn direct_sequential_parallel(b: Bencher) {
         let i = Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
         let ds = i.dataset("d_4_shufzip_chunks").unwrap();
         let r = ds
             .as_par_reader(&"tests/data/dmrpp/chunked_shufzip_twoD.h5")
             .unwrap();
 
-        b.iter(|| {
+        b.bench_local(|| {
             for _ in 0..ITERATIONS {
                 for _ in 0..REPETITIONS {
-                    test::black_box(&r.values_par::<f32, _>(..).unwrap());
+                    divan::black_box(&r.values_par::<f32, _>(..).unwrap());
                 }
             }
         })
     }
 
     #[ignore]
-    #[bench]
-    fn native_sequential(b: &mut Bencher) {
+    #[divan::bench]
+    fn native_sequential(b: Bencher) {
         let h = hdf5::File::open("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
         let d = h.dataset("d_4_shufzip_chunks").unwrap();
 
-        b.iter(|| {
+        b.bench_local(|| {
             for _ in 0..ITERATIONS {
                 for _ in 0..REPETITIONS {
-                    test::black_box(&d.read_raw::<f32>().unwrap());
+                    divan::black_box(&d.read_raw::<f32>().unwrap());
                 }
             }
         })
     }
 
     #[ignore]
-    #[bench]
-    fn cache_concurrent_reads(b: &mut Bencher) {
+    #[divan::bench]
+    fn cache_concurrent_reads(b: Bencher) {
         let i = Arc::new(Index::index("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap());
 
         let pool = rayon::ThreadPoolBuilder::new()
@@ -87,7 +85,7 @@ mod shuffled_compressed {
             .build()
             .unwrap();
 
-        b.iter(move || {
+        b.bench_local(move || {
             let i = Arc::clone(&i);
             pool.scope(move |s| {
                 for _ in 0..ITERATIONS {
@@ -96,7 +94,7 @@ mod shuffled_compressed {
                     s.spawn(move |_| {
                         let mut r = i.reader("d_4_shufzip_chunks").unwrap();
                         for _ in 0..REPETITIONS {
-                            test::black_box(&r.values::<f32, _>(..).unwrap());
+                            divan::black_box(&r.values::<f32, _>(..).unwrap());
                         }
                     });
                 }
@@ -105,8 +103,8 @@ mod shuffled_compressed {
     }
 
     #[ignore]
-    #[bench]
-    fn native_concurrent_reads(b: &mut Bencher) {
+    #[divan::bench]
+    fn native_concurrent_reads(b: Bencher) {
         let h = hdf5::File::open("tests/data/dmrpp/chunked_shufzip_twoD.h5").unwrap();
         let d = Arc::new(h.dataset("d_4_shufzip_chunks").unwrap());
 
@@ -115,7 +113,7 @@ mod shuffled_compressed {
             .build()
             .unwrap();
 
-        b.iter(move || {
+        b.bench_local(move || {
             let d = Arc::clone(&d);
             pool.scope(move |s| {
                 for _ in 0..ITERATIONS {
@@ -123,11 +121,15 @@ mod shuffled_compressed {
 
                     s.spawn(move |_| {
                         for _ in 0..REPETITIONS {
-                            test::black_box(&d.read_raw::<f32>().unwrap());
+                            divan::black_box(&d.read_raw::<f32>().unwrap());
                         }
                     });
                 }
             })
         })
     }
+}
+
+fn main() {
+    divan::main();
 }

@@ -1,6 +1,3 @@
-#![feature(test)]
-extern crate test;
-
 use futures::executor::block_on_stream;
 use futures::pin_mut;
 use hidefix::prelude::*;

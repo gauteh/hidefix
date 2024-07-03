@@ -50,6 +50,7 @@ features = ["sync", "macros", "rt-multi-thread"]
 version = "1"
 
 [dev-dependencies]
+divan = "0.1.14"
 rand = "0.8"
 sled = "0.34.6"
 reqwest = { version = "0.11", features = [ "blocking" ] }
@@ -71,4 +72,40 @@ fast-index = []
 python = ["pyo3", "numpy"]
 extension-module = ["python", "pyo3/extension-module"]
 netcdf = [ "dep:netcdf" ]
+unstable = []
 
+[[bench]]
+name = "concurrency"
+harness = false
+
+[[bench]]
+name = "dataset"
+harness = false
+
+[[bench]]
+name = "index"
+harness = false
+
+[[bench]]
+name = "large"
+harness = false
+
+[[bench]]
+name = "native"
+harness = false
+
+[[bench]]
+name = "norkyst"
+harness = false
+
+[[bench]]
+name = "read"
+harness = false
+
+[[bench]]
+name = "serialize"
+harness = false
+
+[[bench]]
+name = "stream"
+harness = false

@@ -14,7 +14,7 @@ mod tests {
     use crate::filters::byteorder::Order as ByteOrder;
     use itertools::izip;
     use serde::{Deserialize, Serialize};
-    use test::Bencher;
+    use divan::Bencher;
 
     pub(crate) fn test_dataset() -> Dataset<'static, 2> {
         Dataset::new(
@@ -83,22 +83,22 @@ mod tests {
         assert_eq!(d.chunk_slices((&[0, 0], &[1, 0])).next(), None);
     }
 
-    #[bench]
-    fn chunk_slices_range(b: &mut Bencher) {
+    #[divan::bench]
+    fn chunk_slices_range(b: Bencher) {
         let d = test_dataset();
 
-        b.iter(|| d.chunk_slices(..).for_each(drop));
+        b.bench_local(|| d.chunk_slices(..).for_each(drop));
     }
 
-    #[bench]
-    fn make_chunk_slices_iterator(b: &mut Bencher) {
+    #[divan::bench]
+    fn make_chunk_slices_iterator(b: Bencher) {
         let d = test_dataset();
 
-        b.iter(|| test::black_box(d.chunk_slices(..)))
+        b.bench_local(|| divan::black_box(d.chunk_slices(..)))
     }
 
-    #[bench]
-    fn chunk_at_coord(b: &mut Bencher) {
+    #[divan::bench]
+    fn chunk_at_coord(b: Bencher) {
         let d = test_dataset();
 
         println!("chunks: {:#?}", d.chunks);
@@ -127,7 +127,7 @@ mod tests {
             [ULE::new(10), ULE::new(0)]
         );
 
-        b.iter(|| test::black_box(d.chunk_at_coord(&[15, 1])))
+        b.bench_local(|| divan::black_box(d.chunk_at_coord(&[15, 1])))
     }
 
     #[test]

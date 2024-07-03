@@ -228,7 +228,7 @@ mod tests {
 
     mod serde {
         use super::*;
-        use test::Bencher;
+        use divan::Bencher;
 
         #[test]
         fn as_u64s() {
@@ -405,8 +405,8 @@ mod tests {
             assert_eq!(dcs, cs);
         }
 
-        #[bench]
-        fn slice_from_u64s_10k_3d(b: &mut Bencher) {
+        #[divan::bench]
+        fn slice_from_u64s_10k_3d(b: Bencher) {
             let chunks: Vec<Chunk<3>> = (0..10000)
                 .map(|i| Chunk::new(i * 10, 300, [i * 10, i * 100, i * 10000]))
                 .collect();
@@ -423,8 +423,8 @@ mod tests {
             assert_eq!(dechunks.len(), chunks.len());
             assert_eq!(dechunks, chunks.as_slice());
 
-            b.iter(|| {
-                test::black_box(Chunk::<3>::slice_from_u64s(slice));
+            b.bench_local(|| {
+                divan::black_box(Chunk::<3>::slice_from_u64s(slice));
             });
         }
     }

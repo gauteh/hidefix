@@ -21,6 +21,26 @@ pub trait Reader {
     fn shape(&self) -> &[u64];
 }
 
+#[cfg(feature = "unstable")]
+fn empty_vec<T>(vsz: usize) -> Vec<T>
+where
+    T: Default,
+{
+    let values = Box::<[T]>::new_uninit_slice(vsz);
+    let values = unsafe { values.assume_init() };
+    values.into_vec()
+}
+
+#[cfg(not(feature = "unstable"))]
+fn empty_vec<T>(vsz: usize) -> Vec<T>
+where
+    T: Default,
+{
+    let mut values = Vec::with_capacity(vsz);
+    values.resize_with(vsz, T::default);
+    values
+}
+
 pub trait ReaderExt: Reader {
     /// Reads values into desitination slice. Returns values read.
     fn values_to<T, E>(&mut self, extents: E, dst: &mut [T]) -> Result<usize, anyhow::Error>
@@ -40,7 +60,7 @@ pub trait ReaderExt: Reader {
     /// Reads slice of dataset into `Vec<T>`.
     fn values<T, E>(&mut self, extents: E) -> Result<Vec<T>, anyhow::Error>
     where
-        T: ToMutByteSlice,
+        T: ToMutByteSlice + Default,
         [T]: ToNative,
         E: TryInto<Extents>,
         E::Error: Into<anyhow::Error>,
@@ -59,9 +79,7 @@ pub trait ReaderExt: Reader {
 
         ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
-        let values = Box::<[T]>::new_uninit_slice(vsz);
-        let values = unsafe { values.assume_init() };
-        let mut values = values.into_vec();
+        let mut values = empty_vec(vsz);
         self.values_to(extents, values.as_mut_slice())?; // XXX: take maybeuninit
 
         Ok(values)
@@ -93,7 +111,7 @@ pub trait ParReaderExt: Reader + ParReader {
     /// Reads slice of dataset into `Vec<T>`.
     fn values_par<T, E>(&self, extents: E) -> Result<Vec<T>, anyhow::Error>
     where
-        T: ToMutByteSlice,
+        T: ToMutByteSlice + Default,
         [T]: ToNative,
         E: TryInto<Extents>,
         E::Error: Into<anyhow::Error>,
@@ -112,9 +130,7 @@ pub trait ParReaderExt: Reader + ParReader {
 
         ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
-        let values = Box::<[T]>::new_uninit_slice(vsz);
-        let values = unsafe { values.assume_init() };
-        let mut values = values.into_vec();
+        let mut values = empty_vec(vsz);
         self.values_to_par(extents, values.as_mut_slice())?;
 
         Ok(values)

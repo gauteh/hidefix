@@ -85,16 +85,7 @@
 //! hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jul_2023" }
 //! ```
 
-#![allow(incomplete_features)]
-#![recursion_limit = "1024"]
-#![feature(test)]
-#![feature(cow_is_borrowed, array_methods)]
-#![feature(assert_matches)]
-#![feature(slice_group_by)]
-#![feature(mutex_unlock)]
-#![feature(new_uninit)]
-
-extern crate test;
+#![cfg_attr(feature = "unstable", feature(new_uninit, cow_is_borrowed))]
 
 pub mod extent;
 pub mod filters;

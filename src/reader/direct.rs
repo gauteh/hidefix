@@ -46,7 +46,7 @@ impl<'a, const D: usize> ParReader for Direct<'a, D> {
         );
 
         let groups = self.ds.group_chunk_slices(extents);
-        let groups = groups.group_by(|a, b| a.0.addr == b.0.addr);
+        let groups = groups.chunk_by(|a, b| a.0.addr == b.0.addr);
         let groups = groups.collect::<Vec<_>>();
 
         groups.par_iter().try_for_each_init(

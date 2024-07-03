@@ -1,6 +1,4 @@
-#![feature(test)]
-extern crate test;
-use test::Bencher;
+use divan::Bencher;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -41,8 +39,8 @@ fn get_file() -> PathBuf {
 }
 
 #[ignore]
-#[bench]
-fn idx_small_slice(b: &mut Bencher) {
+#[divan::bench]
+fn idx_small_slice(b: Bencher) {
     let p = get_file();
     let i = Index::index(&p).unwrap();
     let mut r = i.reader(VAR).unwrap();
@@ -62,18 +60,18 @@ fn idx_small_slice(b: &mut Bencher) {
         r.values::<T, _>((&[0, 0, 0, 0], &[2, 2, 1, 5])).unwrap()
     );
 
-    b.iter(|| test::black_box(r.values::<T, _>((&[0, 0, 0, 0], &[2, 2, 1, 5])).unwrap()));
+    b.bench_local(|| divan::black_box(r.values::<T, _>((&[0, 0, 0, 0], &[2, 2, 1, 5])).unwrap()));
 }
 
 #[ignore]
-#[bench]
-fn native_small_slice(b: &mut Bencher) {
+#[divan::bench]
+fn native_small_slice(b: Bencher) {
     let p = get_file();
     let h = hdf5::File::open(p).unwrap();
     let d = h.dataset(VAR).unwrap();
 
-    b.iter(|| {
-        test::black_box(
+    b.bench_local(|| {
+        divan::black_box(
             d.read_slice::<T, _, IxDyn>(s![0..2, 0..2, 0..1, 0..5])
                 .unwrap(),
         )
@@ -81,8 +79,8 @@ fn native_small_slice(b: &mut Bencher) {
 }
 
 #[ignore]
-#[bench]
-fn idx_med_slice(b: &mut Bencher) {
+#[divan::bench]
+fn idx_med_slice(b: Bencher) {
     let p = get_file();
     let i = Index::index(&p).unwrap();
     let mut r = i.reader(VAR).unwrap();
@@ -103,8 +101,8 @@ fn idx_med_slice(b: &mut Bencher) {
             .unwrap()
     );
 
-    b.iter(|| {
-        test::black_box(
+    b.bench_local(|| {
+        divan::black_box(
             r.values::<T, _>((&[0, 0, 0, 0], &[10, 10, 1, 2602]))
                 .unwrap(),
         )
@@ -112,14 +110,14 @@ fn idx_med_slice(b: &mut Bencher) {
 }
 
 #[ignore]
-#[bench]
-fn native_med_slice(b: &mut Bencher) {
+#[divan::bench]
+fn native_med_slice(b: Bencher) {
     let p = get_file();
     let h = hdf5::File::open(p).unwrap();
     let d = h.dataset(VAR).unwrap();
 
-    b.iter(|| {
-        test::black_box(
+    b.bench_local(|| {
+        divan::black_box(
             d.read_slice::<T, _, IxDyn>(s![0..10, 0..10, 0..1, 0..2602])
                 .unwrap(),
         )
@@ -127,8 +125,8 @@ fn native_med_slice(b: &mut Bencher) {
 }
 
 #[ignore]
-#[bench]
-fn idx_big_slice(b: &mut Bencher) {
+#[divan::bench]
+fn idx_big_slice(b: Bencher) {
     let p = get_file();
     let i = Index::index(&p).unwrap();
     let mut r = i.reader(VAR).unwrap();
@@ -149,8 +147,8 @@ fn idx_big_slice(b: &mut Bencher) {
             .unwrap()
     );
 
-    b.iter(|| {
-        test::black_box(
+    b.bench_local(|| {
+        divan::black_box(
             r.values::<T, _>((&[0, 0, 0, 0], &[24, 16, 1, 2602]))
                 .unwrap(),
         )
@@ -158,16 +156,20 @@ fn idx_big_slice(b: &mut Bencher) {
 }
 
 #[ignore]
-#[bench]
-fn native_big_slice(b: &mut Bencher) {
+#[divan::bench]
+fn native_big_slice(b: Bencher) {
     let p = get_file();
     let h = hdf5::File::open(p).unwrap();
     let d = h.dataset(VAR).unwrap();
 
-    b.iter(|| {
-        test::black_box(
+    b.bench_local(|| {
+        divan::black_box(
             d.read_slice::<T, _, IxDyn>(s![0..24, 0..16, 0..1, 0..2602])
                 .unwrap(),
         )
     })
+}
+
+fn main() {
+    divan::main();
 }

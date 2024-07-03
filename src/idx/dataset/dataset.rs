@@ -671,15 +671,15 @@ impl<'a, const D: usize> Iterator for ChunkSlicer<'a, D> {
 mod tests {
     use super::super::tests::test_dataset;
     use super::*;
-    use test::Bencher;
+    use divan::Bencher;
 
-    #[bench]
-    fn chunk_start(b: &mut Bencher) {
+    #[divan::bench]
+    fn chunk_start(b: Bencher) {
         let dim_sz = [10, 1];
         let coords = [20, 10];
         let ch_offset = [ULE::new(20), ULE::new(10)];
 
-        b.iter(|| test::black_box(ChunkSlicer::chunk_start(&coords, &ch_offset, &dim_sz)))
+        b.bench_local(|| divan::black_box(ChunkSlicer::chunk_start(&coords, &ch_offset, &dim_sz)))
     }
 
     #[test]

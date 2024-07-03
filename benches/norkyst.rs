@@ -1,6 +1,4 @@
-#![feature(test)]
-extern crate test;
-use test::Bencher;
+use divan::Bencher;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -37,21 +35,25 @@ fn get_file() -> PathBuf {
 }
 
 #[ignore]
-#[bench]
-fn idx_big_slice(b: &mut Bencher) {
+#[divan::bench]
+fn idx_big_slice(b: Bencher) {
     let p = get_file();
     let i = Index::index(&p).unwrap();
     let mut u = i.reader("u_eastward").unwrap();
 
-    b.iter(|| test::black_box(u.values::<f32, _>(..).unwrap()));
+    b.bench_local(|| divan::black_box(u.values::<f32, _>(..).unwrap()));
 }
 
 #[ignore]
-#[bench]
-fn native_big_slice(b: &mut Bencher) {
+#[divan::bench]
+fn native_big_slice(b: Bencher) {
     let p = get_file();
     let h = hdf5::File::open(p).unwrap();
     let d = h.dataset("u_eastward").unwrap();
 
-    b.iter(|| test::black_box(d.read_raw::<f32>().unwrap()))
+    b.bench_local(|| divan::black_box(d.read_raw::<f32>().unwrap()))
+}
+
+fn main() {
+    divan::main();
 }

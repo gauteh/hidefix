@@ -1,9 +1,7 @@
-#![feature(test)]
-extern crate test;
 use futures::executor::block_on_stream;
 use futures::{pin_mut, Stream, StreamExt};
 use hidefix::prelude::*;
-use test::Bencher;
+use divan::Bencher;
 
 fn consume_stream<S: Stream>(rt: &mut tokio::runtime::Runtime, s: S) {
     rt.block_on(async move {
@@ -12,32 +10,32 @@ fn consume_stream<S: Stream>(rt: &mut tokio::runtime::Runtime, s: S) {
     });
 }
 
-#[bench]
-fn chunked_1d_values(b: &mut Bencher) {
+#[divan::bench]
+fn chunked_1d_values(b: Bencher) {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
     let r = i.streamer("d_4_chunks").unwrap();
 
-    b.iter(|| {
+    b.bench_local(|| {
         let v = r.stream_values::<f32, _>(..);
         consume_stream(&mut rt, v);
     })
 }
 
-#[bench]
-fn gzip_shuffle_2d_bytes(b: &mut Bencher) {
+#[divan::bench]
+fn gzip_shuffle_2d_bytes(b: Bencher) {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/gzip_shuffle_2d.h5").unwrap();
     let r = i.streamer("data").unwrap();
 
-    b.iter(|| {
+    b.bench_local(|| {
         let v = r.stream(&Extents::All);
         consume_stream(&mut rt, v);
     })
 }
 
-#[bench]
-fn coads_values(b: &mut Bencher) {
+#[divan::bench]
+fn coads_values(b: Bencher) {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
     let r = i.streamer("SST").unwrap();
@@ -51,26 +49,26 @@ fn coads_values(b: &mut Bencher) {
         assert_eq!(d.read_raw::<f32>().unwrap(), vs);
     }
 
-    b.iter(|| {
+    b.bench_local(|| {
         let v = r.stream_values::<f32, _>(..);
         consume_stream(&mut rt, v);
     })
 }
 
-#[bench]
-fn coads_bytes(b: &mut Bencher) {
+#[divan::bench]
+fn coads_bytes(b: Bencher) {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
     let r = i.streamer("SST").unwrap();
 
-    b.iter(|| {
+    b.bench_local(|| {
         let v = r.stream(&Extents::All);
         consume_stream(&mut rt, v);
     })
 }
 
-#[bench]
-fn coads_async_read(b: &mut Bencher) {
+#[divan::bench]
+fn coads_async_read(b: Bencher) {
     use futures::executor::block_on;
     use futures::io::AsyncReadExt;
     use futures::stream::TryStreamExt;
@@ -78,7 +76,7 @@ fn coads_async_read(b: &mut Bencher) {
     let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
     let r = i.streamer("SST").unwrap();
 
-    b.iter(|| {
+    b.bench_local(|| {
         block_on(async {
             let v = r
                 .stream(&Extents::All)
@@ -88,4 +86,8 @@ fn coads_async_read(b: &mut Bencher) {
             r.read_to_end(&mut buf).await.unwrap();
         })
     })
+}
+
+fn main() {
+    divan::main();
 }
