@@ -617,7 +617,7 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hidefix"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "async-stream",
