@@ -35,6 +35,7 @@ def test_coads_nc(coads, plot):
         plt.show()
 
 
+@pytest.mark.skip(reason = 'xarray, cftime, pandas no longer manages to decode dates here')
 def test_xarray_mfdataset(data):
     urls = [str(data / 'jan.nc4'), str(data / 'feb.nc4')]
     ds = xr.decode_cf(xr.open_mfdataset(urls, engine='hidefix'))
