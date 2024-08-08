@@ -15,10 +15,11 @@ jobs:
     runs-on: ${{matrix.platform}}
     strategy:
       matrix:
-        platform:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
+        include:
+          - {platform: ubuntu-latest, rust: nightly}
+          - {platform: ubuntu-latest, rust: stable}
+          - {platform: windows-latest, rust: nightly}
+          - {platform: macos-latest, rust: nightly}
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
@@ -27,7 +28,7 @@ jobs:
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
-        rust-toolchain: nightly
+        rust-toolchain: '${{matrix.rust}}'
         manylinux: auto
         args: --release --sdist --out dist
     - name: Install built wheel

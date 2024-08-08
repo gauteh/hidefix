@@ -45,8 +45,10 @@ jobs:
       matrix:
         include:
           - {platform: ubuntu-latest, rust: nightly}
+          - {platform: ubuntu-latest, rust: stable}
           - {platform: windows-latest, rust: nightly}
           - {platform: macos-latest, rust: nightly}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
