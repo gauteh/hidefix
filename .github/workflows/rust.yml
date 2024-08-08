@@ -57,11 +57,11 @@ jobs:
         with:
           toolchain: '${{matrix.rust}}'
       - name: Build and test all crates
-        run: cargo test -vv --workspace
+        run: cargo test -vv --workspace ${{matrix.rust == 'nightly' &&  '--features unstable' || '' }}
       - name: Build and test all docs
-        run: cargo test -vv --workspace --doc
+        run: cargo test -vv --workspace --doc ${{matrix.rust == 'nightly' &&  '--features unstable' || '' }}
       - name: Build examples
-        run: cargo b --examples --verbose
+        run: cargo b --examples --verbose ${{matrix.rust == 'nightly' &&  '--features unstable' || '' }}
 
   bench:
     name: Benchmark
@@ -70,7 +70,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {ubuntu: 20.04, rust: nightly}
+          - {ubuntu: latest, rust: nightly}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -79,7 +79,7 @@ jobs:
         with:
           toolchain: '${{matrix.rust}}'
       - name: Build and bench
-        run: cargo bench -vv --workspace
+        run: cargo bench -vv --workspace --features unstable
 
   audit:
     name: Audit
