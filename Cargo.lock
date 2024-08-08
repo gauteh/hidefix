@@ -540,15 +540,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "hdf5"
-version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jul_2023#139027b327c0c6e441f54c769b64ddb6a7d93c7e"
+name = "hdf5-metno"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0bfdbd1f586191c2620c3913d68d9c44ca049032971d8ebe83bbcb48bc02721"
 dependencies = [
  "bitflags 2.6.0",
  "cfg-if",
- "hdf5-derive",
- "hdf5-sys",
- "hdf5-types",
+ "hdf5-metno-derive",
+ "hdf5-metno-sys",
+ "hdf5-metno-types",
  "lazy_static",
  "libc",
  "ndarray",
@@ -557,9 +558,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "hdf5-derive"
-version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jul_2023#139027b327c0c6e441f54c769b64ddb6a7d93c7e"
+name = "hdf5-metno-derive"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed6bbf95dac0682b4d62845d65c3820f27da82e1835f4c1a70aa5e57b4fadfac"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -568,20 +570,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "hdf5-src"
-version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jul_2023#139027b327c0c6e441f54c769b64ddb6a7d93c7e"
+name = "hdf5-metno-src"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e38a0cf492c96b0814b8179d53211478e2523c12c48db85bd03bc00a3de019e"
 dependencies = [
  "cmake",
  "libz-sys",
 ]
 
 [[package]]
-name = "hdf5-sys"
-version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jul_2023#139027b327c0c6e441f54c769b64ddb6a7d93c7e"
+name = "hdf5-metno-sys"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a4d459ce024a086ba8776d56a0024af23f4ecb80f9b89c0f0c6f45ef5670aea"
 dependencies = [
- "hdf5-src",
+ "hdf5-metno-src",
  "libc",
  "libloading",
  "libz-sys",
@@ -589,17 +593,18 @@ dependencies = [
  "regex",
  "serde",
  "serde_derive",
- "winreg 0.50.0",
+ "winreg",
 ]
 
 [[package]]
-name = "hdf5-types"
-version = "0.8.1"
-source = "git+https://github.com/magnusuMET/hdf5-rust?branch=hidefix_jul_2023#139027b327c0c6e441f54c769b64ddb6a7d93c7e"
+name = "hdf5-metno-types"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "236c29ece21fd13543f45b1578c4e65d5d61da38d90192812f1f6ad86ac255ac"
 dependencies = [
  "ascii",
  "cfg-if",
- "hdf5-sys",
+ "hdf5-metno-sys",
  "libc",
 ]
 
@@ -630,9 +635,8 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
- "hdf5",
- "hdf5-src",
- "hdf5-sys",
+ "hdf5-metno",
+ "hdf5-metno-sys",
  "itertools",
  "libc",
  "libdeflater",
@@ -999,35 +1003,36 @@ dependencies = [
 
 [[package]]
 name = "netcdf"
-version = "0.9.3"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8aa8799e918d05f6d5d05e08d980f5a4e5d4f4fb503904f2c35c49aed9ac75a"
+checksum = "8c1e5d3a9613189828a53846ec7b3881960ab3a3ef2e7a86f5636c8f877b195d"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
  "ndarray",
  "netcdf-sys",
+ "semver",
 ]
 
 [[package]]
 name = "netcdf-src"
-version = "0.3.7"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68ae83ca3a3cdbd6f5bc1a30b51cc4838679cbc926f6ead0fed5ee3e52708795"
+checksum = "a6f4b2ec89f807b02a1e06db7eaba041de1ac4d01f7d49692f5790e3413c348d"
 dependencies = [
  "cmake",
- "hdf5-sys",
+ "hdf5-metno-sys",
  "libz-sys",
 ]
 
 [[package]]
 name = "netcdf-sys"
-version = "0.6.2"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41d5387d8e8569b204a9e065529f10d42ef0a1d3b8622d6ee2612765639fbe19"
+checksum = "634fcbdaeb00d90b0673d5928b729d6f9fd33f5be7e45561217bd859b278f3a2"
 dependencies = [
  "curl-sys",
- "hdf5-sys",
+ "hdf5-metno-sys",
  "libz-sys",
  "netcdf-src",
  "semver",
@@ -1543,7 +1548,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "winreg 0.52.0",
+ "winreg",
 ]
 
 [[package]]
@@ -2339,22 +2344,12 @@ dependencies = [
 
 [[package]]
 name = "winreg"
-version = "0.50.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
-dependencies = [
- "cfg-if",
- "serde",
- "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "winreg"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a277a57398d4bfa075df44f501a17cfdf8542d224f0d36095a2adc7aee4ef0a5"
 dependencies = [
  "cfg-if",
+ "serde",
  "windows-sys 0.48.0",
 ]
 
