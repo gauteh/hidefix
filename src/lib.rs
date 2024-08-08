@@ -50,7 +50,7 @@
 //! use hidefix::prelude::*;
 //!
 //! let f = netcdf::open("tests/data/coads_climatology.nc4").unwrap();
-//! let nv = f.variable("SST").unwrap().values::<f32, _>(..).unwrap();
+//! let nv = f.variable("SST").unwrap().get_values::<f32, _>(..).unwrap();
 //!
 //! let i: Index = (&f).try_into().unwrap();
 //! let iv = i.reader("SST").unwrap().values::<f32, _>(..).unwrap();

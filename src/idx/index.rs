@@ -226,7 +226,7 @@ mod tests {
         let mut r = i.reader("SST").unwrap();
         let iv = r.values::<f32, _>(..).unwrap();
 
-        let nv = f.variable("SST").unwrap().values::<f32, _>(..).unwrap();
+        let nv = f.variable("SST").unwrap().get_values::<f32, _>(..).unwrap();
 
         assert_eq!(iv, nv);
     }
