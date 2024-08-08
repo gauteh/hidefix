@@ -1,5 +1,5 @@
-use hidefix::prelude::*;
 use divan::Bencher;
+use hidefix::prelude::*;
 
 #[divan::bench]
 fn read_2d_chunked(b: Bencher) {

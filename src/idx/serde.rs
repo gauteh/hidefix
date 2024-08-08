@@ -92,7 +92,7 @@ pub mod chunks_u64s {
         let chunks: &'a [Chunk<DE>] = Chunk::<DE>::slice_from_u64s(slice);
         let chunks = Cow::<'a, [Chunk<DE>]>::from(chunks);
 
-        #[cfg(feature="unstable")]
+        #[cfg(feature = "unstable")]
         debug_assert!(chunks.is_borrowed());
 
         Ok(chunks)

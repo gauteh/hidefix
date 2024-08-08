@@ -12,9 +12,9 @@ mod tests {
     use super::super::chunk::{Chunk, ULE};
     use super::*;
     use crate::filters::byteorder::Order as ByteOrder;
+    use divan::Bencher;
     use itertools::izip;
     use serde::{Deserialize, Serialize};
-    use divan::Bencher;
 
     pub(crate) fn test_dataset() -> Dataset<'static, 2> {
         Dataset::new(

@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use divan::Bencher;
+use std::sync::Arc;
 
 use hidefix::prelude::*;
 

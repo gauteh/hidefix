@@ -1,7 +1,7 @@
+use divan::Bencher;
 use futures::executor::block_on_stream;
 use futures::{pin_mut, Stream, StreamExt};
 use hidefix::prelude::*;
-use divan::Bencher;
 
 fn consume_stream<S: Stream>(rt: &mut tokio::runtime::Runtime, s: S) {
     rt.block_on(async move {
