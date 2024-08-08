@@ -1,4 +1,5 @@
 use std::io::{Read, Seek};
+use std::num::NonZero;
 
 use anyhow::ensure;
 use lru::LruCache;
@@ -24,7 +25,7 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> {
         Ok(CacheReader {
             ds,
             fd,
-            cache: LruCache::new(cache_sz as usize),
+            cache: LruCache::new(NonZero::new(cache_sz as usize).unwrap()),
             chunk_sz,
         })
     }

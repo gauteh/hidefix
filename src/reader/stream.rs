@@ -1,6 +1,7 @@
 use async_stream::stream;
 use futures::{Stream, StreamExt};
 use std::fs::File;
+use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
@@ -65,7 +66,7 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
 
         (stream! {
             let mut fd = File::open(p)?;
-            let mut ds_cache = LruCache::<u64, Bytes>::new(cache_sz as usize);
+            let mut ds_cache = LruCache::<u64, Bytes>::new(NonZero::new(cache_sz as usize).unwrap());
 
             for (addr, sz, start, end) in slices {
                 let start = start as usize;
@@ -114,7 +115,7 @@ impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
 
         (stream! {
             let mut fd = File::open(p)?;
-            let mut ds_cache = LruCache::<u64, Bytes>::new(cache_sz as usize);
+            let mut ds_cache = LruCache::<u64, Bytes>::new(NonZero::new(cache_sz as usize).unwrap());
 
             for (addr, sz, start, end) in slices {
                 let x = xdr::xdr_factor(dtype);
