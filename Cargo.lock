@@ -551,7 +551,7 @@ dependencies = [
  "hdf5-types",
  "lazy_static",
  "libc",
- "ndarray 0.15.6",
+ "ndarray",
  "parking_lot 0.12.3",
  "paste",
 ]
@@ -638,7 +638,7 @@ dependencies = [
  "libdeflater",
  "log",
  "lru",
- "ndarray 0.16.0",
+ "ndarray",
  "netcdf",
  "numpy",
  "pyo3",
@@ -994,21 +994,6 @@ dependencies = [
  "num-integer",
  "num-traits",
  "rawpointer",
-]
-
-[[package]]
-name = "ndarray"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "087ee1ca8a7c22830c2bba4a96ed8e72ce0968ae944349324d52522f66aa3944"
-dependencies = [
- "matrixmultiply",
- "num-complex",
- "num-integer",
- "num-traits",
- "portable-atomic",
- "portable-atomic-util",
- "rawpointer",
  "rayon",
 ]
 
@@ -1020,7 +1005,7 @@ checksum = "a8aa8799e918d05f6d5d05e08d980f5a4e5d4f4fb503904f2c35c49aed9ac75a"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
- "ndarray 0.15.6",
+ "ndarray",
  "netcdf-sys",
 ]
 
@@ -1103,7 +1088,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec170733ca37175f5d75a5bea5911d6ff45d2cd52849ce98b685394e4f2f37f4"
 dependencies = [
  "libc",
- "ndarray 0.15.6",
+ "ndarray",
  "num-complex",
  "num-integer",
  "num-traits",
@@ -1283,15 +1268,6 @@ name = "portable-atomic"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da544ee218f0d287a911e9c99a39a8c9bc8fcad3cb8db5959940044ecfc67265"
-
-[[package]]
-name = "portable-atomic-util"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcdd8420072e66d54a407b3316991fe946ce3ab1083a7f575b2463866624704d"
-dependencies = [
- "portable-atomic",
-]
 
 [[package]]
 name = "ppv-lite86"

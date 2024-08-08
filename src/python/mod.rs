@@ -2,6 +2,7 @@
 
 use crate::filters::byteorder::ToNative;
 use byte_slice_cast::ToMutByteSlice;
+use ndarray::parallel::prelude::*;
 use numpy::{PyArray, PyArray1, PyArrayDyn};
 use pyo3::{
     prelude::*,
@@ -194,8 +195,8 @@ impl Dataset {
         let (mut indices, (mut counts, mut strides)): (Vec<_>, (Vec<_>, Vec<_>)) = slice
             .iter()
             .map(|el| match el {
-                el if el.is_instance_of::<PySlice>().unwrap() => el.downcast::<PySlice>().unwrap(),
-                el if el.is_instance_of::<PyInt>().unwrap() => {
+                el if el.is_instance_of::<PySlice>() => el.downcast::<PySlice>().unwrap(),
+                el if el.is_instance_of::<PyInt>() => {
                     let ind: isize = el.downcast::<PyInt>().unwrap().extract().unwrap();
                     PySlice::new(py, ind, ind + 1, 1)
                 }
