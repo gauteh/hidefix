@@ -19,28 +19,25 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
-        target: [x86_64]
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with:
         python-version: "3.10"
-        architecture: x64
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
         rust-toolchain: nightly
-        target: ${{ matrix.target }}
         manylinux: auto
         args: --release --sdist --out dist
     - name: Install built wheel
-      if: matrix.target == 'x86_64'
+      # if: matrix.target == 'x86_64'
       run: |
         pip install numpy xarray netCDF4
         pip install hidefix --no-index --find-links dist --force-reinstall --no-deps
         python -c "import hidefix"
     - name: Run tests
-      if: matrix.target == 'x86_64'
+      # if: matrix.target == 'x86_64'
       run: |
         pip install pytest pytest-benchmark dask
         pytest -v --log-cli-level=debug -s
