@@ -32,7 +32,7 @@ strength_reduce = "0.2"
 zerocopy = "0.7"
 libc = "0.2"
 hdf5 = { package = "hdf5-metno", version = "0.9" }
-hdf5-sys = { package = "hdf5-metno-sys", version = "0.9", features = ["threadsafe"] }
+hdf5-sys = { package = "hdf5-metno-sys", version = "0.9" }
 log = "0.4"
 rayon = "1.10"
 ndarray = { version = "0.15", features = [ "rayon" ] }
