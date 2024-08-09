@@ -541,9 +541,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-metno"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0bfdbd1f586191c2620c3913d68d9c44ca049032971d8ebe83bbcb48bc02721"
+checksum = "6f2c9e7b522edb713f5dabf35860d7e2fee4039d2365101fe4120789b861050d"
 dependencies = [
  "bitflags 2.6.0",
  "cfg-if",
@@ -553,7 +553,6 @@ dependencies = [
  "lazy_static",
  "libc",
  "ndarray",
- "parking_lot 0.12.3",
  "paste",
 ]
 
@@ -581,14 +580,15 @@ dependencies = [
 
 [[package]]
 name = "hdf5-metno-sys"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a4d459ce024a086ba8776d56a0024af23f4ecb80f9b89c0f0c6f45ef5670aea"
+checksum = "1e7be8ee30e5034ee48dd30bc85a2fdde6e1ec0e5e19598409e8e9955eab14af"
 dependencies = [
  "hdf5-metno-src",
  "libc",
  "libloading",
  "libz-sys",
+ "parking_lot 0.12.3",
  "pkg-config",
  "regex",
  "serde",
@@ -1003,14 +1003,15 @@ dependencies = [
 
 [[package]]
 name = "netcdf"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c1e5d3a9613189828a53846ec7b3881960ab3a3ef2e7a86f5636c8f877b195d"
+checksum = "2d48655f023b5bb91490d12685e170f9ff9ecd771e30e166faa80f7f414caf27"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
  "ndarray",
  "netcdf-sys",
+ "parking_lot 0.12.3",
  "semver",
 ]
 
@@ -1027,14 +1028,15 @@ dependencies = [
 
 [[package]]
 name = "netcdf-sys"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "634fcbdaeb00d90b0673d5928b729d6f9fd33f5be7e45561217bd859b278f3a2"
+checksum = "2f024a696579d16a9d51747b69560683257886807870ee3c253049d9d76c00bd"
 dependencies = [
  "curl-sys",
  "hdf5-metno-sys",
  "libz-sys",
  "netcdf-src",
+ "parking_lot 0.12.3",
  "semver",
 ]
 
