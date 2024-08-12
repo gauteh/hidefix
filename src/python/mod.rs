@@ -15,7 +15,7 @@ use crate::idx;
 use crate::prelude::*;
 
 #[pymodule]
-fn hidefix(_py: Python, m: &PyModule) -> PyResult<()> {
+fn hidefix(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Index>()?;
     Ok(())
 }
@@ -164,7 +164,7 @@ impl Dataset {
         let arr = arr.downcast::<PyArrayDyn<T>>().unwrap();
 
         let mut v = unsafe { arr.as_array_mut() };
-        v.par_mapv_inplace(|v| if v == cond { fv } else { v });
+        v.mapv_inplace(|v| if v == cond { fv } else { v });
     }
 }
 
