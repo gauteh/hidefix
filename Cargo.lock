@@ -642,7 +642,7 @@ dependencies = [
  "libdeflater",
  "log",
  "lru",
- "ndarray 0.15.6",
+ "ndarray 0.16.0",
  "netcdf",
  "numpy",
  "pyo3",
@@ -998,7 +998,6 @@ dependencies = [
  "num-integer",
  "num-traits",
  "rawpointer",
- "rayon",
 ]
 
 [[package]]
@@ -1014,17 +1013,18 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "rawpointer",
+ "rayon",
 ]
 
 [[package]]
 name = "netcdf"
-version = "0.10.3"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9162dca8a5ca1d10bb6c797b2f9f1a43a00dc97e830577031c255695b0790d6"
+checksum = "84b45ab011b86e2c99be97dfd089a79c4c5b78c54d20bb9ad8a245c5bf18a331"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
- "ndarray 0.15.6",
+ "ndarray 0.16.0",
  "netcdf-sys",
  "semver",
 ]
