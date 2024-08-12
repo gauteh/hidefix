@@ -570,9 +570,9 @@ dependencies = [
 
 [[package]]
 name = "hdf5-metno-src"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e38a0cf492c96b0814b8179d53211478e2523c12c48db85bd03bc00a3de019e"
+checksum = "c8191a851b0e371bf06913a6db6d6171b1d75cfe4b38cbcb23979d6fbdd816b7"
 dependencies = [
  "cmake",
  "libz-sys",
@@ -622,7 +622,7 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hidefix"
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -961,9 +961,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4569e456d394deccd22ce1c1913e6ea0e54519f577285001215d33557431afe4"
+checksum = "80e04d1dcff3aae0704555fe5fee3bcfaf3d1fdf8a7e521d5b9d2b42acb52cec"
 dependencies = [
  "hermit-abi",
  "libc",
