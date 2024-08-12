@@ -642,6 +642,7 @@ dependencies = [
  "libdeflater",
  "log",
  "lru",
+ "ndarray 0.15.6",
  "ndarray 0.16.0",
  "netcdf",
  "numpy",
@@ -998,6 +999,7 @@ dependencies = [
  "num-integer",
  "num-traits",
  "rawpointer",
+ "rayon",
 ]
 
 [[package]]
