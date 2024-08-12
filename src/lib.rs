@@ -85,7 +85,7 @@
 //! hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jul_2023" }
 //! ```
 
-#![cfg_attr(feature = "unstable", feature(new_uninit, cow_is_borrowed))]
+#![cfg_attr(feature = "unstable", feature(new_uninit))]
 
 pub mod extent;
 pub mod filters;
