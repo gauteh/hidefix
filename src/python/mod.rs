@@ -164,7 +164,7 @@ impl Dataset {
         let arr = arr.downcast::<PyArrayDyn<T>>().unwrap();
 
         let mut v = unsafe { arr.as_array_mut() };
-        v.mapv_inplace(|v| if v == cond { fv } else { v });
+        v.par_mapv_inplace(|v| if v == cond { fv } else { v });
     }
 }
 
