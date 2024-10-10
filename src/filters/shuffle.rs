@@ -76,7 +76,7 @@ where
 /// processing.
 ///
 /// Other implementations have often used Duff's device. Newer compilers, using structured data
-/// types when possible, seems to result in similarily fast processing.
+/// types when possible, seems to result in similarly fast processing.
 pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8]) {
     assert!(src.len() == dest.len());
     assert!(src.len() % N == 0);
