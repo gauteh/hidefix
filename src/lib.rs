@@ -72,18 +72,8 @@
 //!
 //! ## Fast indexing
 //!
-//! The indexing can be sped up considerably (_about 200x_) by using the new interface to [iterating
-//! over chunks](https://github.com/HDFGroup/hdf5/pull/6) in HDF5. The `fast-index` feature flag currently requires a patched version of
-//! [hdf5-rust](https://github.com/magnusuMET/hdf5-rust/tree/hidefix_jul_2023). You therefore have to use `patch` to
-//! point the `hdf5` and `hdf5-sys` dependencies to the patched versions for now, in your
-//! `Cargo.toml`:
-//!
-//! ```ignore
-//! [patch.crates-io]
-//! hdf5 = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jul_2023" }
-//! hdf5-sys = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jul_2023" }
-//! hdf5-src = { git = "https://github.com/magnusuMET/hdf5-rust", branch = "hidefix_jul_2023" }
-//! ```
+//! The indexing can be sped up considerably (_about 200x_) by using the new interface to
+//!  [iterating over chunks](https://github.com/HDFGroup/hdf5/pull/6) in HDF5.
 
 #![cfg_attr(feature = "unstable", feature(new_uninit))]
 
