@@ -101,60 +101,27 @@ impl<const D: usize> Dataset<'_, D> {
             (true, None) => {
                 let n = ds.num_chunks().expect("weird..");
 
-                #[cfg(feature = "fast-index")]
-                {
-                    let mut v = Vec::with_capacity(n);
+                let mut v = Vec::with_capacity(n);
 
-                    ds.chunks_visit(|ci| {
-                        v.push(Chunk {
-                            offset: ci
-                                .offset
-                                .iter()
-                                .copied()
-                                .map(ULE::new)
-                                .collect::<Vec<_>>()
-                                .as_slice()
-                                .try_into()
-                                .unwrap(),
-                            size: ULE::new(ci.size),
-                            addr: ULE::new(ci.addr),
-                        });
+                ds.chunks_visit(|ci| {
+                    v.push(Chunk {
+                        offset: ci
+                            .offset
+                            .iter()
+                            .copied()
+                            .map(ULE::new)
+                            .collect::<Vec<_>>()
+                            .as_slice()
+                            .try_into()
+                            .unwrap(),
+                        size: ULE::new(ci.size),
+                        addr: ULE::new(ci.addr),
+                    });
 
-                        0
-                    })?;
+                    0
+                })?;
 
-                    Ok(v)
-                }
-
-                #[cfg(not(feature = "fast-index"))]
-                {
-                    let chunks = (0..n)
-                        .map(|i| {
-                            let chunk = ds.chunk_info(i).unwrap();
-
-                            ensure!(
-                                chunk.filter_mask == 0,
-                                "mismatching filter mask with dataset filter mask"
-                            );
-
-                            Ok(Chunk {
-                                offset: chunk
-                                    .offset
-                                    .iter()
-                                    .cloned()
-                                    .map(ULE::new)
-                                    .collect::<Vec<_>>()
-                                    .as_slice()
-                                    .try_into()
-                                    .unwrap(),
-                                size: ULE::new(chunk.size),
-                                addr: ULE::new(chunk.addr),
-                            })
-                        })
-                        .collect();
-
-                    chunks
-                }
+                Ok(v)
             }
 
             _ => Err(anyhow!(

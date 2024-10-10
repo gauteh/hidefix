@@ -1,44 +1,62 @@
 //! List a summary of a flexbuffer serialized index to stdout.
-use std::env;
+use clap::Parser;
+use hidefix::idx::{DatasetExt, Index};
 
-#[macro_use]
-extern crate anyhow;
-
-fn usage() {
-    println!("Usage: hfxlst input.h5.idx");
+#[derive(Parser, Debug)]
+struct Args {
+    input: std::path::PathBuf,
 }
 
 fn main() -> Result<(), anyhow::Error> {
-    let args: Vec<String> = env::args().collect();
+    let args = Args::parse();
 
-    if args.len() != 2 {
-        usage();
-        return Err(anyhow!("Invalid arguments"));
+    println!("Loading index from {}..", args.input.to_string_lossy());
+
+    let b = std::fs::read(&args.input)?;
+    let idx = read_index(&b)?;
+
+    let path = idx.path();
+    if let Some(path) = path {
+        println!("Datasets (source path: {path:?})");
+    } else {
+        println!("Datasets");
     }
-
-    let fin = &args[1];
-
-    println!("Loading index from {fin}..");
-
-    let b = std::fs::read(fin)?;
-    let idx = flexbuffers::Reader::get_root(&*b)?.as_map();
-
-    println!("Datasets (source path: {:?}):\n", idx.idx("path").as_str());
-    println!("{:4}{:30} shape:", "", "name:");
-
-    let datasets = idx.idx("datasets").as_map();
-
-    datasets.iter_keys().for_each(|k| {
-        let shape: Vec<u64> = datasets
-            .idx(k)
-            .as_map()
-            .idx("shape")
-            .as_vector()
-            .iter()
-            .map(|r| r.as_u64())
-            .collect();
-        println!("{:4}{:30} {:?}", "", k, shape);
-    });
+    for (name, dataset) in idx.datasets() {
+        let shape = dataset.shape();
+        println!("{name:32} {shape:?}");
+    }
+    // println!("{idx:?}");
 
     Ok(())
+}
+
+fn read_index(bytes: &[u8]) -> Result<Index, anyhow::Error> {
+    let mut errs: Vec<anyhow::Error> = vec![];
+    #[cfg(feature = "flexbuffers")]
+    {
+        match read_flexbuffer(bytes) {
+            Ok(idx) => return Ok(idx),
+            Err(e) => errs.push(e),
+        }
+    }
+    #[cfg(feature = "bincode")]
+    {
+        match read_bincode(bytes) {
+            Ok(idx) => return Ok(idx),
+            Err(e) => errs.push(e),
+        }
+    }
+    anyhow::bail!("Parsing failed (incompatible, or not configured): {errs:?}")
+}
+
+#[cfg(feature = "flexbuffers")]
+fn read_flexbuffer(bytes: &[u8]) -> Result<Index, anyhow::Error> {
+    let idx = flexbuffers::from_slice(bytes)?;
+    Ok(idx)
+}
+
+#[cfg(feature = "bincode")]
+fn read_bincode(bytes: &[u8]) -> Result<Index, anyhow::Error> {
+    let idx = bincode::deserialize(bytes)?;
+    Ok(idx)
 }
