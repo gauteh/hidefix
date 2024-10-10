@@ -383,7 +383,7 @@ enum ExtentIterator<'a> {
     Extents(std::iter::Zip<std::slice::Iter<'a, Extent>, std::slice::Iter<'a, u64>>),
 }
 
-impl<'a> Iterator for ExtentIterator<'a> {
+impl Iterator for ExtentIterator<'_> {
     type Item = Extent;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -395,7 +395,7 @@ impl<'a> Iterator for ExtentIterator<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for ExtentIterator<'a> {
+impl DoubleEndedIterator for ExtentIterator<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
             Self::All(iter) => iter

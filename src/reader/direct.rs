@@ -31,7 +31,7 @@ impl<'a, const D: usize> Direct<'a, D> {
     }
 }
 
-impl<'a, const D: usize> ParReader for Direct<'a, D> {
+impl<const D: usize> ParReader for Direct<'_, D> {
     fn read_to_par(&self, extents: &Extents, dst: &mut [u8]) -> Result<usize, anyhow::Error> {
         use rayon::prelude::*;
 
@@ -97,7 +97,7 @@ impl<'a, const D: usize> ParReader for Direct<'a, D> {
     }
 }
 
-impl<'a, const D: usize> Reader for Direct<'a, D> {
+impl<const D: usize> Reader for Direct<'_, D> {
     fn order(&self) -> Order {
         self.ds.order
     }

@@ -139,7 +139,7 @@ impl<const D: usize> Dataset<'_, D> {
             let expected_chunks = shape
                 .iter()
                 .zip(&chunk_shape)
-                .map(|(s, c)| (s + (c - 1)) / c)
+                .map(|(s, c)| s.div_ceil(*c))
                 .product::<u64>() as usize;
 
             ensure!(
@@ -194,7 +194,7 @@ impl<const D: usize> Dataset<'_, D> {
             let mut d = shape
                 .iter()
                 .zip(&chunk_shape)
-                .map(|(d, z)| (d + (z - 1)) / z)
+                .map(|(d, z)| d.div_ceil(*z))
                 .rev()
                 .scan(1, |p, c| {
                     let sz = *p;
