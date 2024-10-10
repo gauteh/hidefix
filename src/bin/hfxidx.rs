@@ -1,39 +1,50 @@
-//! Create an index serialized to a flexbuffer.
-use std::env;
-
-#[macro_use]
-extern crate anyhow;
-
-use flexbuffers::FlexbufferSerializer as ser;
+//! Create an index serialized to a file on disk.
+use clap::Parser;
 use hidefix::idx::Index;
-use serde::ser::Serialize;
 
-fn usage() {
-    println!("Usage: hfxidx input.h5 output.h5.idx");
+#[derive(Parser, Debug)]
+struct Args {
+    input: std::path::PathBuf,
+    output: std::path::PathBuf,
+    #[arg(default_value = "any", long)]
+    out_type: String,
 }
 
 fn main() -> Result<(), anyhow::Error> {
-    let args: Vec<String> = env::args().collect();
+    let args = Args::parse();
 
-    if args.len() != 3 {
-        usage();
-        return Err(anyhow!("Invalid arguments"));
-    }
+    let fin = &args.input;
+    let fout = &args.output;
 
-    let fin = &args[1];
-    let fout = &args[2];
-
-    print!("Indexing {fin}..");
+    print!("Indexing {}..", fin.to_string_lossy());
 
     let idx = Index::index(fin)?;
 
     println!("done.");
 
-    print!("Writing index to {fout} (as flxebuffer)..");
+    println!(
+        "Writing index to {} (as {})..",
+        fout.to_string_lossy(),
+        args.out_type,
+    );
 
-    let mut s = ser::new();
-    idx.serialize(&mut s)?;
-    std::fs::write(fout, s.view())?;
+    #[allow(unreachable_patterns)] // To let "any" work
+    match args.out_type.as_str() {
+        #[cfg(feature = "flexbuffers")]
+        "any" | "flexbuffers" => {
+            use serde::ser::Serialize;
+            let mut s = flexbuffers::FlexbufferSerializer::new();
+            idx.serialize(&mut s)?;
+            std::fs::write(fout, s.view())?;
+        }
+        #[cfg(feature = "bincode")]
+        "any" | "bincode" => {
+            let s = bincode::serialize(&idx)?;
+            std::fs::write(fout, s)?;
+        }
+        "any" => anyhow::bail!("No serializer compiled in"),
+        _ => anyhow::bail!("Unknown serialization type {}", args.out_type),
+    }
 
     println!("done.");
 
