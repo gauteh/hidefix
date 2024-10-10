@@ -102,7 +102,7 @@ impl<const D: usize> Chunk<D> {
         unsafe { &*(slice.as_ptr() as *const Chunk<D>) }
     }
 
-    /// Reintepret a slice of `Chunk<D>`s to a slice of `u64`. This is efficient, but relies
+    /// Reinterpret a slice of `Chunk<D>`s to a slice of `u64`. This is efficient, but relies
     /// on unsafe code.
     pub fn slice_as_u64s(chunks: &[Chunk<D>]) -> &[ULE] {
         let ptr = chunks.as_ptr();
@@ -122,7 +122,7 @@ impl<const D: usize> Chunk<D> {
         slice
     }
 
-    /// Reintepret a slice of `u64`s to a slice of `Chunk<D>`. This is efficient, but relies
+    /// Reinterpret a slice of `u64`s to a slice of `Chunk<D>`. This is efficient, but relies
     /// on unsafe code.
     pub fn slice_from_u64s(slice: &[ULE]) -> &[Chunk<D>] {
         assert_eq!(

@@ -42,7 +42,7 @@ where
 }
 
 pub trait ReaderExt: Reader {
-    /// Reads values into desitination slice. Returns values read.
+    /// Reads values into destination slice. Returns values read.
     fn values_to<T, E>(&mut self, extents: E, dst: &mut [T]) -> Result<usize, anyhow::Error>
     where
         T: ToMutByteSlice,
@@ -93,7 +93,7 @@ pub trait ParReader {
 }
 
 pub trait ParReaderExt: Reader + ParReader {
-    /// Reads values into desitination slice. Returns values read.
+    /// Reads values into destination slice. Returns values read.
     fn values_to_par<T, E>(&self, extents: E, dst: &mut [T]) -> Result<usize, anyhow::Error>
     where
         T: ToMutByteSlice,
