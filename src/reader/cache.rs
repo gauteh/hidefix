@@ -31,7 +31,7 @@ impl<'a, R: Read + Seek, const D: usize> CacheReader<'a, R, D> {
     }
 }
 
-impl<'a, R: Read + Seek, const D: usize> Reader for CacheReader<'a, R, D> {
+impl<R: Read + Seek, const D: usize> Reader for CacheReader<'_, R, D> {
     fn order(&self) -> Order {
         self.ds.order
     }

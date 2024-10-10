@@ -121,7 +121,7 @@ pub trait DatasetExt {
     fn as_par_reader(&self, p: &dyn AsRef<Path>) -> anyhow::Result<Box<dyn DatasetExtReader + '_>>;
 }
 
-impl<'a> DatasetExt for DatasetD<'a> {
+impl DatasetExt for DatasetD<'_> {
     fn size(&self) -> usize {
         self.inner().size()
     }

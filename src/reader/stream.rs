@@ -40,7 +40,7 @@ impl<'a, const D: usize> StreamReader<'a, D> {
     }
 }
 
-impl<'a, const D: usize> Streamer for StreamReader<'a, D> {
+impl<const D: usize> Streamer for StreamReader<'_, D> {
     fn dsize(&self) -> usize {
         self.ds.dsize
     }
