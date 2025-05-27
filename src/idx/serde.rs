@@ -73,7 +73,7 @@ pub mod chunks_u64s {
     where
         S: Serializer,
     {
-        use zerocopy::AsBytes;
+        use zerocopy::IntoBytes;
 
         let slice: &[u8] = Chunk::<D>::slice_as_u64s(chunks).as_bytes();
         serde_bytes::serialize(slice, s)
@@ -86,10 +86,9 @@ pub mod chunks_u64s {
         D: Deserializer<'de>,
     {
         let bytes = <&'a [u8]>::deserialize(d)?;
-        let slice = zerocopy::Ref::new_slice_unaligned(bytes).unwrap();
-        let slice: &[ULE] = slice.into_slice();
+        let slice = zerocopy::Ref::<&'a [u8], [ULE]>::from_bytes(bytes).unwrap();
 
-        let chunks: &'a [Chunk<DE>] = Chunk::<DE>::slice_from_u64s(slice);
+        let chunks: &'a [Chunk<DE>] = Chunk::<DE>::slice_from_u64s(zerocopy::Ref::into_ref(slice));
         let chunks = Cow::<'a, [Chunk<DE>]>::from(chunks);
 
         debug_assert!(matches!(chunks, Cow::Borrowed(_)));

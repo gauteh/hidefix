@@ -2,8 +2,7 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
 
-use byteorder::LittleEndian as LE;
-use zerocopy::byteorder::U64;
+use zerocopy::byteorder::{LittleEndian as LE, U64};
 
 pub type ULE = U64<LE>;
 

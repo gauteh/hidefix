@@ -131,6 +131,7 @@ mod tests {
     use super::*;
     use byteorder::{BigEndian, ByteOrder};
     use divan::Bencher;
+    use rand::{distr::StandardUniform, rng, Rng};
 
     #[test]
     fn shuffle_hdf5_example() {
@@ -160,10 +161,7 @@ mod tests {
 
     #[divan::bench]
     fn shuffle_4kb(b: Bencher) {
-        use rand::distributions::Standard;
-        use rand::{thread_rng, Rng};
-
-        let v: Vec<i32> = thread_rng().sample_iter(Standard).take(1024).collect();
+        let v: Vec<i32> = rng().sample_iter(StandardUniform).take(1024).collect();
         let mut d = vec![0_u8; 1024 * 4];
 
         b.bench_local(|| shuffle(&v, &mut d))
@@ -171,10 +169,7 @@ mod tests {
 
     #[divan::bench]
     fn unshuffle_4kb(b: Bencher) {
-        use rand::distributions::Standard;
-        use rand::{thread_rng, Rng};
-
-        let v: Vec<i32> = thread_rng().sample_iter(Standard).take(1024).collect();
+        let v: Vec<i32> = rng().sample_iter(StandardUniform).take(1024).collect();
         let mut d = vec![0_u8; 1024 * 4];
 
         b.bench_local(|| shuffle(&v, &mut d))
@@ -182,11 +177,8 @@ mod tests {
 
     #[divan::bench]
     fn shuffle_4mb(b: Bencher) {
-        use rand::distributions::Standard;
-        use rand::{thread_rng, Rng};
-
-        let v: Vec<u8> = thread_rng()
-            .sample_iter(Standard)
+        let v: Vec<u8> = rng()
+            .sample_iter(StandardUniform)
             .take(4 * 1024 * 1024)
             .collect();
         let mut d = vec![0_i32; 1024 * 1024];
@@ -196,11 +188,8 @@ mod tests {
 
     #[divan::bench]
     fn unshuffle_4mb(b: Bencher) {
-        use rand::distributions::Standard;
-        use rand::{thread_rng, Rng};
-
-        let v: Vec<u8> = thread_rng()
-            .sample_iter(Standard)
+        let v: Vec<u8> = rng()
+            .sample_iter(StandardUniform)
             .take(4 * 1024 * 1024)
             .collect();
         let mut d = vec![0_i32; 1024 * 1024];
@@ -210,21 +199,15 @@ mod tests {
 
     #[divan::bench]
     fn unshuffle_structured_4kb(b: Bencher) {
-        use rand::distributions::Standard;
-        use rand::{thread_rng, Rng};
-
-        let v: Vec<u8> = thread_rng().sample_iter(Standard).take(4 * 1024).collect();
+        let v: Vec<u8> = rng().sample_iter(StandardUniform).take(4 * 1024).collect();
 
         b.bench_local(|| unshuffle_sized(&v, 4))
     }
 
     #[divan::bench]
     fn unshuffle_structured_4mb(b: Bencher) {
-        use rand::distributions::Standard;
-        use rand::{thread_rng, Rng};
-
-        let v: Vec<u8> = thread_rng()
-            .sample_iter(Standard)
+        let v: Vec<u8> = rng()
+            .sample_iter(StandardUniform)
             .take(4 * 1024 * 1024)
             .collect();
 

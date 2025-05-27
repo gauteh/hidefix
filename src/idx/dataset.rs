@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn coads_slice_all() {
         fn make_u64(u: u64) -> ULE {
-            ULE::new(u)
+            ULE::from(u)
         }
 
         let slices = vec![
