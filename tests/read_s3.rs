@@ -200,6 +200,38 @@ fn read_chunked_shuffled_2d() {
     assert_eq!(vs, hvs);
 }
 
+/// A selection covering the first and third chunk (in file order), but not the second:
+/// the chunks are 10k bytes apart, so the coalesced request fetches the middle chunk and
+/// discards it. The selection also starts and ends mid-chunk in the last dimension.
+#[test]
+fn read_shuffled_2d_coalesced_gap() {
+    let Some(bucket) = bucket() else { return };
+
+    let i = Index::index("tests/data/dmrpp/chunked_shuffled_twoD.h5").unwrap();
+    let DatasetD::D2(ds) = i.dataset("d_4_shuffled_chunks").unwrap() else {
+        panic!()
+    };
+    let mut r =
+        S3Reader::with_dataset(ds, bucket, "tests/data/dmrpp/chunked_shuffled_twoD.h5").unwrap();
+
+    // Chunks are 50 x 50 in a 100 x 100 dataset: 0..100 x 10..40 hits chunks (0, 0) and
+    // (50, 0) but not (0, 50), which lies between them in the file.
+    let vs = r.values::<f32, _>([0..100, 10..40]).unwrap();
+
+    let h = hdf5::File::open(i.path().unwrap()).unwrap();
+    let hvs = h
+        .dataset("d_4_shuffled_chunks")
+        .unwrap()
+        .read_raw::<f32>()
+        .unwrap();
+
+    let expected = (0..100)
+        .flat_map(|row| hvs[(row * 100 + 10)..(row * 100 + 40)].iter().copied())
+        .collect::<Vec<f32>>();
+
+    assert_eq!(vs, expected);
+}
+
 /// The sync `Reader` interface should also work from within a current-thread runtime
 /// (`#[tokio::test]` default), where `block_in_place` is not available.
 #[tokio::test]

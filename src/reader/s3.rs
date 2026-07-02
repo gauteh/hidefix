@@ -170,8 +170,11 @@ impl<'a, const D: usize> S3Reader<'a, D> {
             let resp = bucket
                 .get_object_range(key, r.start, Some(r.end - 1))
                 .await?;
+            // A `200` means the server ignored the `Range` header and returned the full
+            // object: the body only lines up with our offsets when the request starts at
+            // the beginning of the object.
             ensure!(
-                resp.status_code() == 206 || resp.status_code() == 200,
+                resp.status_code() == 206 || (resp.status_code() == 200 && r.start == 0),
                 "range request failed: status code: {}",
                 resp.status_code()
             );
