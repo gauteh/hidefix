@@ -14,10 +14,12 @@ jobs:
   test:
     runs-on: ${{matrix.platform}}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - {platform: ubuntu-latest, rust: nightly}
           - {platform: ubuntu-latest, rust: stable}
+          - {platform: ubuntu-24.04-arm, rust: stable}
           - {platform: windows-latest, rust: nightly}
           - {platform: macos-latest, rust: nightly}
     steps:
@@ -43,9 +45,9 @@ jobs:
         pip install pytest pytest-benchmark dask
         pytest -v --log-cli-level=debug -s
     - name: Upload wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{matrix.platform}}-${{matrix.rust}}
         path: dist
 
   release:
@@ -54,9 +56,10 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs: [ test ]
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: wheels
+          pattern: wheels-*
+          merge-multiple: true
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"

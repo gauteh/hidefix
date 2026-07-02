@@ -262,9 +262,17 @@ mod tests {
     use super::*;
     use pyo3::types::PyFloat;
 
+    /// The interpreter is initialized explicitly (rather than through pyo3's
+    /// `auto-initialize` feature, which breaks wheel builds against statically linked
+    /// pythons like the manylinux ones).
+    fn with_gil<F: FnOnce(Python) -> R, R>(f: F) -> R {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(f)
+    }
+
     #[test]
     fn coads_slice() {
-        Python::with_gil(|py| {
+        with_gil(|py| {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
             let ds = i.dataset("SST", None).unwrap();
 
@@ -275,7 +283,7 @@ mod tests {
 
     #[test]
     fn coads_index_slice() {
-        Python::with_gil(|py| {
+        with_gil(|py| {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
             let ds = i.dataset("SST", None).unwrap();
 
@@ -286,7 +294,7 @@ mod tests {
 
     #[test]
     fn fill_value() {
-        Python::with_gil(|py| {
+        with_gil(|py| {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
             let ds = i.dataset("SST", None).unwrap();
 
