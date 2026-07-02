@@ -18,6 +18,7 @@ jobs:
         include:
           - {platform: ubuntu-latest, rust: nightly}
           - {platform: ubuntu-latest, rust: stable}
+          - {platform: ubuntu-24.04-arm, rust: stable}
           - {platform: windows-latest, rust: nightly}
           - {platform: macos-latest, rust: nightly}
     steps:
