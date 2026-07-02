@@ -200,6 +200,26 @@ fn read_chunked_shuffled_2d() {
     assert_eq!(vs, hvs);
 }
 
+/// The sync `Reader` interface should also work from within a current-thread runtime
+/// (`#[tokio::test]` default), where `block_in_place` is not available.
+#[tokio::test]
+async fn read_chunked_1d_current_thread_runtime() {
+    let Some(bucket) = bucket() else { return };
+
+    let i = Index::index("tests/data/dmrpp/chunked_oneD.h5").unwrap();
+    let DatasetD::D1(ds) = i.dataset("d_4_chunks").unwrap() else {
+        panic!()
+    };
+    let mut r = S3Reader::with_dataset(ds, bucket, "tests/data/dmrpp/chunked_oneD.h5").unwrap();
+
+    let vs = r.values::<f32, _>(..).unwrap();
+
+    let h = hdf5::File::open(i.path().unwrap()).unwrap();
+    let hvs = h.dataset("d_4_chunks").unwrap().read_raw::<f32>().unwrap();
+
+    assert_eq!(vs, hvs);
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn read_coads_sst_async() {
     let Some(bucket) = bucket() else { return };

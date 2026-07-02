@@ -106,16 +106,26 @@ fn group_requests<'a, const D: usize>(
 
 /// Drive a future to completion from a blocking context, whether or not we are already
 /// inside a tokio runtime.
-fn block_on<F: Future>(fut: F) -> F::Output {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        // Requires a multi-threaded runtime: use `read_to_async` directly from async
-        // contexts on a current-thread runtime.
-        tokio::task::block_in_place(|| handle.block_on(fut))
-    } else {
-        static RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
-        RUNTIME
-            .get_or_init(|| tokio::runtime::Runtime::new().unwrap())
-            .block_on(fut)
+fn block_on<F: Future + Send>(fut: F) -> F::Output
+where
+    F::Output: Send,
+{
+    static RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> = std::sync::OnceLock::new();
+    let runtime = || RUNTIME.get_or_init(|| tokio::runtime::Runtime::new().unwrap());
+
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {
+            tokio::task::block_in_place(|| handle.block_on(fut))
+        }
+        // `block_in_place` panics on a current-thread runtime: drive the future on the
+        // fallback runtime from a scoped thread instead.
+        Ok(_) => std::thread::scope(|scope| {
+            scope
+                .spawn(|| runtime().block_on(fut))
+                .join()
+                .expect("block_on thread panicked")
+        }),
+        Err(_) => runtime().block_on(fut),
     }
 }
 
@@ -152,33 +162,35 @@ impl<'a, const D: usize> S3Reader<'a, D> {
             "destination buffer has insufficient capacity"
         );
 
-        let requests = group_requests(self.ds.group_chunk_slices(extents));
+        async fn fetch<'r, const D: usize>(
+            bucket: &Bucket,
+            key: &str,
+            r: Request<'r, D>,
+        ) -> Result<(Request<'r, D>, bytes::Bytes), anyhow::Error> {
+            let resp = bucket
+                .get_object_range(key, r.start, Some(r.end - 1))
+                .await?;
+            ensure!(
+                resp.status_code() == 206 || resp.status_code() == 200,
+                "range request failed: status code: {}",
+                resp.status_code()
+            );
+            let bytes = resp.into_bytes();
+            ensure!(
+                bytes.len() as u64 >= r.end - r.start,
+                "range request returned too few bytes: {} < {}",
+                bytes.len(),
+                r.end - r.start
+            );
+            Ok((r, bytes))
+        }
 
-        let mut responses = futures::stream::iter(requests)
-            .map(|r| {
-                let bucket = &self.bucket;
-                let key = &self.key;
+        let requests = group_requests(self.ds.group_chunk_slices(extents))
+            .into_iter()
+            .map(|r| fetch(&self.bucket, &self.key, r))
+            .collect::<Vec<_>>();
 
-                async move {
-                    let resp = bucket
-                        .get_object_range(key, r.start, Some(r.end - 1))
-                        .await?;
-                    ensure!(
-                        resp.status_code() == 206 || resp.status_code() == 200,
-                        "range request failed: status code: {}",
-                        resp.status_code()
-                    );
-                    let bytes = resp.into_bytes();
-                    ensure!(
-                        bytes.len() as u64 >= r.end - r.start,
-                        "range request returned too few bytes: {} < {}",
-                        bytes.len(),
-                        r.end - r.start
-                    );
-                    Ok::<_, anyhow::Error>((r, bytes))
-                }
-            })
-            .buffer_unordered(CONCURRENT_REQUESTS);
+        let mut responses = futures::stream::iter(requests).buffer_unordered(CONCURRENT_REQUESTS);
 
         while let Some((request, bytes)) = responses.try_next().await? {
             for (c, segments) in request.chunks {
