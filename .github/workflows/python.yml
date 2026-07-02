@@ -14,6 +14,7 @@ jobs:
   test:
     runs-on: ${{matrix.platform}}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - {platform: ubuntu-latest, rust: nightly}
