@@ -1,9 +1,15 @@
+pub mod attributes;
 mod chunk;
 mod dataset;
 mod index;
 pub mod serde;
+#[cfg(feature = "flexbuffers")]
+pub mod serialized;
 
+pub use self::attributes::{AttributeValue, Attributes, DatasetMeta};
 pub use self::index::{GroupIndex, Index};
+#[cfg(feature = "flexbuffers")]
+pub use self::serialized::SerializedIndex;
 pub use chunk::{Chunk, ULE};
 pub use dataset::{Dataset, DatasetD, DatasetExt, Datatype};
 

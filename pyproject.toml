@@ -5,6 +5,7 @@ build-backend = "maturin"
 [project]
 name = "hidefix"
 requires-python = ">=3.9"
+dynamic = ["version"]
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -13,14 +14,16 @@ classifiers = [
 
 dependencies = [
     "numpy",
-    "xarray>=2023",
-    "netCDF4"
+    "xarray>=2023"
 ]
 
 
 [tool.maturin]
 python-source = "python"
-features = [ "static", "python", "extension-module" ]
+# "s3" is enabled for the wheel here rather than folded into the cargo
+# "python" feature, so cargo consumers of "python" do not pull in the S3 stack.
+features = [ "static", "python", "extension-module", "s3" ]
+no-default-features = true
 
 [tool.pytest.ini_options]
 addopts = "--benchmark-disable"

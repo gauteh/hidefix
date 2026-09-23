@@ -41,6 +41,19 @@ ds = xr.open_dataset('file.nc', engine='hidefix')
 print(ds)
 ```
 
+also directly from S3 (or any S3-compatible object store), given an index
+built from a local copy of the file (see the module docs of
+`python/hidefix/xarray.py` for how this differs from a local open):
+```python
+import xarray as xr
+import hidefix
+
+index = hidefix.Index('file.nc')  # or Index.load_index(...) / index.save(...)
+ds = xr.open_dataset('s3://bucket/file.nc', engine='hidefix', index=index,
+                     region='eu-west-1')
+print(ds)
+```
+
 See the [example](examples/) for how to use hidefix for
 [regular](examples/read_hfx_cache.rs), [parallel](examples/read_hfx_parallel.rs) or
 [concurrent](examples/read_hfx_concurrent.rs) reads.

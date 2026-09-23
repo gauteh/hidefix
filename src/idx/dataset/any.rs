@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 use super::*;
+use crate::filters::byteorder::Order as ByteOrder;
 use crate::prelude::{ParReader, Reader, Streamer};
 
 /// Dataset in possible dimensions.
@@ -48,6 +49,24 @@ impl DatasetD<'_> {
         }
     }
 
+    /// Take ownership of the chunk table, untying the dataset from the buffer
+    /// it was (zero-copy) deserialized from.
+    pub fn into_owned(self) -> DatasetD<'static> {
+        use DatasetD::*;
+        match self {
+            D0(ds) => D0(ds.into_owned()),
+            D1(ds) => D1(ds.into_owned()),
+            D2(ds) => D2(ds.into_owned()),
+            D3(ds) => D3(ds.into_owned()),
+            D4(ds) => D4(ds.into_owned()),
+            D5(ds) => D5(ds.into_owned()),
+            D6(ds) => D6(ds.into_owned()),
+            D7(ds) => D7(ds.into_owned()),
+            D8(ds) => D8(ds.into_owned()),
+            D9(ds) => D9(ds.into_owned()),
+        }
+    }
+
     pub fn as_reader(&self, path: &Path) -> Result<Box<dyn Reader + '_>, anyhow::Error> {
         use crate::reader::cache::CacheReader;
         use std::fs;
@@ -64,6 +83,32 @@ impl DatasetD<'_> {
             D7(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
             D8(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
             D9(ds) => Box::new(CacheReader::with_dataset(ds, fs::File::open(path)?)?),
+        })
+    }
+
+    /// A [`Reader`](crate::reader::s3::S3Reader) fetching chunks from `key` in `bucket`
+    /// with ranged `GET`s, see [`crate::reader::s3`]. The bucket carries the region,
+    /// endpoint and credentials.
+    #[cfg(feature = "s3")]
+    pub fn as_s3_reader(
+        &self,
+        bucket: Box<s3::Bucket>,
+        key: &str,
+    ) -> Result<Box<dyn Reader + '_>, anyhow::Error> {
+        use crate::reader::s3::S3Reader;
+        use DatasetD::*;
+
+        Ok(match self {
+            D0(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D1(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D2(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D3(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D4(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D5(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D6(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D7(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D8(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
+            D9(ds) => Box::new(S3Reader::with_dataset(ds, bucket, key)?),
         })
     }
 
@@ -110,6 +155,8 @@ pub trait DatasetExt {
 
     fn dtype(&self) -> Datatype;
 
+    fn order(&self) -> ByteOrder;
+
     fn dsize(&self) -> usize;
 
     fn shape(&self) -> &[u64];
@@ -128,6 +175,10 @@ impl DatasetExt for DatasetD<'_> {
 
     fn dtype(&self) -> Datatype {
         self.inner().dtype()
+    }
+
+    fn order(&self) -> ByteOrder {
+        self.inner().order()
     }
 
     fn dsize(&self) -> usize {

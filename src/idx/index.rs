@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use hdf5::File;
 
+use super::attributes::{dimension_names, read_attributes, Attributes, DatasetMeta};
 use super::dataset::DatasetD;
 use crate::reader::{Reader, Streamer};
 
@@ -49,6 +50,15 @@ impl Index<'_> {
             root: GroupIndex::index_group(&hf.group("/")?, path)?,
         })
     }
+
+    /// Take ownership of all borrowed chunk tables, untying the index from the
+    /// buffer it was (zero-copy) deserialized from.
+    pub fn into_owned(self) -> Index<'static> {
+        Index {
+            path: self.path,
+            root: self.root.into_owned(),
+        }
+    }
 }
 
 impl TryFrom<&Path> for Index<'_> {
@@ -89,6 +99,13 @@ pub struct GroupIndex<'a> {
     datasets: HashMap<String, DatasetD<'a>>,
     #[serde(borrow)]
     groups: HashMap<String, GroupIndex<'a>>,
+    /// Group attributes (root group: global attributes). `default` so indexes
+    /// serialized before these fields existed still deserialize (from
+    /// self-describing formats).
+    #[serde(default)]
+    attributes: Attributes,
+    #[serde(default)]
+    dataset_meta: HashMap<String, DatasetMeta>,
 }
 
 impl GroupIndex<'_> {
@@ -101,14 +118,23 @@ impl GroupIndex<'_> {
         P: Into<PathBuf>,
     {
         let path: Option<PathBuf> = path.map(|p| p.into());
-        let datasets = grp
-            .member_names()?
-            .iter()
-            .map(|m| grp.dataset(m).map(|d| (m, d)))
-            .filter_map(Result::ok)
-            .filter(|(_, d)| d.is_chunked() || d.offset().is_some()) // skipping un-allocated datasets.
-            .map(|(m, d)| DatasetD::index(&d).map(|d| (m.clone(), d)))
-            .collect::<Result<HashMap<String, DatasetD<'static>>, _>>()?;
+        let mut datasets = HashMap::new();
+        let mut dataset_meta = HashMap::new();
+        for m in grp.member_names()? {
+            let Ok(d) = grp.dataset(&m) else { continue };
+            if !(d.is_chunked() || d.offset().is_some()) {
+                // skipping un-allocated datasets.
+                continue;
+            }
+            dataset_meta.insert(
+                m.clone(),
+                DatasetMeta {
+                    attributes: read_attributes(&d),
+                    dim_names: dimension_names(&d),
+                },
+            );
+            datasets.insert(m, DatasetD::index(&d)?);
+        }
         let groups = grp
             .groups()?
             .iter()
@@ -121,7 +147,29 @@ impl GroupIndex<'_> {
             path,
             datasets,
             groups,
+            attributes: read_attributes(grp),
+            dataset_meta,
         })
+    }
+
+    /// Take ownership of all borrowed chunk tables, untying the group from the
+    /// buffer it was (zero-copy) deserialized from.
+    pub fn into_owned(self) -> GroupIndex<'static> {
+        GroupIndex {
+            path: self.path,
+            datasets: self
+                .datasets
+                .into_iter()
+                .map(|(k, v)| (k, v.into_owned()))
+                .collect(),
+            groups: self
+                .groups
+                .into_iter()
+                .map(|(k, v)| (k, v.into_owned()))
+                .collect(),
+            attributes: self.attributes,
+            dataset_meta: self.dataset_meta,
+        }
     }
 
     /// Retrieves a reference to a dataset within a HDF5 group indexer hierarchy if it exists.
@@ -129,15 +177,42 @@ impl GroupIndex<'_> {
     /// This function allows you to access a dataset by providing its path, using the "path/to/dataset" naming structure.
     /// The function traverses nested groups based on the path until it finds the desired dataset.
     #[must_use]
-    pub fn dataset(&self, s: &str) -> Option<&DatasetD> {
+    pub fn dataset(&self, s: &str) -> Option<&DatasetD<'_>> {
         let mut s = s.trim_start_matches('/').split('/');
         let ds_name = s.next_back()?;
         let grp = s.try_fold(self, |grp, grp_name| grp.groups.get(grp_name))?;
         grp.datasets.get(ds_name)
     }
 
-    pub fn datasets(&self) -> &HashMap<String, DatasetD> {
+    pub fn datasets(&self) -> &HashMap<String, DatasetD<'_>> {
         &self.datasets
+    }
+
+    /// Attributes of this group (for the root group: the global attributes).
+    #[must_use]
+    pub fn attributes(&self) -> &Attributes {
+        &self.attributes
+    }
+
+    /// Attributes of a dataset, using the same "path/to/dataset" naming
+    /// structure as [`GroupIndex::dataset`].
+    #[must_use]
+    pub fn dataset_attributes(&self, s: &str) -> Option<&Attributes> {
+        self.dataset_meta(s).map(|m| &m.attributes)
+    }
+
+    /// netCDF dimension names of a dataset (in order), using the same
+    /// "path/to/dataset" naming structure as [`GroupIndex::dataset`].
+    #[must_use]
+    pub fn dataset_dim_names(&self, s: &str) -> Option<&[String]> {
+        self.dataset_meta(s).map(|m| m.dim_names.as_slice())
+    }
+
+    fn dataset_meta(&self, s: &str) -> Option<&DatasetMeta> {
+        let mut s = s.trim_start_matches('/').split('/');
+        let ds_name = s.next_back()?;
+        let grp = s.try_fold(self, |grp, grp_name| grp.groups.get(grp_name))?;
+        grp.dataset_meta.get(ds_name)
     }
 
     #[must_use]
@@ -316,5 +391,76 @@ mod tests {
 
         let s = bincode::serialize(&i).unwrap();
         bincode::deserialize::<Index>(&s).unwrap();
+    }
+
+    #[test]
+    fn serialize_metadata() {
+        use crate::idx::AttributeValue;
+        use flexbuffers::FlexbufferSerializer as ser;
+
+        let i = Index::index("tests/data/coads_climatology.nc4").unwrap();
+
+        fn check(i: &Index) {
+            assert!(i.attributes().contains_key("history"));
+            assert_eq!(
+                i.dataset_attributes("SST").unwrap().get("units"),
+                Some(&AttributeValue::Str("Deg C".into()))
+            );
+            assert_eq!(
+                i.dataset_dim_names("SST").unwrap(),
+                ["TIME", "COADSY", "COADSX"]
+            );
+        }
+        check(&i);
+
+        let mut s = ser::new();
+        i.serialize(&mut s).unwrap();
+        let r = flexbuffers::Reader::get_root(s.view()).unwrap();
+        let mi = Index::deserialize(r).unwrap();
+        check(&mi);
+
+        let b = bincode::serialize(&i).unwrap();
+        let bi = bincode::deserialize::<Index>(&b).unwrap();
+        check(&bi);
+    }
+
+    /// Indexes serialized before `attributes` and `dataset_meta` existed must
+    /// still deserialize from self-describing formats (`serde(default)`).
+    #[test]
+    fn deserialize_index_without_metadata_fields() {
+        use flexbuffers::FlexbufferSerializer as ser;
+
+        #[derive(Serialize)]
+        struct OldGroupIndex<'a> {
+            path: Option<PathBuf>,
+            datasets: HashMap<String, DatasetD<'a>>,
+            groups: HashMap<String, OldGroupIndex<'a>>,
+        }
+
+        #[derive(Serialize)]
+        struct OldIndex<'a> {
+            path: Option<PathBuf>,
+            root: OldGroupIndex<'a>,
+        }
+
+        let Index { path, root } = Index::index("tests/data/coads_climatology.nc4").unwrap();
+        let old = OldIndex {
+            path,
+            root: OldGroupIndex {
+                path: root.path,
+                datasets: root.datasets,
+                groups: HashMap::new(), // no sub-groups in coads
+            },
+        };
+
+        let mut s = ser::new();
+        old.serialize(&mut s).unwrap();
+        let r = flexbuffers::Reader::get_root(s.view()).unwrap();
+        let mi = Index::deserialize(r).unwrap();
+
+        assert!(mi.dataset("SST").is_some());
+        assert!(mi.attributes().is_empty());
+        assert!(mi.dataset_attributes("SST").is_none());
+        assert!(mi.dataset_dim_names("SST").is_none());
     }
 }

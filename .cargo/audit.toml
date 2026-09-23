@@ -1,0 +1,11 @@
+[advisories]
+# quick-xml 0.38 reaches us only through rust-s3 0.37.2 / aws-creds 0.39.1, whose
+# latest releases both pin quick-xml = "0.38"; the bump to 0.41 is open upstream
+# (durch/rust-s3#468). Both advisories are DoS-by-crafted-XML in the parser, and
+# hidefix only ever parses XML that the configured S3 endpoint itself returns
+# (error bodies, region lookup) — never user-supplied documents. Drop these once
+# rust-s3 releases against quick-xml >= 0.41.
+ignore = [
+    "RUSTSEC-2026-0194", # quick-xml: quadratic duplicate-attribute check
+    "RUSTSEC-2026-0195", # quick-xml: unbounded NsReader namespace allocation
+]

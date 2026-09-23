@@ -79,7 +79,7 @@ where
 /// types when possible, seems to result in similarly fast processing.
 pub fn unshuffle_structured<const N: usize>(src: &[u8], dest: &mut [u8]) {
     assert!(src.len() == dest.len());
-    assert!(src.len() % N == 0);
+    assert!(src.len().is_multiple_of(N));
     let n = src.len() / N;
 
     let dest_ptr = dest.as_mut_ptr() as *mut _;
