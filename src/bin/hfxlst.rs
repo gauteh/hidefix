@@ -30,7 +30,7 @@ fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn read_index(bytes: &[u8]) -> Result<Index, anyhow::Error> {
+fn read_index(bytes: &[u8]) -> Result<Index<'_>, anyhow::Error> {
     let mut errs: Vec<anyhow::Error> = vec![];
     #[cfg(feature = "flexbuffers")]
     {
@@ -50,13 +50,13 @@ fn read_index(bytes: &[u8]) -> Result<Index, anyhow::Error> {
 }
 
 #[cfg(feature = "flexbuffers")]
-fn read_flexbuffer(bytes: &[u8]) -> Result<Index, anyhow::Error> {
+fn read_flexbuffer(bytes: &[u8]) -> Result<Index<'_>, anyhow::Error> {
     let idx = flexbuffers::from_slice(bytes)?;
     Ok(idx)
 }
 
 #[cfg(feature = "bincode")]
-fn read_bincode(bytes: &[u8]) -> Result<Index, anyhow::Error> {
+fn read_bincode(bytes: &[u8]) -> Result<Index<'_>, anyhow::Error> {
     let idx = bincode::deserialize(bytes)?;
     Ok(idx)
 }

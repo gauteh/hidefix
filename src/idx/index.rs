@@ -1,11 +1,11 @@
-use anyhow::anyhow;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
+use anyhow::anyhow;
 use hdf5::File;
+use serde::{Deserialize, Serialize};
 
 use super::dataset::DatasetD;
 use crate::reader::{Reader, Streamer};
@@ -129,14 +129,14 @@ impl GroupIndex<'_> {
     /// This function allows you to access a dataset by providing its path, using the "path/to/dataset" naming structure.
     /// The function traverses nested groups based on the path until it finds the desired dataset.
     #[must_use]
-    pub fn dataset(&self, s: &str) -> Option<&DatasetD> {
+    pub fn dataset(&self, s: &str) -> Option<&DatasetD<'_>> {
         let mut s = s.trim_start_matches('/').split('/');
         let ds_name = s.next_back()?;
         let grp = s.try_fold(self, |grp, grp_name| grp.groups.get(grp_name))?;
         grp.datasets.get(ds_name)
     }
 
-    pub fn datasets(&self) -> &HashMap<String, DatasetD> {
+    pub fn datasets(&self) -> &HashMap<String, DatasetD<'_>> {
         &self.datasets
     }
 

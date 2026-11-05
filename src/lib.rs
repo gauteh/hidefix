@@ -75,8 +75,6 @@
 //! The indexing can be sped up considerably (_about 200x_) by using the new interface to
 //!  [iterating over chunks](https://github.com/HDFGroup/hdf5/pull/6) in HDF5.
 
-#![cfg_attr(feature = "unstable", feature(new_uninit))]
-
 pub mod extent;
 pub mod filters;
 pub mod idx;
