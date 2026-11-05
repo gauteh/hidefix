@@ -3,7 +3,7 @@
 use crate::filters::byteorder::ToNative;
 use byte_slice_cast::ToMutByteSlice;
 use ndarray::parallel::prelude::*;
-use numpy::{PyArray, PyArray1, PyArrayDyn};
+use numpy::{PyArray, PyArray1, PyArrayDyn, PyArrayMethods};
 use pyo3::{
     prelude::*,
     types::{PyInt, PySlice, PyTuple},
@@ -92,7 +92,7 @@ impl Dataset {
         ds: &idx::DatasetD<'_>,
         indices: &[u64],
         counts: &[u64],
-    ) -> PyResult<&'py PyAny>
+    ) -> PyResult<Bound<'py, PyAny>>
     where
         T: numpy::Element + ToMutByteSlice + 'py,
         [T]: ToNative,
@@ -108,19 +108,17 @@ impl Dataset {
             dims.push(1);
         }
 
-        let (a, dst) = unsafe {
-            let a = PyArray::<T, _>::new(py, dims, false);
-            let dst = a.as_slice_mut()?;
+        let a = PyArray::<T, _>::zeros(py, dims, false);
+        {
+            let mut rw = a.readwrite();
+            let dst = rw.as_slice_mut()?;
+            py.detach(|| {
+                let r = ds.as_par_reader(&self.idx.path().unwrap())?;
+                r.values_to_par((indices, counts), dst)
+            })?;
+        }
 
-            (a, dst)
-        };
-
-        py.allow_threads(|| {
-            let r = ds.as_par_reader(&self.idx.path().unwrap())?;
-            r.values_to_par((indices, counts), dst)
-        })?;
-
-        Ok(a.as_ref())
+        Ok(a.into_any())
     }
 
     #[cfg(off)]
@@ -130,38 +128,39 @@ impl Dataset {
         ds: &idx::DatasetD<'_>,
         indices: &[u64],
         counts: &[u64],
-    ) -> PyResult<&'py PyAny>
+    ) -> PyResult<Bound<'py, PyAny>>
     where
         T: Default + numpy::Element + ToMutByteSlice + 'py,
         [T]: ToNative,
     {
-        let a = py.allow_threads(|| {
+        let a = py.detach(|| {
             let r = ds.as_par_reader(&self.idx.path().unwrap())?;
             r.values_dyn_par((indices, counts))
         })?;
 
         let a = a.into_pyarray(py);
 
-        Ok(a)
+        Ok(a.into_any())
     }
 
     fn apply_fill_value_impl<'py, T>(
         &self,
         _py: Python<'py>,
-        cond: &'py PyAny,
-        fv: &'py PyAny,
-        arr: &'py PyAny,
+        cond: &Bound<'py, PyAny>,
+        fv: &Bound<'py, PyAny>,
+        arr: &Bound<'py, PyAny>,
     ) where
         T: Clone
-            + pyo3::conversion::FromPyObject<'py>
+            + pyo3::conversion::FromPyObjectOwned<'py>
             + numpy::Element
             + Sync
             + std::cmp::PartialEq
             + Copy,
+        for<'a, 'b> <T as pyo3::FromPyObject<'a, 'b>>::Error: std::fmt::Debug,
     {
         let cond: T = cond.extract().unwrap();
         let fv: T = fv.extract().unwrap();
-        let arr = arr.downcast::<PyArrayDyn<T>>().unwrap();
+        let arr = arr.cast::<PyArrayDyn<T>>().unwrap();
 
         let mut v = unsafe { arr.as_array_mut() };
         v.par_mapv_inplace(|v| if v == cond { fv } else { v });
@@ -178,15 +177,19 @@ impl Dataset {
         self.dataset().size()
     }
 
-    fn shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
+    fn shape<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<u64>> {
         PyArray::from_slice(py, self.dataset().shape())
     }
 
-    fn chunk_shape<'py>(&self, py: Python<'py>) -> &'py PyArray1<u64> {
+    fn chunk_shape<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<u64>> {
         PyArray::from_slice(py, self.dataset().chunk_shape())
     }
 
-    fn __getitem__<'py>(&self, py: Python<'py>, slice: &PyTuple) -> PyResult<&'py PyAny> {
+    fn __getitem__<'py>(
+        &self,
+        py: Python<'py>,
+        slice: &Bound<'_, PyTuple>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let ds = self.dataset();
         let shape = ds.shape();
 
@@ -195,9 +198,9 @@ impl Dataset {
         let (mut indices, (mut counts, mut strides)): (Vec<_>, (Vec<_>, Vec<_>)) = slice
             .iter()
             .map(|el| match el {
-                el if el.is_instance_of::<PySlice>() => el.downcast::<PySlice>().unwrap(),
+                el if el.is_instance_of::<PySlice>() => el.cast_into::<PySlice>().unwrap(),
                 el if el.is_instance_of::<PyInt>() => {
-                    let ind: isize = el.downcast::<PyInt>().unwrap().extract().unwrap();
+                    let ind: isize = el.extract().unwrap();
                     PySlice::new(py, ind, ind + 1, 1)
                 }
                 _ => unimplemented!(),
@@ -236,9 +239,9 @@ impl Dataset {
     pub fn apply_fill_value<'py>(
         &self,
         py: Python<'py>,
-        cond: &PyAny,
-        fv: &PyAny,
-        arr: &'py PyAny,
+        cond: &Bound<'py, PyAny>,
+        fv: &Bound<'py, PyAny>,
+        arr: &Bound<'py, PyAny>,
     ) {
         let ds = self.dataset();
         match ds.dtype() {
@@ -266,8 +269,8 @@ mod tests {
     /// `auto-initialize` feature, which breaks wheel builds against statically linked
     /// pythons like the manylinux ones).
     fn with_gil<F: FnOnce(Python) -> R, R>(f: F) -> R {
-        pyo3::prepare_freethreaded_python();
-        Python::with_gil(f)
+        Python::initialize();
+        Python::attach(f)
     }
 
     #[test]
@@ -276,7 +279,8 @@ mod tests {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
             let ds = i.dataset("SST", None).unwrap();
 
-            let arr = ds.__getitem__(py, PyTuple::new(py, vec![PySlice::new(py, 0, 10, 1)]));
+            let slice = PyTuple::new(py, vec![PySlice::new(py, 0, 10, 1)]).unwrap();
+            let arr = ds.__getitem__(py, &slice);
             println!("{:?}", arr);
         });
     }
@@ -287,7 +291,8 @@ mod tests {
             let i = Index::new("tests/data/coads_climatology.nc4".into()).unwrap();
             let ds = i.dataset("SST", None).unwrap();
 
-            let arr = ds.__getitem__(py, PyTuple::new(py, vec![0, 10, 1]));
+            let slice = PyTuple::new(py, vec![0, 10, 1]).unwrap();
+            let arr = ds.__getitem__(py, &slice);
             println!("{:?}", arr);
         });
     }
@@ -299,15 +304,15 @@ mod tests {
             let ds = i.dataset("SST", None).unwrap();
 
             let arr = ds
-                .__getitem__(py, PyTuple::new(py, vec![0, 10, 1]))
+                .__getitem__(py, &PyTuple::new(py, vec![0, 10, 1]).unwrap())
                 .unwrap();
             println!("{:?}", arr);
 
             // apply fill value
             ds.apply_fill_value(
                 py,
-                PyFloat::new(py, -1.0e+34),
-                PyFloat::new(py, f64::NAN),
+                PyFloat::new(py, -1.0e+34).as_any(),
+                PyFloat::new(py, f64::NAN).as_any(),
                 &arr,
             );
         });
