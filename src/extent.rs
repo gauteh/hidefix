@@ -533,6 +533,7 @@ impl TryFrom<(Vec<u64>, Vec<u64>)> for Extents {
 
 macro_rules! impl_extents_for_arrays {
     ($N: expr) => {
+        #[allow(clippy::infallible_try_from)]
         impl TryFrom<([u64; $N], [u64; $N])> for Extents {
             type Error = Infallible;
             fn try_from((start, count): ([u64; $N], [u64; $N])) -> Result<Self, Self::Error> {
@@ -540,6 +541,7 @@ macro_rules! impl_extents_for_arrays {
             }
         }
 
+        #[allow(clippy::infallible_try_from)]
         impl TryFrom<(&[u64; $N], &[u64; $N])> for Extents {
             type Error = Infallible;
             fn try_from((start, count): (&[u64; $N], &[u64; $N])) -> Result<Self, Self::Error> {

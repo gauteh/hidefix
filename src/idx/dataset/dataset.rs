@@ -1,10 +1,11 @@
-use anyhow::{anyhow, ensure};
-use itertools::izip;
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::cmp::min;
 use std::convert::TryInto;
 use std::path::Path;
+
+use anyhow::{anyhow, ensure};
+use itertools::izip;
+use serde::{Deserialize, Serialize};
 use strength_reduce::StrengthReducedU64;
 
 use super::super::chunk::{Chunk, ULE};
@@ -297,7 +298,7 @@ impl<const D: usize> Dataset<'_, D> {
             .map(|(i, c)| i + c)
             .zip(self.shape.iter())
             .any(|(l, &s)| l > s)
-            || counts.iter().any(|&c| c == 0)
+            || counts.contains(&0)
         {
             // Out of bounds or counts is zero in any dimension.
             ChunkSlicer::empty(self)
