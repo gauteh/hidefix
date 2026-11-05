@@ -33,6 +33,7 @@ impl Index {
         })
     }
 
+    #[pyo3(signature = (s, group=None))]
     pub fn dataset(&self, s: &str, group: Option<&str>) -> Option<Dataset> {
         match group {
             Some(group) => self.idx.group(group).and_then(|g| g.dataset(s)),
