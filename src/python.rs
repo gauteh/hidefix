@@ -1,16 +1,14 @@
 //! Wrappers for using hidefix in Python.
 
-use crate::filters::byteorder::ToNative;
-use byte_slice_cast::ToMutByteSlice;
-use ndarray::parallel::prelude::*;
-use numpy::{PyArray, PyArray1, PyArrayDyn, PyArrayMethods};
-use pyo3::{
-    prelude::*,
-    types::{PyInt, PySlice, PyTuple},
-};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use byte_slice_cast::ToMutByteSlice;
+use numpy::{PyArray, PyArray1, PyArrayDyn, PyArrayMethods};
+use pyo3::prelude::*;
+use pyo3::types::{PyInt, PySlice, PyTuple};
+
+use crate::filters::byteorder::ToNative;
 use crate::idx;
 use crate::prelude::*;
 
@@ -79,7 +77,7 @@ struct Dataset {
 }
 
 impl Dataset {
-    fn dataset(&self) -> &idx::DatasetD {
+    fn dataset(&self) -> &idx::DatasetD<'_> {
         match &self.group {
             Some(group) => self.idx.group(&group).unwrap().dataset(&self.ds).unwrap(),
             None => self.idx.dataset(&self.ds).unwrap(),
@@ -121,7 +119,7 @@ impl Dataset {
         Ok(a.into_any())
     }
 
-    #[cfg(off)]
+    #[cfg(any())]
     fn read_ndarray<'py, T>(
         &self,
         py: Python<'py>,
@@ -262,8 +260,10 @@ impl Dataset {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use pyo3::types::PyFloat;
+    use numpy::pyo3::Python;
+    use pyo3::types::{PyFloat, PySlice, PyTuple};
+
+    use super::Index;
 
     /// The interpreter is initialized explicitly (rather than through pyo3's
     /// `auto-initialize` feature, which breaks wheel builds against statically linked
