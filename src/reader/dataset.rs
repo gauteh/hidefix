@@ -71,13 +71,13 @@ pub trait ReaderExt: Reader {
         let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
 
         ensure!(
-            dsz % std::mem::size_of::<T>() == 0,
+            dsz.is_multiple_of(std::mem::size_of::<T>()),
             "size of datatype ({}) not multiple of target {}",
             dsz,
             std::mem::size_of::<T>()
         );
 
-        ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
+        ensure!((dsz * vsz).is_multiple_of(std::mem::align_of::<T>()), "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
         let mut values = empty_vec(vsz);
         self.values_to(extents, values.as_mut_slice())?; // XXX: take maybeuninit
@@ -122,13 +122,13 @@ pub trait ParReaderExt: Reader + ParReader {
         let vsz = counts.product::<u64>() as usize * dsz / std::mem::size_of::<T>();
 
         ensure!(
-            dsz % std::mem::size_of::<T>() == 0,
+            dsz.is_multiple_of(std::mem::size_of::<T>()),
             "size of datatype ({}) not multiple of target {}",
             dsz,
             std::mem::size_of::<T>()
         );
 
-        ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
+        ensure!((dsz * vsz).is_multiple_of(std::mem::align_of::<T>()), "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
         let mut values = empty_vec(vsz);
         self.values_to_par(extents, values.as_mut_slice())?;
@@ -150,13 +150,13 @@ pub trait ParReaderExt: Reader + ParReader {
         let vsz = dims.iter().product::<usize>() * dsz / std::mem::size_of::<T>();
 
         ensure!(
-            dsz % std::mem::size_of::<T>() == 0,
+            dsz.is_multiple_of(std::mem::size_of::<T>()),
             "size of datatype ({}) not multiple of target {}",
             dsz,
             std::mem::size_of::<T>()
         );
 
-        ensure!((dsz * vsz) % std::mem::align_of::<T>() == 0, "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
+        ensure!((dsz * vsz).is_multiple_of(std::mem::align_of::<T>()), "alignment of datatype ({}) not a multiple of datatype size and length {}*{}={}, alignment may not match and result in unsoundness", std::mem::align_of::<T>(), dsz, vsz, vsz * dsz);
 
         // this is not safe: better to let read_to take maybeuninit's
         let mut a = unsafe { ndarray::ArrayD::<T>::uninit(dims).assume_init() };
