@@ -970,7 +970,6 @@ dependencies = [
  "itertools",
  "libc",
  "libdeflater",
- "log",
  "lru",
  "ndarray",
  "netcdf",

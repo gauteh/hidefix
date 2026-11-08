@@ -32,7 +32,6 @@ strength_reduce = "0.2"
 zerocopy = "0.7"
 libc = "0.2"
 hdf5 = { package = "hdf5-metno", version = "0.9.1" }
-log = "0.4"
 rayon = "1.10"
 ndarray = { version = "0.16", features = [ "rayon" ] }
 pyo3 = { version = "0.29", optional = true, features = ["anyhow", "abi3-py39"] }
