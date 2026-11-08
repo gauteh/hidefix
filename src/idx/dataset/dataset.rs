@@ -78,17 +78,14 @@ impl<const D: usize> Dataset<'_, D> {
             .as_slice()
             .try_into()?;
 
-        let chunk_shape = ds.chunk().map_or_else(
-            || shape,
-            |cs| {
-                cs.into_iter()
-                    .map(|u| u as u64)
-                    .collect::<Vec<u64>>()
-                    .as_slice()
-                    .try_into()
-                    .unwrap()
-            },
-        );
+        let chunk_shape = ds.chunk().map_or(shape, |cs| {
+            cs.into_iter()
+                .map(|u| u as u64)
+                .collect::<Vec<u64>>()
+                .as_slice()
+                .try_into()
+                .unwrap()
+        });
 
         let mut chunks: Vec<Chunk<D>> = match (ds.is_chunked(), ds.offset()) {
             // Continuous
