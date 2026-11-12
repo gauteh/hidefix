@@ -6,7 +6,7 @@ license = "MIT"
 name = "hidefix"
 repository = "https://github.com/gauteh/hidefix"
 description = "Concurrent HDF5 and NetCDF4 reader (experimental)"
-version = "0.12.0"
+version = "0.13.0"
 categories = [ "filesystem", "parsing", "science" ]
 
 [lib]
