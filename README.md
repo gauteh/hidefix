@@ -11,8 +11,8 @@
 # HIDEFIX
 
 This Rust and Python library provides an alternative reader for the
-[HDF5](https://support.hdfgroup.org/HDF5/doc/H5.format.html) file or [NetCDF4
-file](https://www.unidata.ucar.edu/software/netcdf/docs/file_format_specifications.html)
+[HDF5](https://support.hdfgroup.org/documentation/hdf5/latest/_f_m_t3.html) file or [NetCDF4
+file](https://docs.unidata.ucar.edu/netcdf-c/current/file_format_specifications.html)
 (which uses HDF5) which supports concurrent access to data. This is achieved by
 building an index of the chunks, allowing a thread to use many file handles to
 read the file. The original (native) HDF5 library is used to build the index,
